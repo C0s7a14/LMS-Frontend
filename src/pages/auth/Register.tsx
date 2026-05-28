@@ -1,4 +1,5 @@
 import logo from "../../assets/logo.png"
+import { Link } from "react-router-dom"
 
 export default function Registro(){
  return(
@@ -79,20 +80,22 @@ export default function Registro(){
             />
         </div>
 
-        {/*Botões*/}
-            <div className=" flex flex-col gap-5 mt-4">
-                <button
-                className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-4 rounded-2xl transition-all"
-                >
-                Entrar
-                </button>
+   {/*Botões*/}
+<div className="flex flex-col gap-5 mt-4">
 
-                <button
-                type="button"
-                className="border border-[#28475F] hover:bg-[#132D49] text-white font-semibold py-4 rounded-2xl transition-all">
-                    Já tenho conta
-                </button>
-            </div>
+  <Link
+    to="/"
+    className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-4 rounded-2xl transition-all text-center block">
+    Entrar
+  </Link>
+
+  <Link
+    to="/"
+    className="w-full border border-[#28475F] hover:bg-[#132D49] text-white font-semibold py-4 rounded-2xl transition-all text-center block">
+    Já tenho conta
+  </Link>
+
+</div>
         </form>
         </div>
 

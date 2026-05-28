@@ -1,4 +1,5 @@
 import logo from "../../assets/logo.png"
+import { Link } from "react-router-dom"
 
 export default function Login(){
  return(
@@ -54,20 +55,36 @@ export default function Login(){
 
         {/*Botões*/}
             <div className=" flex flex-col gap-5 mt-4">
+
+                
                 <button
                 className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-4 rounded-2xl transition-all"
                 >
                 Entrar
                 </button>
+               
 
-                <button
-                type="button"
-                className="border border-[#28475F] hover:bg-[#132D49] text-white font-semibold py-4 rounded-2xl transition-all">
-                    Criar Conta
-                </button>
+
+         <Link
+  to="/register"
+  className="w-full border border-[#28475F] hover:bg-[#132D49] text-white font-semibold py-4 rounded-2xl transition-all text-center block">
+        Criar Conta
+        </Link>
             </div>
+
+
+    {/*Esqueceu a senha */}
+
+<div className="flex justify-center">
+  <Link
+    to="/forgot-password"
+    className="text-sm text-blue-400 hover:text-blue-300 transition-all hover:cursor-pointer">
+    Esqueceu a senha?
+  </Link>
+</div>
         </form>
         </div>
+        
 
     </div>
  )   

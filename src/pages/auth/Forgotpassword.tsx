@@ -1,4 +1,5 @@
 import logo from "../../assets/logo.png"
+import { Link } from "react-router-dom"
 
 export default function ForgotPassword(){
  return(
@@ -41,22 +42,22 @@ export default function ForgotPassword(){
         
 
         {/*Botões*/}
-            <div className=" flex flex-col gap-5 mt-4">
-                <button
-                className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-4 rounded-2xl transition-all"
-                >
-                Enviar E-mail de Recuperação
-                </button>
+    <div className=" flex flex-col gap-5 mt-4">
+    <Link
+    to="/reset-password"
+    className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-4 rounded-2xl transition-all text-center block">
+    Enviar E-mail de Recuperação
+  </Link>
 
-                <button
-                type="button"
-                className="border border-[#28475F] hover:bg-[#132D49] text-white font-semibold py-4 rounded-2xl transition-all">
-                    Voltar para Login
-                </button>
-            </div>
-        </form>
-        </div>
-
+    <Link
+    to="/"
+    className="w-full border border-[#28475F] hover:bg-[#132D49] text-white font-semibold py-4 rounded-2xl transition-all text-center block">
+    Voltar para Login
+  </Link>
     </div>
+</form>
+</div>
+
+</div>
  )   
 }

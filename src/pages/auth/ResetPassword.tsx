@@ -1,5 +1,5 @@
 import logo from "../../assets/logo.png";
-
+import { Link } from "react-router-dom";
 import {
   useState,
   useRef,
@@ -64,20 +64,20 @@ export default function ResetPassword() {
 
   return (
     <div className="min-h-screen bg-[#2E3B7B] flex items-center justify-center px-4 py-8">
-      <div className="w-full max-w-2xl bg-[#0B2239] rounded-[24px] md:rounded-[32px] border border-[#28475F] shadow-2xl px-5 py-8 sm:px-8 sm:py-10">
+      <div className="w-full max-w-2xl bg-[#0B2239] rounded-3xl md:rounded-4xl] border border-[#28475F] shadow-2xl px-5 py-8 sm:px-8 sm:py-10">
 
         {/* Logo */}
-        <div className="flex justify-center mb-8">
+        <div className="flex justify-center mb-4">
           <img
             src={logo}
             alt="Sirros logo"
-            className="w-28 sm:w-36 md:w-40"
+            className="w-28 sm:w-36 md:w-52"
           />
         </div>
 
         {/* Etapa 1 */}
         <div className="text-center mb-8">
-          <h1 className="text-white text-2xl sm:text-3xl md:text-4xl font-bold leading-tight mb-4">
+          <h1 className="text-white text-2xl sm:text-3xl md:text-3xl font-bold leading-tight mb-4">
             Etapa 1: Digite o Código do E-mail
           </h1>
 
@@ -108,31 +108,17 @@ export default function ResetPassword() {
                 onChange={(e) => handleChange(e, index)}
                 onKeyDown={(e) => handleKeyDown(e, index)}
                 onPaste={handlePaste}
-                className="
-                  w-11 h-14
-                  sm:w-14 sm:h-16
-                  md:w-16 md:h-20
-                  bg-[#3D4B97]
-                  text-white
-                  text-xl sm:text-2xl
-                  text-center
-                  rounded-xl sm:rounded-2xl
-                  outline-none
-                  border border-transparent
-                  focus:border-blue-400
-                  transition-all
-                "
-              />
+                className=" w-11 h-14 sm:w-14 sm:h-16 md:w-16 md:h-20  bg-[#3D4B97]   text-white  text-xl sm:text-2xl text-center rounded-xl sm:rounded-2xl outline-none  border border-transparent focus:border-blue-400 transition-all"/>
             ))}
           </div>
         </div>
 
         {/* Linha */}
-        <div className="w-full h-[2px] bg-blue-500 mb-10"></div>
+        <div className="w-full h-0.5 bg-blue-500 mb-10"></div>
 
         {/* Etapa 2 */}
         <div className="text-center mb-8">
-          <h2 className="text-white text-2xl sm:text-3xl md:text-4xl font-bold leading-tight mb-4">
+          <h2 className="text-white text-2xl sm:text-3xl md:text-3xl font-bold leading-tight mb-4">
             Etapa 2: Digite sua Nova Senha
           </h2>
 
@@ -153,20 +139,7 @@ export default function ResetPassword() {
             <input
               type="password"
               placeholder="Crie sua nova senha"
-              className="
-                bg-[#3D4B97]
-                text-white
-                placeholder:text-slate-300
-                rounded-xl sm:rounded-2xl
-                px-4 py-3
-                sm:px-5 sm:py-4
-                text-sm sm:text-base
-                outline-none
-                border border-transparent
-                focus:border-blue-400
-                transition-all
-              "
-            />
+              className="bg-[#3D4B97] text-white placeholder:text-slate-300 rounded-xl sm:rounded-2xl px-4 py-3 sm:px-5 sm:py-4 text-sm sm:text-base outline-none border border-transparent  focus:border-blue-400 transition-all"/>
           </div>
 
           {/* Confirmar senha */}
@@ -178,39 +151,15 @@ export default function ResetPassword() {
             <input
               type="password"
               placeholder="Repita a nova senha"
-              className="
-                bg-[#3D4B97]
-                text-white
-                placeholder:text-slate-300
-                rounded-xl sm:rounded-2xl
-                px-4 py-3
-                sm:px-5 sm:py-4
-                text-sm sm:text-base
-                outline-none
-                border border-transparent
-                focus:border-blue-400
-                transition-all
-              "
-            />
+              className=" bg-[#3D4B97] text-white placeholder:text-slate-300 rounded-xl sm:rounded-2xl px-4 py-3 sm:px-5 sm:py-4 text-sm sm:text-base outline-none border border-transparent focus:border-blue-400 transition-all"/>
           </div>
 
           {/* Botão */}
-          <button
-            type="submit"
-            className="
-              mt-3
-              bg-blue-500
-              hover:bg-blue-600
-              text-white
-              font-semibold
-              py-3 sm:py-4
-              rounded-xl sm:rounded-2xl
-              transition-all
-              text-sm sm:text-lg
-            "
-          >
-            Redefinir Senha e Ir para Login
-          </button>
+          <Link
+    to="/"
+    className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-4 rounded-2xl transition-all text-center block">
+    Redefinir Senha e Ir para Login
+  </Link>
         </form>
       </div>
     </div>
