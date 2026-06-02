@@ -1,70 +1,95 @@
 import logo from "../../assets/logo.png";
-import { Link } from "react-router-dom";
+
+import axios from "axios";
+
+import { useState } from "react";
+
 import {
-  useState,
-  useRef,
-  type ChangeEvent,
-  type KeyboardEvent,
-  type ClipboardEvent,
-} from "react";
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
 
 export default function ResetPassword() {
-  const [code, setCode] = useState(["", "", "", "", "", ""]);
 
-  const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
+  const navigate = useNavigate();
 
-  const handleChange = (
-    e: ChangeEvent<HTMLInputElement>,
-    index: number
-  ) => {
-    const value = e.target.value.replace(/\D/g, "");
+  const [searchParams] =
+    useSearchParams();
 
-    if (!value) return;
+  const token =
+    searchParams.get("token");
+    console.log(token);
 
-    const newCode = [...code];
-    newCode[index] = value[0];
-    setCode(newCode);
+  const [
+    newPassword,
+    setNewPassword,
+  ] = useState("");
 
-    if (index < 5) {
-      inputsRef.current[index + 1]?.focus();
-    }
-  };
+  const [
+    confirmPassword,
+    setConfirmPassword,
+  ] = useState("");
 
-  const handleKeyDown = (
-    e: KeyboardEvent<HTMLInputElement>,
-    index: number
-  ) => {
-    if (e.key === "Backspace") {
-      if (code[index]) {
-        const newCode = [...code];
-        newCode[index] = "";
-        setCode(newCode);
-      } else if (index > 0) {
-        inputsRef.current[index - 1]?.focus();
-      }
-    }
-  };
+  const [loading, setLoading] =
+    useState(false);
 
-  const handlePaste = (e: ClipboardEvent<HTMLInputElement>) => {
+  async function handleResetPassword(
+
+    
+    e: React.FormEvent
+  ) {
+
     e.preventDefault();
 
-    const pastedData = e.clipboardData
-      .getData("text")
-      .replace(/\D/g, "")
-      .slice(0, 6);
+    if (
+      newPassword !== confirmPassword
+    ) {
 
-    const newCode = pastedData.split("");
+      alert(
+        "As senhas não coincidem"
+      );
 
-    while (newCode.length < 6) {
-      newCode.push("");
+      return;
     }
 
-    setCode(newCode);
-  };
+    try {
+
+      setLoading(true);
+
+      await axios.post(
+        "http://localhost:3333/auth/reset-password",
+        {
+          token,
+          newPassword,
+        }
+      );
+
+      alert(
+        "Senha redefinida com sucesso!"
+      );
+
+      navigate("/");
+
+    } catch (error: any) {
+
+      alert(
+        error.response?.data?.message
+        || "Erro ao redefinir senha"
+      );
+
+    } finally {
+
+      setLoading(false);
+
+    }
+
+
+  }
 
   return (
     <div className="min-h-screen bg-[#2E3B7B] flex items-center justify-center px-4 py-8">
-      <div className="w-full max-w-2xl bg-[#0B2239] rounded-3xl md:rounded-4xl] border border-[#28475F] shadow-2xl px-5 py-8 sm:px-8 sm:py-10">
+
+      <div className="w-full max-w-2xl bg-[#0B2239] rounded-3xl border border-[#28475F] shadow-2xl px-5 py-8 sm:px-8 sm:py-10">
 
         {/* Logo */}
         <div className="flex justify-center mb-4">
@@ -75,63 +100,28 @@ export default function ResetPassword() {
           />
         </div>
 
-        {/* Etapa 1 */}
+        {/* Título */}
         <div className="text-center mb-8">
+
           <h1 className="text-white text-2xl sm:text-3xl md:text-3xl font-bold leading-tight mb-4">
-            Etapa 1: Digite o Código do E-mail
+            Redefinir Senha
           </h1>
 
-          <p className="text-slate-300 text-sm sm:text-base md:text-lg leading-relaxed">
-            Verifique sua caixa de entrada e spam
-            <br className="hidden sm:block" />
-            por um código de 6 dígitos.
-          </p>
-        </div>
-
-        {/* Código */}
-        <div className="mb-10">
-          <label className="text-slate-300 font-medium block mb-4 text-sm sm:text-base">
-            Código de 6 dígitos
-          </label>
-
-          <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
-            {code.map((digit, index) => (
-              <input
-                key={index}
-                ref={(el) => {
-                  inputsRef.current[index] = el;
-                }}
-                type="text"
-                inputMode="numeric"
-                maxLength={1}
-                value={digit}
-                onChange={(e) => handleChange(e, index)}
-                onKeyDown={(e) => handleKeyDown(e, index)}
-                onPaste={handlePaste}
-                className=" w-11 h-14 sm:w-14 sm:h-16 md:w-16 md:h-20  bg-[#3D4B97]   text-white  text-xl sm:text-2xl text-center rounded-xl sm:rounded-2xl outline-none  border border-transparent focus:border-blue-400 transition-all"/>
-            ))}
-          </div>
-        </div>
-
-        {/* Linha */}
-        <div className="w-full h-0.5 bg-blue-500 mb-10"></div>
-
-        {/* Etapa 2 */}
-        <div className="text-center mb-8">
-          <h2 className="text-white text-2xl sm:text-3xl md:text-3xl font-bold leading-tight mb-4">
-            Etapa 2: Digite sua Nova Senha
-          </h2>
-
           <p className="text-slate-300 text-sm sm:text-base md:text-lg">
-            Agora, crie uma senha forte e segura.
+            Digite sua nova senha abaixo.
           </p>
+
         </div>
 
         {/* Form */}
-        <form className="flex flex-col gap-5 sm:gap-6">
+        <form
+          onSubmit={handleResetPassword}
+          className="flex flex-col gap-5 sm:gap-6"
+        >
 
           {/* Nova senha */}
           <div className="flex flex-col gap-2">
+
             <label className="text-slate-300 font-medium text-sm sm:text-base">
               Nova Senha
             </label>
@@ -139,11 +129,23 @@ export default function ResetPassword() {
             <input
               type="password"
               placeholder="Crie sua nova senha"
-              className="bg-[#3D4B97] text-white placeholder:text-slate-300 rounded-xl sm:rounded-2xl px-4 py-3 sm:px-5 sm:py-4 text-sm sm:text-base outline-none border border-transparent  focus:border-blue-400 transition-all"/>
+
+              value={newPassword}
+
+              onChange={(e) =>
+                setNewPassword(
+                  e.target.value
+                )
+              }
+
+              className="bg-[#3D4B97] text-white placeholder:text-slate-300 rounded-xl sm:rounded-2xl px-4 py-3 sm:px-5 sm:py-4 text-sm sm:text-base outline-none border border-transparent focus:border-blue-400 transition-all"
+            />
+
           </div>
 
           {/* Confirmar senha */}
           <div className="flex flex-col gap-2">
+
             <label className="text-slate-300 font-medium text-sm sm:text-base">
               Confirmar Senha
             </label>
@@ -151,17 +153,39 @@ export default function ResetPassword() {
             <input
               type="password"
               placeholder="Repita a nova senha"
-              className=" bg-[#3D4B97] text-white placeholder:text-slate-300 rounded-xl sm:rounded-2xl px-4 py-3 sm:px-5 sm:py-4 text-sm sm:text-base outline-none border border-transparent focus:border-blue-400 transition-all"/>
+
+              value={confirmPassword}
+
+              onChange={(e) =>
+                setConfirmPassword(
+                  e.target.value
+                )
+              }
+
+              className="bg-[#3D4B97] text-white placeholder:text-slate-300 rounded-xl sm:rounded-2xl px-4 py-3 sm:px-5 sm:py-4 text-sm sm:text-base outline-none border border-transparent focus:border-blue-400 transition-all"
+            />
+
           </div>
 
           {/* Botão */}
-          <Link
-    to="/"
-    className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-4 rounded-2xl transition-all text-center block">
-    Redefinir Senha e Ir para Login
-  </Link>
+          <button
+            type="submit"
+
+            disabled={loading}
+
+            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-4 rounded-2xl transition-all"
+          >
+
+            {loading
+              ? "Redefinindo..."
+              : "Redefinir senha"}
+
+          </button>
+
         </form>
+
       </div>
+
     </div>
   );
 }

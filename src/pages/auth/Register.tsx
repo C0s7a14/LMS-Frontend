@@ -1,104 +1,210 @@
-import logo from "../../assets/logo.png"
-import { Link } from "react-router-dom"
+import logo from "../../assets/logo.png";
 
-export default function Registro(){
- return(
+import { Link, useNavigate } from "react-router-dom";
+
+import { useState } from "react";
+
+import axios from "axios";
+
+export default function Registro() {
+
+  const navigate = useNavigate();
+
+  const [name, setName] = useState("");
+
+  const [email, setEmail] = useState("");
+
+  const [senha, setSenha] = useState("");
+
+  const [confirmarSenha, setConfirmarSenha] =
+    useState("");
+
+  const [loading, setLoading] =
+    useState(false);
+
+  async function handleRegister(
+    e: React.FormEvent
+  ) {
+
+    e.preventDefault();
+
+    if (senha !== confirmarSenha) {
+
+      alert("As senhas não coincidem");
+
+      return;
+    }
+
+    try {
+
+      setLoading(true);
+
+      await axios.post(
+        "http://localhost:3333/auth/register",
+        {
+          name,
+          email,
+          senha,
+          role: "student",
+        }
+      );
+
+      alert("Conta criada com sucesso!");
+
+      navigate("/");
+
+    } catch (error: any) {
+
+      alert(
+        error.response?.data?.error ||
+        "Erro ao criar conta"
+      );
+
+    } finally {
+
+      setLoading(false);
+    }
+  }
+
+  return (
     <div className="min-h-screen bg-[#2E3B7B] flex items-center justify-center p-6">
-        <div className="w-full max-w-md bg-[#0B2239] ronded-[30px] px-8 py-10 shadow-2xl">
 
-        {/* logo*/}
+      <div className="w-full max-w-md bg-[#0B2239] rounded-[30px] px-8 py-10 shadow-2xl">
+
+        {/* logo */}
         <div className="flex justify-center mb-10">
-            <img src={logo} alt="Sirros logo" className="w-40"
-            />
+
+          <img
+            src={logo}
+            alt="Sirros logo"
+            className="w-40"
+          />
+
         </div>
 
+        {/* titulo */}
+        <div className="text-center mb-10">
 
+          <h1 className="text-white text-2xl font-bold mb-3">
 
-        {/*Titulo*/}
+            Acesse sua plataforma de treinamento IoT
 
-        <div className=" text-center mb-10">
-            <h1 className="text-white text-2xl font-bold mb-3"> acesse sua plataforma de treinamento IoT </h1>
- 
+          </h1>
+
         </div>
 
+        {/* formulario */}
+        <form
+          onSubmit={handleRegister}
+          className="flex flex-col gap-6"
+        >
 
-        {/* Formulario */}
-        <form className="flex flex-col gap-6">
-        {/*Nome */}
-            <div className=" flex flex-col gap-2">
+          {/* nome */}
+          <div className="flex flex-col gap-2">
+
             <label className="text-slate-300 font-medium">
-                Nome
+              Nome
             </label>
-            
-            <input
-             type="Email"
-             placeholder="Digite seu e-mail"
-             className=" bg-[#3D4B97] text-white placeholder:text-slate-300 rounded-2xl px-5 py-4 outline-none border border-transparent focus:border-blue-400 transition-all"
-            />
-            </div>
 
-              {/*EMAIL */}
-            <div className=" flex flex-col gap-2">
+            <input
+              type="text"
+              placeholder="Digite seu nome"
+              value={name}
+              onChange={(e) =>
+                setName(e.target.value)
+              }
+              className="bg-[#3D4B97] text-white placeholder:text-slate-300 rounded-2xl px-5 py-4 outline-none border border-transparent focus:border-blue-400 transition-all"
+            />
+
+          </div>
+
+          {/* email */}
+          <div className="flex flex-col gap-2">
+
             <label className="text-slate-300 font-medium">
-                Email
+              Email
             </label>
-            
-            <input
-             type="Email"
-             placeholder="Digite seu e-mail"
-             className=" bg-[#3D4B97] text-white placeholder:text-slate-300 rounded-2xl px-5 py-4 outline-none border border-transparent focus:border-blue-400 transition-all"
-            />
-            </div>
-
-
-        {/*Senha */}
-        <div className="flex flex-col gap-2">
-        <label className="text-slate-300 font-medium">
-        Senha
-        </label>
 
             <input
-            type="password"
-            placeholder="Digite sua senha"
-            className="bg-[#3D4B97] text-white placeholder:text-slate-300 rounded-2xl px-5 py-4 outline-none border:tranparent focus:border-blue-400 transition-all"
-            
-             
+              type="email"
+              placeholder="Digite seu e-mail"
+              value={email}
+              onChange={(e) =>
+                setEmail(e.target.value)
+              }
+              className="bg-[#3D4B97] text-white placeholder:text-slate-300 rounded-2xl px-5 py-4 outline-none border border-transparent focus:border-blue-400 transition-all"
             />
-        </div>
-         {/*Senha novamente*/}
-        <div className="flex flex-col gap-2">
-        <label className="text-slate-300 font-medium">
-        Confirme sua Senha
-        </label>
+
+          </div>
+
+          {/* senha */}
+          <div className="flex flex-col gap-2">
+
+            <label className="text-slate-300 font-medium">
+              Senha
+            </label>
 
             <input
-            type="password"
-            placeholder="Digite sua senha novamente"
-            className="bg-[#3D4B97] text-white placeholder:text-slate-300 rounded-2xl px-5 py-4 outline-none border:tranparent focus:border-blue-400 transition-all"
-            
-             
+              type="password"
+              placeholder="Digite sua senha"
+              value={senha}
+              onChange={(e) =>
+                setSenha(e.target.value)
+              }
+              className="bg-[#3D4B97] text-white placeholder:text-slate-300 rounded-2xl px-5 py-4 outline-none border border-transparent focus:border-blue-400 transition-all"
             />
-        </div>
 
-   {/*Botões*/}
-<div className="flex flex-col gap-5 mt-4">
+          </div>
 
-  <Link
-    to="/"
-    className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-4 rounded-2xl transition-all text-center block">
-    Entrar
-  </Link>
+          {/* confirmar senha */}
+          <div className="flex flex-col gap-2">
 
-  <Link
-    to="/"
-    className="w-full border border-[#28475F] hover:bg-[#132D49] text-white font-semibold py-4 rounded-2xl transition-all text-center block">
-    Já tenho conta
-  </Link>
+            <label className="text-slate-300 font-medium">
+              Confirme sua senha
+            </label>
 
-</div>
+            <input
+              type="password"
+              placeholder="Digite sua senha novamente"
+              value={confirmarSenha}
+              onChange={(e) =>
+                setConfirmarSenha(e.target.value)
+              }
+              className="bg-[#3D4B97] text-white placeholder:text-slate-300 rounded-2xl px-5 py-4 outline-none border border-transparent focus:border-blue-400 transition-all"
+            />
+
+          </div>
+
+          {/* botoes */}
+          <div className="flex flex-col gap-5 mt-4">
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-4 rounded-2xl transition-all"
+            >
+
+              {loading
+                ? "Criando conta..."
+                : "Criar conta"}
+
+            </button>
+
+            <Link
+              to="/"
+              className="w-full border border-[#28475F] hover:bg-[#132D49] text-white font-semibold py-4 rounded-2xl transition-all text-center block"
+            >
+
+              Já tenho conta
+
+            </Link>
+
+          </div>
+
         </form>
-        </div>
+
+      </div>
 
     </div>
- )   
+  );
 }
