@@ -7,11 +7,21 @@ import {
   PlusCircle,
   Settings,
   LogOut,
+  Menu,
+  X,
 } from "lucide-react";
 
 import { NavLink } from "react-router-dom";
 
+import { useState } from "react";
+
+import { motion, AnimatePresence } from "framer-motion";
+
+import logo from "../assets/logo.png";
+
 export default function Sidebar() {
+  const [open, setOpen] = useState(false);
+
   const menuItems = [
     {
       name: "Home",
@@ -51,16 +61,122 @@ export default function Sidebar() {
   ];
 
   return (
-    <aside className="w-72 min-h-screen bg-[#11293D] border-r border-white/10 flex flex-col justify-between p-5">
+    <>
+      {/* Botão Mobile */}
+      <button
+        onClick={() => setOpen(true)}
+        className="
+          lg:hidden
+          fixed
+          top-5
+          left-5
+          z-[60]
+          bg-[#11293D]
+          border
+          border-white/10
+          p-3
+          rounded-xl
+          text-white
+        "
+      >
+        <Menu size={24} />
+      </button>
 
+      {/* Desktop */}
+      <aside
+        className="
+          hidden
+          lg:flex
+          w-72
+          min-h-screen
+          bg-[#11293D]
+          border-r
+          border-white/10
+          flex-col
+          justify-between
+          p-5
+        "
+      >
+        <SidebarContent menuItems={menuItems} />
+      </aside>
+
+      {/* Mobile */}
+      <AnimatePresence>
+        {open && (
+          <>
+            {/* Overlay */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setOpen(false)}
+              className="
+                fixed
+                inset-0
+                bg-black/50
+                z-40
+                lg:hidden
+              "
+            />
+
+            {/* Sidebar */}
+            <motion.aside
+              initial={{ x: -300 }}
+              animate={{ x: 0 }}
+              exit={{ x: -300 }}
+              transition={{ duration: 0.3 }}
+              className="
+                fixed
+                top-0
+                left-0
+                z-50
+                w-72
+                h-screen
+                bg-[#11293D]
+                border-r
+                border-white/10
+                p-5
+                flex
+                flex-col
+                justify-between
+                lg:hidden
+              "
+            >
+              {/* Fechar */}
+              <button
+                onClick={() => setOpen(false)}
+                className="
+                  absolute
+                  top-5
+                  right-5
+                  text-white
+                "
+              >
+                <X size={24} />
+              </button>
+
+              <SidebarContent menuItems={menuItems} />
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+
+function SidebarContent({ menuItems }: any) {
+  return (
+    <>
       {/* Top */}
       <div>
-
         {/* Logo */}
         <div className="mb-10">
-          <h1 className="text-white text-2xl font-bold">
-            Sirros
-          </h1>
+          <img
+          src={logo}
+          alt="Sirros logo"
+          className="w-40 object-contain drop-shadow-[0__0_20px_rgba(59,130,246,0.35)]"
+
+          />
 
           <p className="text-gray-400 text-sm mt-1">
             Plataforma de Treinamento
@@ -69,7 +185,7 @@ export default function Sidebar() {
 
         {/* Menu */}
         <nav className="space-y-3">
-          {menuItems.map((item, index) => {
+          {menuItems.map((item: any, index: number) => {
             const Icon = item.icon;
 
             return (
@@ -97,7 +213,6 @@ export default function Sidebar() {
 
       {/* Bottom */}
       <div className="border-t border-white/10 pt-5">
-
         {/* User */}
         <div className="flex items-center gap-3 mb-5">
           <div className="w-12 h-12 rounded-full bg-blue-400 flex items-center justify-center text-white font-bold">
@@ -116,11 +231,26 @@ export default function Sidebar() {
         </div>
 
         {/* Logout */}
-        <button className="w-full bg-red-700 hover:bg-red-800 transition-all text-white rounded-2xl py-4 flex items-center justify-center gap-3 font-medium">
+        <button
+          className="
+            w-full
+            bg-red-700
+            hover:bg-red-800
+            transition-all
+            text-white
+            rounded-2xl
+            py-4
+            flex
+            items-center
+            justify-center
+            gap-3
+            font-medium
+          "
+        >
           <LogOut size={20} />
           Sair da Conta
         </button>
       </div>
-    </aside>
+    </>
   );
 }
