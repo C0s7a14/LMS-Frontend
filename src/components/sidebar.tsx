@@ -102,24 +102,26 @@ export default function Sidebar() {
   return (
     <>
       {/* Botão Mobile */}
-      <button
-        onClick={() => setOpen(true)}
-        className="
-          lg:hidden
-          fixed
-          top-5
-          left-5
-          z-[60]
-          bg-[#11293D]
-          border
-          border-white/10
-          p-3
-          rounded-xl
-          text-white
-        "
-      >
-        <Menu size={24} />
-      </button>
+        {!open && (
+        <button
+            onClick={() => setOpen(true)}
+            className="
+            lg:hidden
+            fixed
+            top-5
+            left-5
+            z-[60]
+            bg-[#11293D]
+            border
+            border-white/10
+            p-3
+            rounded-xl
+            text-white
+            "
+        >
+            <Menu size={24} />
+        </button>
+        )}
 
       {/* Desktop */}
       <aside
@@ -222,15 +224,15 @@ function SidebarContent({
       <div>
 
         {/* Logo */}
-        <div className="mb-10">
+        <div className="mb-5">
 
           <img
             src={logo}
             alt="Sirros logo"
-            className="w-40 object-contain drop-shadow-[0__0_20px_rgba(59,130,246,0.35)]"
+            className="w-40 ml-12  object-contain drop-shadow-[0__0_20px_rgba(59,130,246,0.35)]"
           />
 
-          <p className="text-gray-400 text-sm mt-1">
+          <p className="text-gray-400 text-sm mt-1 flex text-center justify-center">
             Plataforma de Treinamento
           </p>
 

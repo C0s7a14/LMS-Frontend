@@ -13,14 +13,14 @@ export default function Home() {
     <div className="space-y-6">
 
       {/* Header */}
-      <div className="flex flex-col py-15 md:py-0  gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col  text-center gap-4 md:flex-row md:items-center md:justify-between">
 
         <div>
           <h1 className="text-2xl  md:text-4xl font-bold text-white">
             Olá, Lucas! 👋
           </h1>
 
-          <p className="text-gray-400 mt-2 text-sm md:text-base">
+          <p className=" ml-3 text-white mt-5 text-sm md:text-base">
             Continue aprendendo e alcance seus objetivos.
           </p>
         </div>
