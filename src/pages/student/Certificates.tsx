@@ -1,4 +1,4 @@
-export default function Courses(){
+export default function Certicate(){
     return(
         <div>
             

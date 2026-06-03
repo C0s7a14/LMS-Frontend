@@ -56,7 +56,7 @@ export default function Login() {
 
       alert("Login realizado com sucesso!");
 
-      navigate("/dashboard");
+      navigate("/home");
 
     } catch (error: any) {
 
