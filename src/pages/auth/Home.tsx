@@ -17,7 +17,7 @@ export default function Home() {
 
         <div>
           <h1 className="text-2xl  md:text-4xl font-bold text-white">
-            Olá, Lucas! 👋
+            Olá, Lucas! 
           </h1>
 
           <p className=" ml-3 text-white mt-5 text-sm md:text-base">
