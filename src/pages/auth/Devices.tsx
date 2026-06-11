@@ -123,17 +123,17 @@ export default function Device() {
   });
 
   return (
-    <main className="min-h-screen bg-[#071827] px-6 py-8 lg:px-12">
+<main className="min-h-screen bg-gray-50 dark:bg-[#071827] px-6 py-8 lg:px-12 transition-colors">
       <div className="max-w-[1500px] mx-auto">
 
         {/* Header */}
         <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between mb-10">
           <div>
-            <h1 className="text-3xl lg:text-4xl font-bold text-white">
+           <h1 className="text-3xl lg:text-4xl font-bold text-[#080E2F] dark:text-white">
               Dispositivos SIRROS
             </h1>
 
-            <p className="text-gray-400 mt-2 text-base lg:text-lg">
+           <p className="text-gray-500 dark:text-gray-400 mt-2 text-base lg:text-lg">
               Selecione um dispositivo para acessar os cursos
             </p>
           </div>
@@ -154,18 +154,18 @@ export default function Device() {
                 onChange={(e) => setSearch(e.target.value)}
                 className="
                   w-full
-                  bg-[#091a2c]
-                  border
-                  border-white/10
-                  rounded-2xl
-                  py-4
-                  pl-12
-                  pr-4
-                  text-white
-                  placeholder:text-gray-500
-                  outline-none
-                  focus:border-blue-500
-                  transition-all
+                bg-[#091a2c]
+                border
+                border-white/10
+                rounded-2xl
+                py-4
+                pl-12
+                pr-4
+                text-white
+                placeholder:text-gray-500
+                outline-none
+                focus:border-blue-500
+                transition-all
                 "
               />
             </div>
