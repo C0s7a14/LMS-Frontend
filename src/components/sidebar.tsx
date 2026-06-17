@@ -11,6 +11,7 @@ import {
   X,
   Moon,
   Sun,
+  Users,
 } from "lucide-react";
 
 import {
@@ -85,6 +86,11 @@ export default function Sidebar() {
       name: "Criar Curso",
       icon: PlusCircle,
       path: "/create-courses",
+    },
+    {
+      name: "Usuários",
+      icon: Users,
+      path: "/users",
     },
     {
       name: "Configurações",

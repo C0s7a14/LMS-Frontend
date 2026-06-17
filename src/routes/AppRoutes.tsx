@@ -13,6 +13,7 @@ import Support from "../pages/client/Support";
 import CreateCourses from "../pages/admin/CreateCourse";
 import Settings from "../pages/auth/Settings";
 import Certicate from "../pages/student/Certificates";
+import Users from "../pages/admin/user";
 
 export default function AppRoutes() {
   return (
@@ -35,6 +36,7 @@ export default function AppRoutes() {
         <Route path="/create-courses" element={<CreateCourses/>}/>
         <Route path="/settings" element={<Settings/>}/>
         <Route path="/certificate" element={<Certicate/>}/>
+        <Route path="/users" element={<Users/>}/>
         </Route>
 
 
