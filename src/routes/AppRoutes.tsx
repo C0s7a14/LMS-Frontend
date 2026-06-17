@@ -8,7 +8,7 @@ import ForgotPassword from "../pages/auth/Forgotpassword";
 import ResetPassword from "../pages/auth/ResetPassword";
 import Home from "../pages/auth/Home";
 import Device from "../pages/auth/Devices";
-import Courses from "../pages/student/Courses";
+import MyCourses from "../pages/student/Courses";
 import Support from "../pages/client/Support";
 import CreateCourses from "../pages/admin/CreateCourse";
 import Settings from "../pages/auth/Settings";
@@ -30,7 +30,7 @@ export default function AppRoutes() {
         <Route element={<DashboardLayout/>}>
         <Route path="/home" element={<Home/>}/>
         <Route path="/devices" element={<Device/>}/>
-        <Route path="/courses" element={<Courses/>}/>
+        <Route path="/courses" element={<MyCourses/>}/>
         <Route path="/support" element={<Support/>}/>
         <Route path="/create-courses" element={<CreateCourses/>}/>
         <Route path="/settings" element={<Settings/>}/>
