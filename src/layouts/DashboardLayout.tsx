@@ -4,16 +4,12 @@ import Sidebar from "../components/sidebar";
 
 export default function DashboardLayout() {
   return (
-    <div className="flex min-h-screen bg-gray-100 dark:bg-[#081521]">
-
-      {/* Sidebar */}
+    <div className="flex min-h-screen bg-gray-100 dark:bg-[#081521] transition-colors">
       <Sidebar />
 
-      {/* Conteúdo das páginas */}
-      <main className="flex-1 p-6">
+      <main className="flex-1 min-w-0 p-6">
         <Outlet />
       </main>
-
     </div>
   );
 }

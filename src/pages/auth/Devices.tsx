@@ -7,17 +7,17 @@ import {
   ArrowRight,
   Cpu,
   Plus,
-  X,
 } from "lucide-react";
 
 import {
   useEffect,
   useState,
-  type FormEvent,
 } from "react";
 
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+
+import DeviceModal from "../../components/modals/DeviceModal";
 
 interface DeviceType {
   id: number;
@@ -29,30 +29,12 @@ interface DeviceType {
   criado_em?: string;
 }
 
-interface DeviceFormData {
-  nome: string;
-  modelo: string;
-  tipo: string;
-  descricao: string;
-  imagem_url: string;
-}
-
 export default function Device() {
   const [devices, setDevices] = useState<DeviceType[]>([]);
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [loading, setLoading] = useState(true);
-
   const [modalOpen, setModalOpen] = useState(false);
-  const [creating, setCreating] = useState(false);
-
-  const [formData, setFormData] = useState<DeviceFormData>({
-    nome: "",
-    modelo: "",
-    tipo: "",
-    descricao: "",
-    imagem_url: "",
-  });
 
   const navigate = useNavigate();
 
@@ -77,41 +59,6 @@ export default function Device() {
     getDevices();
   }, []);
 
-  async function handleCreateDevice(e: FormEvent) {
-    e.preventDefault();
-
-    if (!formData.nome.trim()) {
-      alert("O nome do dispositivo é obrigatório");
-      return;
-    }
-
-    try {
-      setCreating(true);
-
-      await axios.post(
-        "http://localhost:3333/devices",
-        formData
-      );
-
-      setModalOpen(false);
-
-      setFormData({
-        nome: "",
-        modelo: "",
-        tipo: "",
-        descricao: "",
-        imagem_url: "",
-      });
-
-      await getDevices();
-    } catch (error) {
-      console.log(error);
-      alert("Erro ao cadastrar dispositivo");
-    } finally {
-      setCreating(false);
-    }
-  }
-
   const filteredDevices = devices.filter((device) => {
     const searchLower = search.toLowerCase();
 
@@ -123,17 +70,17 @@ export default function Device() {
   });
 
   return (
-<main className="min-h-screen bg-gray-50 dark:bg-[#071827] px-6 py-8 lg:px-12 transition-colors">
+    <main className="min-h-screen bg-gray-50 dark:bg-[#071827] px-6 py-8 lg:px-12 transition-colors">
       <div className="max-w-[1500px] mx-auto">
 
         {/* Header */}
         <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between mb-10">
           <div>
-           <h1 className="text-3xl lg:text-4xl font-bold text-[#080E2F] dark:text-white">
+            <h1 className="text-3xl lg:text-4xl font-bold text-[#080E2F] dark:text-white">
               Dispositivos SIRROS
             </h1>
 
-           <p className="text-gray-500 dark:text-gray-400 mt-2 text-base lg:text-lg">
+            <p className="text-gray-500 dark:text-gray-400 mt-2 text-base lg:text-lg">
               Selecione um dispositivo para acessar os cursos
             </p>
           </div>
@@ -154,18 +101,22 @@ export default function Device() {
                 onChange={(e) => setSearch(e.target.value)}
                 className="
                   w-full
-                bg-[#091a2c]
-                border
-                border-white/10
-                rounded-2xl
-                py-4
-                pl-12
-                pr-4
-                text-white
-                placeholder:text-gray-500
-                outline-none
-                focus:border-blue-500
-                transition-all
+                  bg-white
+                  dark:bg-[#091a2c]
+                  border
+                  border-gray-200
+                  dark:border-white/10
+                  rounded-2xl
+                  py-4
+                  pl-12
+                  pr-4
+                  text-[#080E2F]
+                  dark:text-white
+                  placeholder:text-gray-400
+                  dark:placeholder:text-gray-500
+                  outline-none
+                  focus:border-blue-500
+                  transition-all
                 "
               />
             </div>
@@ -177,7 +128,6 @@ export default function Device() {
                 bg-blue-500
                 hover:bg-blue-600
                 text-white
-                w-30
                 h-16
                 px-5
                 py-4
@@ -187,7 +137,7 @@ export default function Device() {
                 flex
                 items-center
                 justify-center
-                gap-1
+                gap-2
               "
             >
               <Plus size={20} />
@@ -195,7 +145,7 @@ export default function Device() {
             </button>
 
             {/* View buttons */}
-            <div className="hidden sm:flex bg-[#091a2c] border border-white/10 rounded-2xl p-1">
+            <div className="hidden sm:flex bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-2xl p-1">
               <button
                 onClick={() => setViewMode("grid")}
                 className={`
@@ -208,8 +158,8 @@ export default function Device() {
                   transition-all
                   ${
                     viewMode === "grid"
-                      ? "bg-blue-500/20 text-blue-400"
-                      : "text-gray-400 hover:bg-white/5"
+                      ? "bg-blue-500/20 text-blue-500 dark:text-blue-400"
+                      : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5"
                   }
                 `}
               >
@@ -228,8 +178,8 @@ export default function Device() {
                   transition-all
                   ${
                     viewMode === "list"
-                      ? "bg-blue-500/20 text-blue-400"
-                      : "text-gray-400 hover:bg-white/5"
+                      ? "bg-blue-500/20 text-blue-500 dark:text-blue-400"
+                      : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5"
                   }
                 `}
               >
@@ -241,23 +191,23 @@ export default function Device() {
 
         {/* Loading */}
         {loading && (
-          <div className="bg-[#091a2c] border border-white/10 rounded-3xl p-10 text-center text-gray-400">
+          <div className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-10 text-center text-gray-500 dark:text-gray-400">
             Carregando dispositivos...
           </div>
         )}
 
         {/* Empty */}
         {!loading && filteredDevices.length === 0 && (
-          <div className="bg-[#091a2c] border border-white/10 rounded-3xl p-10 text-center">
+          <div className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-10 text-center">
             <div className="w-16 h-16 rounded-2xl bg-blue-500/20 flex items-center justify-center mx-auto mb-4">
-              <Cpu size={36} className="text-blue-400" />
+              <Cpu size={36} className="text-blue-500 dark:text-blue-400" />
             </div>
 
-            <h2 className="text-xl font-bold text-white">
+            <h2 className="text-xl font-bold text-[#080E2F] dark:text-white">
               Nenhum dispositivo encontrado
             </h2>
 
-            <p className="text-gray-400 mt-2">
+            <p className="text-gray-500 dark:text-gray-400 mt-2">
               Cadastre dispositivos para eles aparecerem aqui.
             </p>
           </div>
@@ -276,9 +226,11 @@ export default function Device() {
               <div
                 key={device.id}
                 className={`
-                  bg-[#091a2c]
+                  bg-white
+                  dark:bg-[#091a2c]
                   border
-                  border-white/10
+                  border-gray-200
+                  dark:border-white/10
                   rounded-3xl
                   hover:border-blue-500/40
                   hover:-translate-y-1
@@ -296,7 +248,8 @@ export default function Device() {
                   className={`
                     relative
                     p-6
-                    bg-[#0d2238]
+                    bg-gray-100
+                    dark:bg-[#0d2238]
                     ${
                       viewMode === "list"
                         ? "md:w-72 h-56 md:h-48"
@@ -304,7 +257,7 @@ export default function Device() {
                     }
                   `}
                 >
-                  <div className="absolute top-5 left-5 z-10 bg-blue-500/20 text-blue-400 px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-medium">
+                  <div className="absolute top-5 left-5 z-10 bg-blue-500/20 text-blue-500 dark:text-blue-400 px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-medium">
                     <Star size={16} fill="currentColor" />
                     {device.tipo || "Dispositivo"}
                   </div>
@@ -328,7 +281,7 @@ export default function Device() {
                       <div className="w-36 h-36 rounded-3xl bg-blue-500/20 flex items-center justify-center">
                         <Cpu
                           size={70}
-                          className="text-blue-400"
+                          className="text-blue-500 dark:text-blue-400"
                         />
                       </div>
                     )}
@@ -337,26 +290,26 @@ export default function Device() {
 
                 {/* Info */}
                 <div className="p-6 flex-1">
-                  <h2 className="text-2xl font-bold text-white mb-2">
+                  <h2 className="text-2xl font-bold text-[#080E2F] dark:text-white mb-2">
                     {device.nome}
                   </h2>
 
-                  <p className="text-gray-400 leading-relaxed min-h-[52px]">
+                  <p className="text-gray-500 dark:text-gray-400 leading-relaxed min-h-[52px]">
                     {device.descricao ||
                       "Dispositivo SIRROS para treinamentos e cursos da plataforma."}
                   </p>
 
                   {device.modelo && (
-                    <p className="text-sm text-blue-400 font-medium mt-3">
+                    <p className="text-sm text-blue-500 dark:text-blue-400 font-medium mt-3">
                       Modelo: {device.modelo}
                     </p>
                   )}
 
-                  <div className="border-t border-white/10 mt-5 pt-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3 text-blue-400">
+                  <div className="border-t border-gray-200 dark:border-white/10 mt-5 pt-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3 text-blue-500 dark:text-blue-400">
                       <BookOpen size={24} />
 
-                      <span className="text-gray-400 font-medium">
+                      <span className="text-gray-500 dark:text-gray-400 font-medium">
                         Ver cursos
                       </span>
                     </div>
@@ -370,7 +323,8 @@ export default function Device() {
                         h-12
                         rounded-xl
                         bg-blue-500/20
-                        text-blue-400
+                        text-blue-500
+                        dark:text-blue-400
                         flex
                         items-center
                         justify-center
@@ -388,173 +342,11 @@ export default function Device() {
           </div>
         )}
 
-        {/* Modal */}
-        {modalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-            <div className="w-full max-w-2xl bg-[#091a2c] rounded-3xl border border-white/10 p-6">
-
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-2xl font-bold text-white">
-                    Novo Dispositivo
-                  </h2>
-
-                  <p className="text-gray-400 mt-1">
-                    Cadastre um novo dispositivo SIRROS
-                  </p>
-                </div>
-
-                <button
-                  onClick={() => setModalOpen(false)}
-                  className="w-10 h-10 rounded-xl flex items-center justify-center text-gray-400 hover:bg-red-500/20 hover:text-red-400 transition-all"
-                >
-                  <X size={24} />
-                </button>
-              </div>
-
-              <form
-                onSubmit={handleCreateDevice}
-                className="grid grid-cols-1 md:grid-cols-2 gap-4"
-              >
-                <div className="flex flex-col gap-2">
-                  <label className="text-sm font-medium text-gray-300">
-                    Nome
-                  </label>
-
-                  <input
-                    type="text"
-                    value={formData.nome}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        nome: e.target.value,
-                      })
-                    }
-                    placeholder="Sensor de Temperatura"
-                    className="bg-[#0d2238] border border-white/10 text-white placeholder:text-gray-500 rounded-2xl px-4 py-3 outline-none focus:border-blue-500"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <label className="text-sm font-medium text-gray-300">
-                    Modelo
-                  </label>
-
-                  <input
-                    type="text"
-                    value={formData.modelo}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        modelo: e.target.value,
-                      })
-                    }
-                    placeholder="SIRROS-TEMP-01"
-                    className="bg-[#0d2238] border border-white/10 text-white placeholder:text-gray-500 rounded-2xl px-4 py-3 outline-none focus:border-blue-500"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <label className="text-sm font-medium text-gray-300">
-                    Tipo
-                  </label>
-
-                  <input
-                    type="text"
-                    value={formData.tipo}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        tipo: e.target.value,
-                      })
-                    }
-                    placeholder="sensor, contador, rastreador..."
-                    className="bg-[#0d2238] border border-white/10 text-white placeholder:text-gray-500 rounded-2xl px-4 py-3 outline-none focus:border-blue-500"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <label className="text-sm font-medium text-gray-300">
-                    URL da Imagem
-                  </label>
-
-                  <input
-                    type="text"
-                    value={formData.imagem_url}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        imagem_url: e.target.value,
-                      })
-                    }
-                    placeholder="https://imagem.com/sensor.png"
-                    className="bg-[#0d2238] border border-white/10 text-white placeholder:text-gray-500 rounded-2xl px-4 py-3 outline-none focus:border-blue-500"
-                  />
-                </div>
-
-                <div className="md:col-span-2 flex flex-col gap-2">
-                  <label className="text-sm font-medium text-gray-300">
-                    Descrição
-                  </label>
-
-                  <textarea
-                    value={formData.descricao}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        descricao: e.target.value,
-                      })
-                    }
-                    placeholder="Descrição do dispositivo..."
-                    rows={4}
-                    className="bg-[#0d2238] border border-white/10 text-white placeholder:text-gray-500 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 resize-none"
-                  />
-                </div>
-
-                <div className="md:col-span-2 flex justify-end gap-3 mt-4">
-                  <button
-                    type="button"
-                    onClick={() => setModalOpen(false)}
-                    className="
-                      px-5
-                      py-3
-                      rounded-2xl
-                      border
-                      border-white/10
-                      text-gray-300
-                      font-medium
-                      hover:bg-white/5
-                      transition-all
-                    "
-                  >
-                    Cancelar
-                  </button>
-
-                  <button
-                    type="submit"
-                    disabled={creating}
-                    className="
-                      px-6
-                      py-3
-                      rounded-2xl
-                      bg-blue-500
-                      text-white
-                      font-semibold
-                      hover:bg-blue-600
-                      transition-all
-                      disabled:opacity-60
-                      disabled:cursor-not-allowed
-                    "
-                  >
-                    {creating
-                      ? "Cadastrando..."
-                      : "Cadastrar Dispositivo"}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
+        <DeviceModal
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          onSuccess={getDevices}
+        />
 
       </div>
     </main>

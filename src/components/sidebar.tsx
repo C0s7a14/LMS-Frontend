@@ -124,28 +124,34 @@ export default function Sidebar() {
       )}
 
       {/* Desktop */}
-      <aside
-        className="
-          hidden
-          lg:flex
-          w-72
-          min-h-screen
-          bg-white
-          dark:bg-[#11293D]
-          border-r
-          border-gray-200
-          dark:border-white/10
-          flex-col
-          justify-between
-          p-5
-          transition-colors
-        "
-      >
-        <SidebarContent
-          menuItems={menuItems}
-          handleLogout={handleLogout}
-        />
-      </aside>
+  <aside
+  className="
+    hidden
+    lg:flex
+    sticky
+    top-0
+    self-start
+    shrink-0
+    w-72
+    h-screen
+    bg-white
+    dark:bg-[#11293D]
+    border-r
+    border-gray-200
+    dark:border-white/10
+    flex-col
+    justify-between
+    p-5
+    transition-colors
+    overflow-y-auto
+    scrollbar-hide
+  "
+>
+  <SidebarContent
+    menuItems={menuItems}
+    handleLogout={handleLogout}
+  />
+</aside>
 
       {/* Mobile */}
       <AnimatePresence>
