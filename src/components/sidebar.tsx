@@ -14,6 +14,8 @@ import {
   Users,
 } from "lucide-react";
 
+import type { LucideIcon } from "lucide-react";
+
 import {
   NavLink,
   useNavigate,
@@ -29,10 +31,60 @@ import logo from "../assets/logo-preto.png";
 
 import { useTheme } from "../contexts/ThemeContext";
 
+type UserRole = "student" | "client" | "admin";
+
+interface MenuItem {
+  name: string;
+  icon: LucideIcon;
+  path: string;
+  allowedRoles: UserRole[];
+}
+
+interface UserData {
+  id?: number;
+  name?: string;
+  email?: string;
+  role?: string;
+}
+
+function getUserFromStorage(): UserData {
+  return JSON.parse(
+    localStorage.getItem("user") || "{}"
+  );
+}
+
+function normalizeRole(role?: string): UserRole {
+  if (role === "admin") {
+    return "admin";
+  }
+
+  if (role === "client" || role === "cliente") {
+    return "client";
+  }
+
+  return "student";
+}
+
+function getRoleLabel(role: UserRole) {
+  if (role === "admin") {
+    return "Administrador";
+  }
+
+  if (role === "client") {
+    return "Cliente";
+  }
+
+  return "Aluno";
+}
+
 export default function Sidebar() {
   const [open, setOpen] = useState(false);
 
   const navigate = useNavigate();
+
+  const user = getUserFromStorage();
+
+  const role = normalizeRole(user?.role);
 
   async function handleLogout() {
     try {
@@ -56,52 +108,63 @@ export default function Sidebar() {
     }
   }
 
-  const menuItems = [
+  const menuItems: MenuItem[] = [
     {
       name: "Home",
       icon: Home,
       path: "/home",
+      allowedRoles: ["student", "admin"],
     },
     {
       name: "Dispositivos",
       icon: Cpu,
       path: "/devices",
+      allowedRoles: ["student", "admin"],
     },
     {
       name: "Meus Cursos",
       icon: BookOpen,
       path: "/courses",
+      allowedRoles: ["student", "admin"],
     },
     {
       name: "Suporte IA",
       icon: MessageSquare,
       path: "/support",
+      allowedRoles: ["client", "admin"],
     },
     {
       name: "Certificados",
       icon: Award,
       path: "/certificate",
+      allowedRoles: ["student", "admin"],
     },
     {
       name: "Criar Curso",
       icon: PlusCircle,
       path: "/create-courses",
+      allowedRoles: ["admin"],
     },
     {
       name: "Usuários",
       icon: Users,
       path: "/users",
+      allowedRoles: ["admin"],
     },
     {
       name: "Configurações",
       icon: Settings,
       path: "/settings",
+      allowedRoles: ["student", "client", "admin"],
     },
   ];
 
+  const visibleMenuItems = menuItems.filter((item) =>
+    item.allowedRoles.includes(role)
+  );
+
   return (
     <>
-      {/* Botão Mobile */}
       {!open && (
         <button
           onClick={() => setOpen(true)}
@@ -130,34 +193,36 @@ export default function Sidebar() {
       )}
 
       {/* Desktop */}
-  <aside
-  className="
-    hidden
-    lg:flex
-    sticky
-    top-0
-    self-start
-    shrink-0
-    w-72
-    h-screen
-    bg-white
-    dark:bg-[#11293D]
-    border-r
-    border-gray-200
-    dark:border-white/10
-    flex-col
-    justify-between
-    p-5
-    transition-colors
-    overflow-y-auto
-    scrollbar-hide
-  "
->
-  <SidebarContent
-    menuItems={menuItems}
-    handleLogout={handleLogout}
-  />
-</aside>
+      <aside
+        className="
+          hidden
+          lg:flex
+          sticky
+          top-0
+          self-start
+          shrink-0
+          w-72
+          h-screen
+          bg-white
+          dark:bg-[#11293D]
+          border-r
+          border-gray-200
+          dark:border-white/10
+          flex-col
+          justify-between
+          p-5
+          transition-colors
+          overflow-y-auto
+          scrollbar-hide
+        "
+      >
+        <SidebarContent
+          menuItems={visibleMenuItems}
+          handleLogout={handleLogout}
+          user={user}
+          role={role}
+        />
+      </aside>
 
       {/* Mobile */}
       <AnimatePresence>
@@ -214,6 +279,8 @@ export default function Sidebar() {
                 justify-between
                 lg:hidden
                 transition-colors
+                overflow-y-auto
+                scrollbar-hide
               "
             >
               <button
@@ -230,8 +297,10 @@ export default function Sidebar() {
               </button>
 
               <SidebarContent
-                menuItems={menuItems}
+                menuItems={visibleMenuItems}
                 handleLogout={handleLogout}
+                user={user}
+                role={role}
               />
             </motion.aside>
           </>
@@ -241,43 +310,46 @@ export default function Sidebar() {
   );
 }
 
+interface SidebarContentProps {
+  menuItems: MenuItem[];
+  handleLogout: () => void;
+  user: UserData;
+  role: UserRole;
+}
+
 function SidebarContent({
   menuItems,
   handleLogout,
-}: any) {
+  user,
+  role,
+}: SidebarContentProps) {
   const { theme, toggleTheme } = useTheme();
 
   const isDark = theme === "dark";
-
-  const user =
-    JSON.parse(
-      localStorage.getItem("user") || "{}"
-    );
 
   return (
     <>
       {/* Top */}
       <div>
         {/* Logo */}
-    
-          
-      
         <div className="mb-5">
-
           <div className="flex">
-          <img
-            src={logo}
-            alt="Sirros logo"
-            className="
-              w-20
-              ml-8
-              object-contain
-              drop-shadow-[0_0_20px_rgba(59,130,246,0.35)]
-            "
-          />
+            <img
+              src={logo}
+              alt="Sirros logo"
+              className="
+                w-20
+                ml-8
+                object-contain
+                drop-shadow-[0_0_20px_rgba(59,130,246,0.35)]
+              "
+            />
 
-          <h1 className="font-bold pt-6 text-2xl dark:text-white ">SIRROS</h1>
+            <h1 className="font-bold pt-6 text-2xl text-[#080E2F] dark:text-white">
+              SIRROS
+            </h1>
           </div>
+
           <p
             className="
               text-gray-500
@@ -295,7 +367,7 @@ function SidebarContent({
 
         {/* Menu */}
         <nav className="space-y-3">
-          {menuItems.map((item: any, index: number) => {
+          {menuItems.map((item, index) => {
             const Icon = item.icon;
 
             return (
@@ -411,7 +483,7 @@ function SidebarContent({
                 text-sm
               "
             >
-              {user?.role || "Student"}
+              {getRoleLabel(role)}
             </p>
           </div>
         </div>
