@@ -8,18 +8,40 @@ import {
   TrendingUp,
 } from "lucide-react";
 
+
+interface UserData {
+  id?: string;
+  name?: string;
+  email?: string;
+  role?: "aluno" | "adm" | "cliente";
+}
+
+function getUserFromStorage(): UserData {
+  return JSON.parse(
+    localStorage.getItem("user") || "{}"
+  );
+}
+
+
 export default function Home() {
+
+const user = getUserFromStorage();
+
   return (
     <div className="space-y-6">
 
       {/* Header */}
-      <div className="flex flex-col text-center gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
+        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2 text-center md:text-left mt-15 md:mt-0">
           <h1 className="text-2xl md:text-4xl font-bold text-black dark:text-white">
-            Olá, Lucas!
+            bem vindo{" "}
+            <span className="text-blue-500 font-bold">
+              {user?.name || "usuario"}
+            </span>{" "}
+            a Sirros academy
           </h1>
 
-          <p className="ml-3 text-gray-500 dark:text-gray-300 mt-5 text-sm md:text-base">
+          <p className="text-gray-500 dark:text-gray-300 text-sm md:text-base">
             Continue aprendendo e alcance seus objetivos.
           </p>
         </div>
@@ -29,7 +51,7 @@ export default function Home() {
       <div
         className="
           grid
-          grid-cols-1
+          grid-cols-2
           sm:grid-cols-2
           xl:grid-cols-4
           gap-5
@@ -100,7 +122,7 @@ export default function Home() {
               Cursos em Andamento
             </h2>
 
-            <button className="text-blue-500 dark:text-blue-400 text-sm">
+            <button className="text-blue-500 dark:text-blue-400 text-sm font-bold cursor-pointer hover:text-blue-300">
               Ver todos
             </button>
           </div>
@@ -141,6 +163,7 @@ export default function Home() {
             p-4
             md:p-5
             shadow-2xl
+            
           "
         >
           <h2 className="text-black dark:text-white text-lg md:text-xl font-semibold mb-5">
@@ -148,7 +171,7 @@ export default function Home() {
           </h2>
 
           <div className="space-y-4">
-            <div className="bg-white dark:bg-[#0d2238] rounded-2xl p-4 border border-gray-200 dark:border-white/5">
+            <div className="bg-white dark:bg-[#0d2238] rounded-2xl p-4 border border-gray-200 dark:border-white/5 shadow-2xl cursor-pointer transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-xl active:scale-95 active:shadow-sm">
               <h3 className="text-black dark:text-white font-medium">
                 Configuração de Rede
               </h3>
@@ -162,9 +185,23 @@ export default function Home() {
               </span>
             </div>
 
-            <div className="bg-white dark:bg-[#0d2238] rounded-2xl p-4 border border-gray-200 dark:border-white/5">
+            <div className="bg-white dark:bg-[#0d2238] rounded-2xl p-4 border border-gray-200 dark:border-white/5 shadow-2xl cursor-pointer transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-xl active:scale-95 active:shadow-sm">
               <h3 className="text-black dark:text-white font-medium">
                 Calibração Inicial
+              </h3>
+
+              <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
+                Sensor Temperatura
+              </p>
+
+              <span className="text-blue-500 dark:text-blue-400 text-sm mt-3 block">
+                35min
+              </span>
+            </div>
+
+             <div className="bg-white dark:bg-[#0d2238] rounded-2xl p-4 border border-gray-200 dark:border-white/5 shadow-2xl cursor-pointer transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-xl active:scale-95 active:shadow-sm">
+              <h3 className="text-black dark:text-white font-medium">
+                Instalação 
               </h3>
 
               <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">

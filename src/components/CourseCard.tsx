@@ -12,7 +12,10 @@ export default function CourseCard({
   progressColor = "bg-blue-700 dark:bg-blue-500",
 }: Props) {
   return (
-    <div className="bg-white dark:bg-[#0d2238] border border-gray-200 dark:border-white/5 rounded-2xl p-5 shadow-2xl">
+    <div className="bg-white dark:bg-[#0d2238] border border-gray-200 dark:border-white/5 rounded-2xl
+     p-5 shadow-2xl transition-all duration-300 ease-in-out
+      hover:scale-105 hover:shadow-xl 
+      active:scale-95 active:shadow-sm cursor-pointer">
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-[#080E2F] dark:text-white font-semibold">

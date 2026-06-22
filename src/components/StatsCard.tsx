@@ -18,7 +18,16 @@ export default function StatsCard({
   iconBg = "bg-blue-500/20",
 }: Props) {
   return (
-    <div className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-5 shadow-2xl">
+    <div className=" bg-white dark:bg-[#091a2c]
+        border border-gray-200 dark:border-white/10
+        rounded-3xl
+        p-5
+        shadow-2xl
+        dark:shadow-blue-500 dark:shadow-md
+        cursor-pointer
+        transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-xl active:scale-95 active:shadow-sm
+
+        flex flex-col items-center text-center">
       <div
         className={`
           w-14
@@ -29,12 +38,14 @@ export default function StatsCard({
           items-center
           justify-center
           
+      
+          
         `}
       >
         <Icon className={iconColor} size={26} />
       </div>
 
-      <p className="text-gray-500 dark:text-gray-400 text-sm">
+      <p className="text-gray-500 dark:text-gray-400 text-sm pt-2">
         {title}
       </p>
 
@@ -42,7 +53,7 @@ export default function StatsCard({
         {value}
       </h2>
 
-      <span className="text-gray-500 text-sm">
+      <span className="text-gray-500 text-sm ">
         {subtitle}
       </span>
     </div>

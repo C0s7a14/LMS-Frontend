@@ -12,6 +12,10 @@ import {
   Moon,
   Sun,
   Users,
+  BotMessageSquare,
+  Brain,
+  BarChart3,
+
 } from "lucide-react";
 
 import type { LucideIcon } from "lucide-react";
@@ -109,6 +113,13 @@ export default function Sidebar() {
   }
 
   const menuItems: MenuItem[] = [
+      {
+      name: "Dashboard",
+      icon: Brain,
+      path: "/Dashboard",
+      allowedRoles: ["admin"],
+    },
+    
     {
       name: "Home",
       icon: Home,
@@ -129,7 +140,7 @@ export default function Sidebar() {
     },
     {
       name: "Suporte IA",
-      icon: MessageSquare,
+      icon: BotMessageSquare,
       path: "/support",
       allowedRoles: ["client", "admin"],
     },
@@ -157,6 +168,9 @@ export default function Sidebar() {
       path: "/settings",
       allowedRoles: ["student", "client", "admin"],
     },
+
+   
+
   ];
 
   const visibleMenuItems = menuItems.filter((item) =>
