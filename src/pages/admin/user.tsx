@@ -14,6 +14,7 @@ import {
 } from "react";
 
 import axios from "axios";
+import toast from "react-hot-toast";
 
 import UserModal from "../../components/modals/UserModal";
 
@@ -42,7 +43,7 @@ export default function Users() {
       setUsers(response.data);
     } catch (error) {
       console.log(error);
-      alert("Erro ao buscar usuários");
+      toast.error("Erro ao buscar usuários");
     } finally {
       setLoading(false);
     }
@@ -58,7 +59,7 @@ export default function Users() {
     );
 
     if (loggedUser?.id === userId) {
-      alert("Você não pode deletar o próprio usuário logado.");
+      toast.error("Você não pode deletar o próprio usuário logado.");
       return;
     }
 
@@ -77,11 +78,11 @@ export default function Users() {
 
       await getUsers();
 
-      alert("Usuário deletado com sucesso");
+      toast.success("Usuário deletado com sucesso");
     } catch (error: any) {
       console.log(error);
 
-      alert(
+      toast.error(
         error.response?.data?.error ||
           error.response?.data?.message ||
           "Erro ao deletar usuário"

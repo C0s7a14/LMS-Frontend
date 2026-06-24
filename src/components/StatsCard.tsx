@@ -26,8 +26,8 @@ export default function StatsCard({
         dark:shadow-blue-500 dark:shadow-md
         cursor-pointer
         transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-xl active:scale-95 active:shadow-sm
-
-        flex flex-col items-center text-center">
+        flex flex-col items-center text-center
+        ">
       <div
         className={`
           w-14

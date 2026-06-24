@@ -16,6 +16,7 @@ import {
 
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import toast from "react-hot-toast";
 
 import DeviceModal from "../../components/modals/DeviceModal";
 
@@ -49,7 +50,7 @@ export default function Device() {
       setDevices(response.data);
     } catch (error) {
       console.log(error);
-      alert("Erro ao buscar dispositivos");
+      toast.error("Erro ao buscar dispositivos");
     } finally {
       setLoading(false);
     }

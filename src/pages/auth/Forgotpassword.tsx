@@ -9,6 +9,7 @@ import {
 } from "react";
 
 import axios from "axios";
+import toast from "react-hot-toast";
 
 export default function ForgotPassword() {
 
@@ -35,13 +36,14 @@ export default function ForgotPassword() {
         }
       );
 
-      alert(
+      toast.success(
         "Email de recuperação enviado!"
       );
 
     } catch (error: any) {
 
-      alert(
+      toast.error(
+        error.response?.data?.error ||
         error.response?.data?.message
         || "Erro ao enviar email"
       );

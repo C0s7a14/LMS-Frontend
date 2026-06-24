@@ -540,10 +540,12 @@ function StatCard({
         justify-center
         text-center
         shadow-2xl
-        dark:shadow-none
+        dark:shadow-blue-500
+        dark:shadow-sm
         transition-all
         hover:-translate-y-1
         hover:shadow-[0_22px_50px_rgba(15,23,42,0.14)]
+        cursor-pointer
       "
     >
       <div
@@ -1505,7 +1507,8 @@ function ActionButton({
       className="
         border
         border-gray-200
-        dark:border-white/10
+        dark:border-blue-500
+        dark:shadow-none
         rounded-2xl
         p-4
         flex
@@ -1517,7 +1520,6 @@ function ActionButton({
         gap-4
         cursor-pointer
         shadow-xl
-        dark:shadow-none
         hover:shadow-[0_18px_40px_rgba(15,23,42,0.12)]
         hover:-translate-y-1
         transition-all
@@ -1566,7 +1568,7 @@ function QuickSummary({
         dark:bg-[#091a2c]
         border
         border-gray-200
-        dark:border-white/10
+        dark:border-blue-500
         rounded-2xl
         p-5
         min-h-24
@@ -1579,6 +1581,7 @@ function QuickSummary({
         hover:shadow-[0_18px_40px_rgba(15,23,42,0.12)]
         hover:-translate-y-1
         transition-all
+        
       "
     >
       <div className="flex items-center gap-3 min-w-0">

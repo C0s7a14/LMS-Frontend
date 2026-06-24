@@ -14,6 +14,7 @@ import {
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import toast from "react-hot-toast";
 
 interface CourseType {
   id: number;
@@ -50,7 +51,7 @@ export default function MyCourses() {
       setCourses(response.data);
     } catch (error) {
       console.log(error);
-      alert("Erro ao buscar cursos");
+      toast.error("Erro ao buscar cursos");
     } finally {
       setLoading(false);
     }

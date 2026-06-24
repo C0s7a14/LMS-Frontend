@@ -17,6 +17,7 @@ import {
 } from "react";
 
 import axios from "axios";
+import toast from "react-hot-toast";
 
 interface DeviceType {
   id: number;
@@ -62,7 +63,7 @@ export default function CreateCourse() {
       setDevices(response.data);
     } catch (error) {
       console.log(error);
-      alert("Erro ao buscar dispositivos");
+      toast.error("Erro ao buscar dispositivos");
     }
   }
 
@@ -92,7 +93,7 @@ export default function CreateCourse() {
 
   function handleRemoveModule(index: number) {
     if (modules.length === 1) {
-      alert("O curso precisa ter pelo menos um módulo");
+      toast.error("O curso precisa ter pelo menos um módulo");
       return;
     }
 
@@ -131,7 +132,7 @@ export default function CreateCourse() {
     e.preventDefault();
 
     if (!titulo.trim()) {
-      alert("O título do curso é obrigatório");
+      toast.error("O título do curso é obrigatório");
       return;
     }
 
@@ -143,7 +144,7 @@ export default function CreateCourse() {
       );
 
       if (!user?.id) {
-        alert("Usuário logado não encontrado");
+        toast.error("Usuário logado não encontrado");
         return;
       }
 
@@ -172,7 +173,7 @@ export default function CreateCourse() {
         );
       }
 
-      alert("Curso criado com sucesso!");
+      toast.success("Curso criado com sucesso!");
 
       setTitulo("");
       setCategoria("");
@@ -190,7 +191,7 @@ export default function CreateCourse() {
     } catch (error: any) {
       console.log(error);
 
-      alert(
+      toast.error(
         error.response?.data?.error ||
           error.response?.data?.message ||
           "Erro ao criar curso"

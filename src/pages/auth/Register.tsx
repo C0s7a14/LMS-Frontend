@@ -6,6 +6,8 @@ import { useState } from "react";
 
 import axios from "axios";
 
+import toast from "react-hot-toast";
+
 export default function Registro() {
 
   const navigate = useNavigate();
@@ -30,7 +32,7 @@ export default function Registro() {
 
     if (senha !== confirmarSenha) {
 
-      alert("As senhas não coincidem");
+      toast.error("As senhas não coincidem");
 
       return;
     }
@@ -49,14 +51,15 @@ export default function Registro() {
         }
       );
 
-      alert("Conta criada com sucesso!");
+      toast.success("Conta criada com sucesso!");
 
       navigate("/");
 
     } catch (error: any) {
 
-      alert(
+      toast.error(
         error.response?.data?.error ||
+        error.response?.data.message ||
         "Erro ao criar conta"
       );
 

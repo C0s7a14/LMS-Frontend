@@ -3,6 +3,7 @@ import logo from "../../assets/logo.png";
 import axios from "axios";
 
 import { useState } from "react";
+import toast from "react-hot-toast";
 
 import {
   useNavigate,
@@ -45,7 +46,7 @@ export default function ResetPassword() {
       newPassword !== confirmPassword
     ) {
 
-      alert(
+      toast.error(
         "As senhas não coincidem"
       );
 
@@ -64,7 +65,7 @@ export default function ResetPassword() {
         }
       );
 
-      alert(
+      toast.success(
         "Senha redefinida com sucesso!"
       );
 
@@ -72,7 +73,8 @@ export default function ResetPassword() {
 
     } catch (error: any) {
 
-      alert(
+      toast.error(
+        error.response?.data?.error ||
         error.response?.data?.message
         || "Erro ao redefinir senha"
       );

@@ -115,9 +115,11 @@ const user = getUserFromStorage();
             rounded-3xl
             p-4
             md:p-5
+            dark:shadow-sm
+            dark:shadow-blue-500
           "
         >
-          <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center justify-between mb-5  ">
             <h2 className="text-black dark:text-white text-lg md:text-xl font-semibold">
               Cursos em Andamento
             </h2>
@@ -127,7 +129,7 @@ const user = getUserFromStorage();
             </button>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-4 ">
             <CourseCard
               title="Instalação Gateway IoT"
               progress={65}
@@ -163,6 +165,8 @@ const user = getUserFromStorage();
             p-4
             md:p-5
             shadow-2xl
+            dark:shadow-sm
+            dark:shadow-blue-500
             
           "
         >
@@ -171,7 +175,8 @@ const user = getUserFromStorage();
           </h2>
 
           <div className="space-y-4">
-            <div className="bg-white dark:bg-[#0d2238] rounded-2xl p-4 border border-gray-200 dark:border-white/5 shadow-2xl cursor-pointer transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-xl active:scale-95 active:shadow-sm">
+            <div className="bg-white dark:bg-[#0d2238] rounded-2xl p-4 border border-gray-200 dark:border-white/5 shadow-2xl cursor-pointer transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-xl active:scale-95 active:shadow-sm dark:shadow-xs
+            dark:shadow-blue-500 dark:hover:shadow-sm">
               <h3 className="text-black dark:text-white font-medium">
                 Configuração de Rede
               </h3>
@@ -185,7 +190,8 @@ const user = getUserFromStorage();
               </span>
             </div>
 
-            <div className="bg-white dark:bg-[#0d2238] rounded-2xl p-4 border border-gray-200 dark:border-white/5 shadow-2xl cursor-pointer transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-xl active:scale-95 active:shadow-sm">
+            <div className="bg-white dark:bg-[#0d2238] rounded-2xl p-4 border border-gray-200 dark:border-white/5 shadow-2xl cursor-pointer transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-xl active:scale-95 active:shadow-sm dark:shadow-xs
+            dark:shadow-blue-500 dark:hover:shadow-sm">
               <h3 className="text-black dark:text-white font-medium">
                 Calibração Inicial
               </h3>
@@ -199,7 +205,8 @@ const user = getUserFromStorage();
               </span>
             </div>
 
-             <div className="bg-white dark:bg-[#0d2238] rounded-2xl p-4 border border-gray-200 dark:border-white/5 shadow-2xl cursor-pointer transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-xl active:scale-95 active:shadow-sm">
+             <div className="bg-white dark:bg-[#0d2238] rounded-2xl p-4 border border-gray-200 dark:border-white/5 shadow-2xl cursor-pointer transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-xl active:scale-95 active:shadow-sm dark:shadow-xs
+            dark:shadow-blue-500 dark:hover:shadow-sm">
               <h3 className="text-black dark:text-white font-medium">
                 Instalação 
               </h3>

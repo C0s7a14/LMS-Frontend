@@ -1,10 +1,8 @@
 import logo from "../../assets/logo.png";
-
 import { Link, useNavigate } from "react-router-dom";
-
 import { useState } from "react";
-
 import axios from "axios";
+import toast from "react-hot-toast";
 
 export default function Login() {
 
@@ -19,57 +17,58 @@ export default function Login() {
   const [loading, setLoading] =
     useState(false);
 
-  async function handleLogin(
-    e: React.FormEvent
-  ) {
+  async function handleLogin(e: React.FormEvent) {
+  e.preventDefault();
 
-    e.preventDefault();
+  try {
+    setLoading(true);
 
-    try {
+    const response = await axios.post(
+      "http://localhost:3333/auth/login",
+      {
+        email,
+        senha,
+      }
+    );
 
-      setLoading(true);
+    const data = response.data;
 
-      const response = await axios.post(
-        "http://localhost:3333/auth/login",
-        {
-          email,
-          senha,
-        }
-      );
+    localStorage.setItem(
+      "token",
+      data.accessToken
+    );
 
-      const data = response.data;
+    localStorage.setItem(
+      "refreshToken",
+      data.refreshToken
+    );
 
-      localStorage.setItem(
-        "token",
-        data.accessToken
-      );
+    localStorage.setItem(
+      "user",
+      JSON.stringify(data.user)
+    );
 
-      localStorage.setItem(
-        "refreshToken",
-        data.refreshToken
-      );
+    toast.success("Login feito com sucesso!");
 
-      localStorage.setItem(
-        "user",
-        JSON.stringify(data.user)
-      );
+    navigate("/home");
+  } catch (error) {
+    console.log(error);
 
-      alert("Login realizado com sucesso!");
-
-      navigate("/home");
-
-    } catch (error: any) {
-
-      alert(
+    if (axios.isAxiosError(error)) {
+      toast.error(
         error.response?.data?.error ||
-        "Erro ao fazer login"
+          error.response?.data?.message ||
+          "Erro ao fazer login"
       );
 
-    } finally {
-
-      setLoading(false);
+      return;
     }
+
+    toast.error("Erro inesperado ao fazer login");
+  } finally {
+    setLoading(false);
   }
+}
 
   return (
     <div className="min-h-screen bg-[#2E3B7B] flex items-center justify-center p-6">
