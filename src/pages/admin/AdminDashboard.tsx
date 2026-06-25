@@ -21,6 +21,16 @@ import {
   Activity,
 } from "lucide-react";
 
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+} from "recharts";
+
 import type {
   LucideIcon,
 } from "lucide-react";
@@ -49,6 +59,14 @@ type AdminTab =
   | "courses"
   | "certificates"
   | "reports";
+
+  type MetricKey =
+  | "users"
+  | "courses"
+  | "devices"
+  | "certificates"
+  | "completion"
+  | "satisfaction";
 
 interface UserType {
   id: number;
@@ -150,27 +168,63 @@ export default function AdminDashboard() {
 
   const navigate = useNavigate();
 
-  async function loadDashboardData() {
-    try {
-      setLoading(true);
+  
+async function loadDashboardData() {
+  try {
+    setLoading(true);
 
-      const [usersResponse, coursesResponse, devicesResponse] =
-        await Promise.all([
-          axios.get<UserType[]>("http://localhost:3333/users"),
-          axios.get<CourseType[]>("http://localhost:3333/courses"),
-          axios.get<DeviceType[]>("http://localhost:3333/devices"),
-        ]);
+    const token = localStorage.getItem("token");
 
-      setUsers(usersResponse.data);
-      setCourses(coursesResponse.data);
-      setDevices(devicesResponse.data);
-    } catch (error) {
-      console.log(error);
-      toast.error("Erro ao carregar dados da dashboard");
-    } finally {
-      setLoading(false);
+    if (!token) {
+      toast.error("Sessão expirada. Faça login novamente.");
+      navigate("/");
+      return;
     }
+
+    const config = {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    };
+
+    const [usersResponse, coursesResponse, devicesResponse] =
+      await Promise.all([
+        axios.get<UserType[]>(
+          "http://localhost:3333/users",
+          config
+        ),
+        axios.get<CourseType[]>(
+          "http://localhost:3333/courses",
+          config
+        ),
+        axios.get<DeviceType[]>(
+          "http://localhost:3333/devices",
+          config
+        ),
+      ]);
+
+    setUsers(usersResponse.data);
+    setCourses(coursesResponse.data);
+    setDevices(devicesResponse.data);
+  } catch (error) {
+    console.log(error);
+
+    if (axios.isAxiosError(error)) {
+      toast.error(
+        error.response?.data?.error ||
+          error.response?.data?.message ||
+          "Erro ao carregar dados da dashboard"
+      );
+
+      return;
+    }
+
+    toast.error("Erro inesperado ao carregar dados");
+  } finally {
+    setLoading(false);
   }
+}
+
 
   useEffect(() => {
     loadDashboardData();
@@ -513,6 +567,8 @@ interface StatCardProps {
   subtitle: string;
   icon: LucideIcon;
   color: string;
+  onClick?: () => void;
+  active?: boolean;
 }
 
 function StatCard({
@@ -521,18 +577,20 @@ function StatCard({
   subtitle,
   icon: Icon,
   color,
+  onClick,
+  active = false,
 }: StatCardProps) {
   return (
-    <div
-      className="
+    <button
+      type="button"
+      onClick={onClick}
+      className={`
         bg-white
         dark:bg-[#091a2c]
         border
-        border-gray-200
-        dark:border-white/10
         rounded-4xl
-        p-6
-        sm:p-1
+        p-5
+        sm:p-5
         min-h-55
         flex
         flex-col
@@ -540,18 +598,24 @@ function StatCard({
         justify-center
         text-center
         shadow-2xl
-        dark:shadow-blue-500
         dark:shadow-sm
+        dark:shadow-blue-500
+        cursor-pointer
         transition-all
         hover:-translate-y-1
         hover:shadow-[0_22px_50px_rgba(15,23,42,0.14)]
-        cursor-pointer
-      "
+        ${
+          active
+            ? "border-blue-500 ring-2 ring-blue-500/20"
+            : "border-gray-200 dark:border-white/10"
+        }
+        ${onClick ? "cursor-pointer" : "cursor-default"}
+      `}
     >
       <div
         className={`
-          w-15
-          h-15
+          w-7
+          h-5
           rounded-3xl
           flex
           items-center
@@ -564,20 +628,108 @@ function StatCard({
         <Icon size={38} />
       </div>
 
-      <p className="text-gray-500 dark:text-gray-400 text-base md:text-sm font-medium">
+      <p className="text-gray-500 dark:text-gray-400 text-base font-medium">
         {title}
       </p>
 
-      <h2 className="text-4xl sm:text-3xl font-bold text-[#080E2F] dark:text-white mt-3 leading-none">
+      <h2 className="text-2xl sm:text-3xl font-bold text-[#080E2F] dark:text-white mt-3 leading-none">
         {value}
       </h2>
 
-      <p className="text-gray-500 dark:text-gray-400 text-base md:text-sm mt-2">
+      <p className="text-gray-500 dark:text-gray-400 text-base mt-2">
         {subtitle}
       </p>
+    </button>
+  );
+}
+
+function MetricChart({
+  title,
+  subtitle,
+  data,
+  suffix = "",
+}: {
+  title: string;
+  subtitle: string;
+  data: {
+    label: string;
+    value: number;
+  }[];
+  suffix?: string;
+}) {
+  return (
+    <div className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-5 sm:p-7 shadow-[0_18px_40px_rgba(15,23,42,0.10)] dark:shadow-none">
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-[#080E2F] dark:text-white">
+          {title}
+        </h2>
+
+        <p className="text-gray-500 dark:text-gray-400 mt-1">
+          {subtitle}
+        </p>
+      </div>
+
+      <div className="w-full h-[320px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data}>
+            <defs>
+              <linearGradient id="metricGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#2563eb" stopOpacity={0.35} />
+                <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+
+            <XAxis
+              dataKey="label"
+              tickLine={false}
+              axisLine={false}
+              tick={{
+                fill: "#64748b",
+                fontSize: 13,
+              }}
+            />
+
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              tick={{
+                fill: "#64748b",
+                fontSize: 13,
+              }}
+            />
+
+            <Tooltip
+              formatter={(value) => [`${value}${suffix}`, title]}
+              contentStyle={{
+                borderRadius: "16px",
+                border: "1px solid #e5e7eb",
+              }}
+            />
+
+            <Area
+              type="monotone"
+              dataKey="value"
+              stroke="#2563eb"
+              strokeWidth={3}
+              fill="url(#metricGradient)"
+              dot={{
+                r: 5,
+                fill: "#2563eb",
+              }}
+              activeDot={{
+                r: 7,
+              }}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }
+
+
 function OverviewTab({
   users,
   courses,
@@ -1313,6 +1465,7 @@ function CertificatesTab() {
   );
 }
 
+
 function ReportsTab({
   users,
   courses,
@@ -1322,6 +1475,97 @@ function ReportsTab({
   courses: CourseType[];
   devices: DeviceType[];
 }) {
+  const [selectedMetric, setSelectedMetric] =
+    useState<MetricKey>("users");
+
+  const chartData = {
+    users: {
+      title: "Crescimento de Usuários",
+      subtitle: "Quantidade de usuários ativos nos últimos meses.",
+      suffix: "",
+      data: [
+        { label: "Jan", value: 12 },
+        { label: "Fev", value: 18 },
+        { label: "Mar", value: 25 },
+        { label: "Abr", value: 34 },
+        { label: "Mai", value: 48 },
+        { label: "Jun", value: users.length },
+      ],
+    },
+
+    courses: {
+      title: "Cursos Publicados",
+      subtitle: "Evolução de cursos disponíveis na plataforma.",
+      suffix: "",
+      data: [
+        { label: "Jan", value: 1 },
+        { label: "Fev", value: 2 },
+        { label: "Mar", value: 4 },
+        { label: "Abr", value: 6 },
+        { label: "Mai", value: 9 },
+        { label: "Jun", value: courses.length },
+      ],
+    },
+
+    devices: {
+      title: "Dispositivos Cadastrados",
+      subtitle: "Crescimento da base de dispositivos registrados.",
+      suffix: "",
+      data: [
+        { label: "Jan", value: 2 },
+        { label: "Fev", value: 4 },
+        { label: "Mar", value: 6 },
+        { label: "Abr", value: 10 },
+        { label: "Mai", value: 14 },
+        { label: "Jun", value: devices.length },
+      ],
+    },
+
+    certificates: {
+      title: "Certificados Emitidos",
+      subtitle: "Quantidade de certificados emitidos por mês.",
+      suffix: "",
+      data: [
+        { label: "Jan", value: 8 },
+        { label: "Fev", value: 14 },
+        { label: "Mar", value: 22 },
+        { label: "Abr", value: 31 },
+        { label: "Mai", value: 44 },
+        { label: "Jun", value: 56 },
+      ],
+    },
+
+    completion: {
+      title: "Taxa de Conclusão",
+      subtitle: "Percentual médio de conclusão dos cursos.",
+      suffix: "%",
+      data: [
+        { label: "Jan", value: 42 },
+        { label: "Fev", value: 50 },
+        { label: "Mar", value: 58 },
+        { label: "Abr", value: 64 },
+        { label: "Mai", value: 70 },
+        { label: "Jun", value: 76 },
+      ],
+    },
+
+    satisfaction: {
+      title: "Satisfação Média",
+      subtitle: "Avaliação média dos usuários na plataforma.",
+      suffix: "",
+      data: [
+        { label: "Jan", value: 3.8 },
+        { label: "Fev", value: 4.0 },
+        { label: "Mar", value: 4.2 },
+        { label: "Abr", value: 4.3 },
+        { label: "Mai", value: 4.5 },
+        { label: "Jun", value: 4.6 },
+      ],
+    },
+  };
+
+  const selectedChart = chartData[selectedMetric];
+
   return (
     <div className="space-y-6 sm:space-y-8">
       <StatsGrid>
@@ -1331,6 +1575,8 @@ function ReportsTab({
           subtitle="Total atual"
           icon={Users}
           color="bg-purple-500/15 text-purple-600 dark:text-purple-400"
+          active={selectedMetric === "users"}
+          onClick={() => setSelectedMetric("users")}
         />
 
         <StatCard
@@ -1339,6 +1585,8 @@ function ReportsTab({
           subtitle="Publicados"
           icon={BookOpen}
           color="bg-orange-500/15 text-orange-600 dark:text-orange-400"
+          active={selectedMetric === "courses"}
+          onClick={() => setSelectedMetric("courses")}
         />
 
         <StatCard
@@ -1347,6 +1595,8 @@ function ReportsTab({
           subtitle="Online"
           icon={Cpu}
           color="bg-blue-500/15 text-blue-600 dark:text-blue-400"
+          active={selectedMetric === "devices"}
+          onClick={() => setSelectedMetric("devices")}
         />
 
         <StatCard
@@ -1355,6 +1605,8 @@ function ReportsTab({
           subtitle="Emitidos"
           icon={Award}
           color="bg-purple-500/15 text-purple-600 dark:text-purple-400"
+          active={selectedMetric === "certificates"}
+          onClick={() => setSelectedMetric("certificates")}
         />
 
         <StatCard
@@ -1363,6 +1615,8 @@ function ReportsTab({
           subtitle="Taxa média"
           icon={BarChart3}
           color="bg-green-500/15 text-green-600 dark:text-green-400"
+          active={selectedMetric === "completion"}
+          onClick={() => setSelectedMetric("completion")}
         />
 
         <StatCard
@@ -1371,8 +1625,17 @@ function ReportsTab({
           subtitle="De 5"
           icon={Star}
           color="bg-orange-500/15 text-orange-600 dark:text-orange-400"
+          active={selectedMetric === "satisfaction"}
+          onClick={() => setSelectedMetric("satisfaction")}
         />
       </StatsGrid>
+
+      <MetricChart
+        title={selectedChart.title}
+        subtitle={selectedChart.subtitle}
+        data={selectedChart.data}
+        suffix={selectedChart.suffix}
+      />
 
       <div className="grid grid-cols-1 2xl:grid-cols-2 gap-5 sm:gap-6">
         <TableCard title="Indicadores por Módulo">
@@ -1428,6 +1691,7 @@ function ReportsTab({
     </div>
   );
 }
+
 
 function StatsGrid({
   children,
