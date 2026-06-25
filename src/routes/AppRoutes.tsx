@@ -12,7 +12,8 @@ import MyCourses from "../pages/student/Courses";
 import Support from "../pages/client/Support";
 import CreateCourses from "../pages/admin/CreateCourse";
 import Settings from "../pages/auth/Settings";
-import Certicate from "../pages/student/Certificates";
+import Certificates from "../pages/student/Certificates";
+import CertificateDetails from "../pages/student/CertificateDetails";
 import AdminDashboard from "../pages/admin/AdminDashboard";
 import Users from "../pages/admin/user";
 
@@ -36,7 +37,8 @@ export default function AppRoutes() {
         <Route path="/support" element={<Support/>}/>
         <Route path="/create-courses" element={<CreateCourses/>}/>
         <Route path="/settings" element={<Settings/>}/>
-        <Route path="/certificate" element={<Certicate/>}/>
+        <Route path="/certificate" element={<Certificates/>}/>
+        <Route path="/certificate/:certificateId" element={<CertificateDetails />} />
         <Route path="/users" element={<Users/>}/>
         <Route path="/Dashboard" element={<AdminDashboard/>}/>
         </Route>

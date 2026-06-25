@@ -38,7 +38,7 @@ import {
 } from "react-router-dom";
 
 import axios from "axios";
-
+import toast from "react-hot-toast";
 import UserModal from "../../components/modals/UserModal";
 import DeviceModal from "../../components/modals/DeviceModal";
 
@@ -166,7 +166,7 @@ export default function AdminDashboard() {
       setDevices(devicesResponse.data);
     } catch (error) {
       console.log(error);
-      alert("Erro ao carregar dados da dashboard");
+      toast.error("Erro ao carregar dados da dashboard");
     } finally {
       setLoading(false);
     }
@@ -259,12 +259,12 @@ export default function AdminDashboard() {
     }
 
     if (currentTab === "certificates") {
-      alert("Emissão de certificado será conectada depois.");
+      toast.error("Emissão de certificado será conectada depois.");
       return;
     }
 
     if (currentTab === "reports") {
-      alert("Exportação de relatório será conectada depois.");
+      toast.error("Exportação de relatório será conectada depois.");
     }
   }
 
