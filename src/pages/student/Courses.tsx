@@ -13,7 +13,7 @@ import {
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { api } from "../../services/api";
 import toast from "react-hot-toast";
 
 interface CourseType {
@@ -41,21 +41,19 @@ export default function MyCourses() {
   const navigate = useNavigate();
 
   async function getCourses() {
-    try {
-      setLoading(true);
+  try {
+    setLoading(true);
 
-      const response = await axios.get<CourseType[]>(
-        "http://localhost:3333/courses"
-      );
+    const response = await api.get<CourseType[]>("/courses");
 
-      setCourses(response.data);
-    } catch (error) {
-      console.log(error);
-      toast.error("Erro ao buscar cursos");
-    } finally {
-      setLoading(false);
-    }
+    setCourses(response.data);
+  } catch (error) {
+    console.log(error);
+    toast.error("Erro ao buscar cursos");
+  } finally {
+    setLoading(false);
   }
+}
 
   useEffect(() => {
     getCourses();

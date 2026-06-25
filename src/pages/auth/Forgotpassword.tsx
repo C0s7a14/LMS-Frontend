@@ -8,7 +8,7 @@ import {
   useState
 } from "react";
 
-import axios from "axios";
+import { api } from "../../services/api";
 import toast from "react-hot-toast";
 
 export default function ForgotPassword() {
@@ -29,12 +29,12 @@ export default function ForgotPassword() {
 
       setLoading(true);
 
-      await axios.post(
-        "http://localhost:3333/auth/forgot-password",
-        {
-          email,
-        }
-      );
+   await api.post(
+      "/auth/forgot-password",
+      {
+        email,
+      }
+    );
 
       toast.success(
         "Email de recuperação enviado!"

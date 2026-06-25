@@ -13,7 +13,7 @@ import {
   useState,
 } from "react";
 
-import axios from "axios";
+import { api } from "../../services/api";
 import toast from "react-hot-toast";
 
 import UserModal from "../../components/modals/UserModal";
@@ -36,9 +36,7 @@ export default function Users() {
     try {
       setLoading(true);
 
-      const response = await axios.get<UserType[]>(
-        "http://localhost:3333/users"
-      );
+      const response = await api.get<UserType[]>("/users");
 
       setUsers(response.data);
     } catch (error) {
@@ -72,9 +70,7 @@ export default function Users() {
     }
 
     try {
-      await axios.delete(
-        `http://localhost:3333/users/${userId}`
-      );
+     await api.delete(`/users/${userId}`);
 
       await getUsers();
 

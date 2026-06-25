@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { useState } from "react";
 
-import axios from "axios";
+import { api } from "../../services/api";
 
 import toast from "react-hot-toast";
 
@@ -41,8 +41,8 @@ export default function Registro() {
 
       setLoading(true);
 
-      await axios.post(
-        "http://localhost:3333/auth/register",
+          await api.post(
+        "/auth/register",
         {
           name,
           email,
@@ -59,7 +59,7 @@ export default function Registro() {
 
       toast.error(
         error.response?.data?.error ||
-        error.response?.data.message ||
+        error.response?.data?.message ||
         "Erro ao criar conta"
       );
 

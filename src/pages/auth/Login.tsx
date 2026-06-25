@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
+import { api } from "../../services/api";
 
 export default function Login() {
 
@@ -17,14 +18,14 @@ export default function Login() {
   const [loading, setLoading] =
     useState(false);
 
-  async function handleLogin(e: React.FormEvent) {
+async function handleLogin(e: React.FormEvent) {
   e.preventDefault();
 
   try {
     setLoading(true);
 
-    const response = await axios.post(
-      "http://localhost:3333/auth/login",
+    const response = await api.post(
+      "/auth/login",
       {
         email,
         senha,
@@ -69,7 +70,6 @@ export default function Login() {
     setLoading(false);
   }
 }
-
   return (
     <div className="min-h-screen bg-[#2E3B7B] flex items-center justify-center p-6">
 

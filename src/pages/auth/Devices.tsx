@@ -15,7 +15,7 @@ import {
 } from "react";
 
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { api } from "../../services/api";
 import toast from "react-hot-toast";
 
 import DeviceModal from "../../components/modals/DeviceModal";
@@ -39,13 +39,12 @@ export default function Device() {
 
   const navigate = useNavigate();
 
+
   async function getDevices() {
     try {
       setLoading(true);
 
-      const response = await axios.get<DeviceType[]>(
-        "http://localhost:3333/devices"
-      );
+      const response = await api.get<DeviceType[]>("/devices");
 
       setDevices(response.data);
     } catch (error) {

@@ -1,6 +1,6 @@
 import logo from "../../assets/logo.png";
 
-import axios from "axios";
+
 
 import { useState } from "react";
 import toast from "react-hot-toast";
@@ -9,6 +9,7 @@ import {
   useNavigate,
   useSearchParams,
 } from "react-router-dom";
+import { api } from "../../services/api";
 
 export default function ResetPassword() {
 
@@ -19,7 +20,7 @@ export default function ResetPassword() {
 
   const token =
     searchParams.get("token");
-    console.log(token);
+    //console.log(token);
 
   const [
     newPassword,
@@ -57,14 +58,13 @@ export default function ResetPassword() {
 
       setLoading(true);
 
-      await axios.post(
-        "http://localhost:3333/auth/reset-password",
-        {
-          token,
-          newPassword,
-        }
-      );
-
+     await api.post(
+  "/auth/reset-password",
+  {
+    token,
+    newPassword,
+  }
+);
       toast.success(
         "Senha redefinida com sucesso!"
       );

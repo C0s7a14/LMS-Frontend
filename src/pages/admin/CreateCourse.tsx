@@ -16,7 +16,7 @@ import {
   type FormEvent,
 } from "react";
 
-import axios from "axios";
+import { api } from "../../services/api";
 import toast from "react-hot-toast";
 
 interface DeviceType {
@@ -55,17 +55,17 @@ export default function CreateCourse() {
   const [saving, setSaving] = useState(false);
 
   async function getDevices() {
-    try {
-      const response = await axios.get<DeviceType[]>(
-        "http://localhost:3333/devices"
-      );
+  try {
+    const response = await api.get<DeviceType[]>(
+      "/devices"
+    );
 
-      setDevices(response.data);
-    } catch (error) {
-      console.log(error);
-      toast.error("Erro ao buscar dispositivos");
-    }
+    setDevices(response.data);
+  } catch (error) {
+    console.log(error);
+    toast.error("Erro ao buscar dispositivos");
   }
+}
 
   useEffect(() => {
     getDevices();
@@ -148,8 +148,8 @@ export default function CreateCourse() {
         return;
       }
 
-      const response = await axios.post(
-        "http://localhost:3333/courses",
+            const response = await api.post(
+        "/courses",
         {
           titulo,
           descricao,
@@ -166,10 +166,10 @@ export default function CreateCourse() {
       if (courseId && selectedDevices.length > 0) {
         await Promise.all(
           selectedDevices.map((deviceId) =>
-            axios.post(
-              `http://localhost:3333/devices/courses/${courseId}/devices/${deviceId}`
-            )
+           api.post(
+            `/devices/courses/${courseId}/devices/${deviceId}`
           )
+           )
         );
       }
 
