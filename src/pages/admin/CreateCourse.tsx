@@ -55,17 +55,15 @@ export default function CreateCourse() {
   const [saving, setSaving] = useState(false);
 
   async function getDevices() {
-  try {
-    const response = await api.get<DeviceType[]>(
-      "/devices"
-    );
+    try {
+      const response = await api.get<DeviceType[]>("/devices");
 
-    setDevices(response.data);
-  } catch (error) {
-    console.log(error);
-    toast.error("Erro ao buscar dispositivos");
+      setDevices(response.data);
+    } catch (error) {
+      console.log(error);
+      toast.error("Erro ao buscar dispositivos");
+    }
   }
-}
 
   useEffect(() => {
     getDevices();
@@ -148,28 +146,45 @@ export default function CreateCourse() {
         return;
       }
 
-            const response = await api.post(
-        "/courses",
-        {
-          titulo,
-          descricao,
-          thumbnail,
-          criado_por: user.id,
-        }
+      const validModules = modules.filter((module) =>
+        module.titulo.trim()
       );
+
+      const response = await api.post("/courses", {
+        titulo,
+        descricao,
+        thumbnail,
+        criado_por: user.id,
+      });
 
       const courseId =
         response.data.courseId ||
         response.data.cursoId ||
         response.data.id;
 
-      if (courseId && selectedDevices.length > 0) {
+      if (!courseId) {
+        toast.error("Curso criado, mas o ID não foi retornado");
+        return;
+      }
+
+      if (selectedDevices.length > 0) {
         await Promise.all(
           selectedDevices.map((deviceId) =>
-           api.post(
-            `/devices/courses/${courseId}/devices/${deviceId}`
+            api.post(
+              `/devices/courses/${courseId}/devices/${deviceId}`
+            )
           )
-           )
+        );
+      }
+
+      if (validModules.length > 0) {
+        await Promise.all(
+          validModules.map((module, index) =>
+            api.post(`/courses/${courseId}/modules`, {
+              titulo: module.titulo,
+              ordem: index + 1,
+            })
+          )
         );
       }
 
