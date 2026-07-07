@@ -450,6 +450,11 @@ function SidebarContent({
             justify-center
             gap-3
             font-medium
+            shadow-2xl
+            dark:shadow-blue-500
+            dark:shadow-sm
+            cursor-pointer
+            v
           "
         >
           {isDark ? (
@@ -520,6 +525,10 @@ function SidebarContent({
             justify-center
             gap-3
             font-medium
+            shadow-2xl
+            dark:shadow-sm
+            dark:shadow-red-100
+            cursor-pointer
           "
         >
           <LogOut size={20} />

@@ -230,7 +230,8 @@ export default function CourseStudy() {
   return (
     <main className="space-y-6">
       {/* Topo */}
-      <section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 transition-colors">
+      <section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 transition-colors shadow-2xl dark:shadow-sm
+                    dark:shadow-blue-500">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
           <div>
             <div className="flex items-center gap-2 text-sm font-semibold text-blue-500 dark:text-blue-400">
@@ -357,12 +358,16 @@ export default function CourseStudy() {
                     py-4
                     font-semibold
                     transition-all
+                    shadow-2xl
+                    dark:shadow-sm
+                    dark:shadow-blue-500
                     disabled:opacity-60
                     disabled:cursor-not-allowed
                     flex
                     items-center
                     justify-center
                     gap-2
+                    
                   "
                 >
                   <CheckCircle2 size={22} />
@@ -382,7 +387,7 @@ export default function CourseStudy() {
               )}
 
               {selectedAula.conteudo && (
-                <div className="mt-6 bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 rounded-2xl p-5">
+                <div className="mt-6 bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 rounded-2xl p-5 shadow-2xl ">
                   <h3 className="text-lg font-bold text-[#080E2F] dark:text-white mb-3">
                     Conteúdo da aula
                   </h3>
@@ -442,6 +447,9 @@ export default function CourseStudy() {
                     flex
                     items-center
                     justify-center
+                    shadow-2xl
+                    dark:shadow-sm
+                    dark:shadow-blue-500
                     gap-2
                     hover:bg-gray-50
                     dark:hover:bg-white/5
@@ -470,6 +478,9 @@ export default function CourseStudy() {
                     items-center
                     justify-center
                     gap-2
+                    shadow-2xl
+                    dark:shadow-sm
+                    dark:shadow-blue-500
                     transition-all
                     disabled:opacity-50
                     disabled:cursor-not-allowed
@@ -483,7 +494,8 @@ export default function CourseStudy() {
           </section>
 
           {/* Quiz do módulo */}
-          <section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 transition-colors">
+          <section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 transition-colors shadow-2xl dark:shadow-sm
+                    dark:shadow-blue-500">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-5">
                 <div className="w-20 h-20 rounded-3xl bg-blue-500/10 flex items-center justify-center">
@@ -512,7 +524,7 @@ export default function CourseStudy() {
               <button
                 type="button"
                 disabled
-                className="bg-gray-200 dark:bg-[#132d46] text-gray-400 rounded-2xl px-6 py-4 font-semibold cursor-not-allowed"
+                className="bg-gray-200 dark:bg-[#132d46] text-gray-400 rounded-2xl px-6 py-4 font-semibold cursor-not-allowed shadow-2xl"
               >
                 Ir para quiz
               </button>
@@ -556,7 +568,8 @@ export default function CourseStudy() {
 
         {/* Lateral */}
         <aside className="space-y-6">
-          <section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 transition-colors">
+          <section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 transition-colors shadow-2xl dark:shadow-sm
+                    dark:shadow-blue-500">
             <h2 className="text-xl font-bold text-[#080E2F] dark:text-white">
               Conteúdo do curso
             </h2>
@@ -568,7 +581,8 @@ export default function CourseStudy() {
                 return (
                   <div
                     key={modulo.id}
-                    className="border border-gray-200 dark:border-white/10 rounded-2xl overflow-hidden"
+                    className="border border-gray-200 dark:border-white/10 rounded-2xl overflow-hidden shadow-2xl dark:shadow-sm
+                    dark:shadow-blue-500"
                   >
                     <div className="p-4 bg-gray-50 dark:bg-[#0d2238] flex items-center justify-between">
                       <div>
@@ -657,13 +671,15 @@ export default function CourseStudy() {
             </div>
           </section>
 
-          <section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 transition-colors">
+          <section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 transition-colors shadow-2xl dark:shadow-sm
+                    dark:shadow-blue-500">
             <h2 className="text-xl font-bold text-[#080E2F] dark:text-white">
               Seu progresso
             </h2>
 
             <div className="grid grid-cols-3 gap-3 mt-5">
-              <div className="bg-gray-50 dark:bg-[#0d2238] rounded-2xl p-4 text-center">
+              <div className="bg-gray-50 dark:bg-[#0d2238] rounded-2xl p-4 text-center shadow-2xl dark:shadow-sm
+                    dark:shadow-blue-500">
                 <BookOpen
                   size={28}
                   className="mx-auto text-blue-500 dark:text-blue-400"
@@ -678,7 +694,8 @@ export default function CourseStudy() {
                 </span>
               </div>
 
-              <div className="bg-gray-50 dark:bg-[#0d2238] rounded-2xl p-4 text-center">
+              <div className="bg-gray-50 dark:bg-[#0d2238] rounded-2xl p-4 text-center shadow-2xl dark:shadow-sm
+                    dark:shadow-blue-500">
                 <CheckCircle2
                   size={28}
                   className="mx-auto text-green-500"
@@ -693,7 +710,8 @@ export default function CourseStudy() {
                 </span>
               </div>
 
-              <div className="bg-gray-50 dark:bg-[#0d2238] rounded-2xl p-4 text-center">
+              <div className="bg-gray-50 dark:bg-[#0d2238] rounded-2xl p-4 text-center shadow-2xl dark:shadow-sm
+                    dark:shadow-blue-500">
                 <Award
                   size={28}
                   className="mx-auto text-blue-500 dark:text-blue-400"
@@ -709,7 +727,8 @@ export default function CourseStudy() {
               </div>
             </div>
 
-            <div className="mt-5 rounded-2xl bg-blue-500/10 border border-blue-500/20 p-5">
+            <div className="mt-5 rounded-2xl bg-blue-500/10 border border-blue-500/20 p-5 shadow-2xl dark:shadow-sm
+                    dark:shadow-blue-500">
               <h3 className="font-bold text-[#080E2F] dark:text-white">
                 Certificado bloqueado
               </h3>

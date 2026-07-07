@@ -217,7 +217,7 @@ export default function CreateCourse() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 dark:bg-[#071827] px-6 py-8 lg:px-12 transition-colors">
+    <main className="min-h-screen bg-gray-50 dark:bg-[#071827] px-6 py-8 lg:px-12 transition-colors shadow-2xl shadow-2xl dark:shadow-sm dark:shadow-blue-500 rounded-2xl">
       <form
         onSubmit={handleSubmit}
         className="max-w-[1500px] mx-auto space-y-6"
@@ -251,7 +251,9 @@ export default function CreateCourse() {
               justify-center
               gap-3
               disabled:opacity-60
-              disabled:cursor-not-allowed
+              disabled:cursor-not-allowed 
+              shadow-2xl
+              shadow-2xl dark:shadow-sm dark:shadow-blue-500
             "
           >
             <Save size={22} />
@@ -261,7 +263,7 @@ export default function CreateCourse() {
         </div>
 
         {/* Informações do curso */}
-        <section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 transition-colors">
+        <section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 transition-colors shadow-2xl dark:shadow-sm dark:shadow-blue-500">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-12 h-12 rounded-2xl bg-blue-500/20 flex items-center justify-center">
               <BookOpen className="text-blue-500 dark:text-blue-400" />
@@ -274,7 +276,7 @@ export default function CreateCourse() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
+              <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300 ">
                 Título do Curso
               </label>
 
@@ -283,7 +285,28 @@ export default function CreateCourse() {
                 value={titulo}
                 onChange={(e) => setTitulo(e.target.value)}
                 placeholder="Digite o título"
-                className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500"
+                className="
+                bg-gray-50
+                dark:bg-[#0d2238]
+                border
+                border-gray-200
+                dark:border-white/10
+                text-[#080E2F]
+                dark:text-white
+                placeholder:text-gray-400
+                rounded-2xl
+                px-4
+                py-3
+                outline-none
+                shadow-xl
+                shadow-slate-300/40
+                dark:shadow-sm
+                dark:shadow-blue-500/30
+                focus:border-blue-500
+                focus:shadow-lg
+                focus:shadow-blue-500/20
+                transition-all
+                cursor-pointer"
               />
             </div>
 
@@ -297,7 +320,27 @@ export default function CreateCourse() {
                 value={categoria}
                 onChange={(e) => setCategoria(e.target.value)}
                 placeholder="Ex: IoT"
-                className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500"
+                className=" bg-gray-50
+                dark:bg-[#0d2238]
+                border
+                border-gray-200
+                dark:border-white/10
+                text-[#080E2F]
+                dark:text-white
+                placeholder:text-gray-400
+                rounded-2xl
+                px-4
+                py-3
+                outline-none
+                shadow-xl
+                shadow-slate-300/40
+                dark:shadow-sm
+                dark:shadow-blue-500/30
+                focus:border-blue-500
+                focus:shadow-lg
+                focus:shadow-blue-500/20
+                transition-all
+                cursor-pointer"
               />
             </div>
 
@@ -309,7 +352,27 @@ export default function CreateCourse() {
               <select
                 value={nivel}
                 onChange={(e) => setNivel(e.target.value)}
-                className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500"
+                className=" bg-gray-50
+                dark:bg-[#0d2238]
+                border
+                border-gray-200
+                dark:border-white/10
+                text-[#080E2F]
+                dark:text-white
+                placeholder:text-gray-400
+                rounded-2xl
+                px-4
+                py-3
+                outline-none
+                shadow-xl
+                shadow-slate-300/40
+                dark:shadow-sm
+                dark:shadow-blue-500/30
+                focus:border-blue-500
+                focus:shadow-lg
+                focus:shadow-blue-500/20
+                transition-all
+                cursor-pointer"
               >
                 <option value="">Selecione</option>
                 <option value="iniciante">Iniciante</option>
@@ -328,7 +391,27 @@ export default function CreateCourse() {
                 onChange={(e) => setDescricao(e.target.value)}
                 placeholder="Descrição do curso"
                 rows={4}
-                className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 resize-none"
+                className=" bg-gray-50
+                dark:bg-[#0d2238]
+                border
+                border-gray-200
+                dark:border-white/10
+                text-[#080E2F]
+                dark:text-white
+                placeholder:text-gray-400
+                rounded-2xl
+                px-4
+                py-3
+                outline-none
+                shadow-xl
+                shadow-slate-300/40
+                dark:shadow-sm
+                dark:shadow-blue-500/30
+                focus:border-blue-500
+                focus:shadow-lg
+                focus:shadow-blue-500/20
+                transition-all
+                cursor-pointer"
               />
             </div>
 
@@ -342,14 +425,34 @@ export default function CreateCourse() {
                 value={thumbnail}
                 onChange={(e) => setThumbnail(e.target.value)}
                 placeholder="https://imagem.com/curso.png"
-                className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500"
+                className="b bg-gray-50
+                dark:bg-[#0d2238]
+                border
+                border-gray-200
+                dark:border-white/10
+                text-[#080E2F]
+                dark:text-white
+                placeholder:text-gray-400
+                rounded-2xl
+                px-4
+                py-3
+                outline-none
+                shadow-xl
+                shadow-slate-300/40
+                dark:shadow-sm
+                dark:shadow-blue-500/30
+                focus:border-blue-500
+                focus:shadow-lg
+                focus:shadow-blue-500/20
+                transition-all
+                cursor-pointer"
               />
             </div>
           </div>
         </section>
 
         {/* PDF */}
-        <section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 transition-colors">
+        <section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 transition-colors shadow-2xl dark:shadow-sm dark:shadow-blue-500">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
             <div className="flex items-center justify-center">
               <div className="w-44 h-44 rounded-full bg-blue-500/10 flex items-center justify-center">
@@ -397,7 +500,7 @@ export default function CreateCourse() {
         </section>
 
         {/* Dispositivos relacionados */}
-        <section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 transition-colors">
+        <section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 transition-colors shadow-2xl dark:shadow-sm dark:shadow-blue-500">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-12 h-12 rounded-2xl bg-blue-500/20 flex items-center justify-center">
               <Cpu className="text-blue-500 dark:text-blue-400" />
@@ -419,7 +522,7 @@ export default function CreateCourse() {
               Nenhum dispositivo cadastrado.
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 ">
               {devices.map((device) => {
                 const selected = selectedDevices.includes(device.id);
 
@@ -434,10 +537,14 @@ export default function CreateCourse() {
                       border
                       p-4
                       transition-all
+                      shadow-2xl
+                      dark:shadow-sm
+                      dark:shadow-blue-300
+                      cursor-pointer
                       ${
                         selected
                           ? "bg-blue-500/20 border-blue-500 text-blue-600 dark:text-blue-400"
-                          : "bg-gray-50 dark:bg-[#0d2238] border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:border-blue-500/50"
+                          : "bg-gray-50 dark:bg-[#0d2238] border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:border-blue-500"
                       }
                     `}
                   >
@@ -456,7 +563,7 @@ export default function CreateCourse() {
         </section>
 
         {/* Módulos */}
-        <section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 transition-colors">
+        <section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 transition-colors shadow-2xl dark:shadow-sm dark:shadow-blue-500">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-5">
             <div className="flex items-center gap-3">
               <Box className="text-blue-500 dark:text-blue-400" />
@@ -476,13 +583,13 @@ export default function CreateCourse() {
             </button>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-4 ">
             {modules.map((module, index) => (
               <div
                 key={index}
                 className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 rounded-2xl p-4"
               >
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between mb-3 ">
                   <h3 className="font-semibold text-[#080E2F] dark:text-white">
                     Módulo {index + 1}
                   </h3>
@@ -496,7 +603,7 @@ export default function CreateCourse() {
                   </button>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-3 ">
                   <input
                     type="text"
                     value={module.titulo}
@@ -508,7 +615,7 @@ export default function CreateCourse() {
                       )
                     }
                     placeholder="Título do módulo"
-                    className="w-full bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500"
+                    className="w-full bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 shadow-2xl dark:shadow-sm dark:shadow-blue-500"
                   />
 
                   <textarea
@@ -522,7 +629,7 @@ export default function CreateCourse() {
                     }
                     placeholder="Conteúdo do módulo"
                     rows={3}
-                    className="w-full bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 resize-none"
+                    className="w-full bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 resize-none shadow-2xl dark:shadow-sm dark:shadow-blue-500"
                   />
                 </div>
               </div>

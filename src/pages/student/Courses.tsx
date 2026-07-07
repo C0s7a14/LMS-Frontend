@@ -35,7 +35,7 @@ interface CourseType {
 export default function MyCourses() {
   const [courses, setCourses] = useState<CourseType[]>([]);
   const [search, setSearch] = useState("");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [loading, setLoading] = useState(true);
 
   const navigate = useNavigate();
@@ -82,7 +82,7 @@ export default function MyCourses() {
       <div className="max-w-[1500px] mx-auto">
 
         {/* Header */}
-        <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between mb-8">
+        <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between mb-8 ">
           <div>
             <h1 className="text-3xl lg:text-4xl font-bold text-[#080E2F] dark:text-white">
               Meus Cursos
@@ -98,9 +98,9 @@ export default function MyCourses() {
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 ">
             {/* Search */}
-            <div className="relative w-full sm:w-[360px]">
+            <div className="relative w-full sm:w-[360px] shadow-2xl rounded-2xl">
               <Search
                 size={22}
                 className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
@@ -124,7 +124,7 @@ export default function MyCourses() {
                   pr-4
                   text-[#080E2F]
                   dark:text-white
-                  placeholder:text-gray-400
+                  placeholder:text-gray-500
                   dark:placeholder:text-gray-500
                   outline-none
                   focus:border-blue-500
@@ -134,7 +134,7 @@ export default function MyCourses() {
             </div>
 
             {/* View buttons */}
-            <div className="hidden sm:flex bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-2xl p-1">
+            <div className="hidden sm:flex bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-2xl p-1 shadow-2xl ">
               <button
                 onClick={() => setViewMode("grid")}
                 className={`
@@ -145,10 +145,11 @@ export default function MyCourses() {
                   items-center
                   justify-center
                   transition-all
+                  cursor-pointer
                   ${
                     viewMode === "grid"
-                      ? "bg-blue-500/20 text-blue-500 dark:text-blue-400"
-                      : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5"
+                      ? "bg-blue-500/20 text-blue-500 dark:text-blue-400 cursor-pointer"
+                      : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 "
                   }
                 `}
               >
@@ -165,9 +166,10 @@ export default function MyCourses() {
                   items-center
                   justify-center
                   transition-all
+                  cursor-pointer
                   ${
                     viewMode === "list"
-                      ? "bg-blue-500/20 text-blue-500 dark:text-blue-400"
+                      ? "bg-blue-500/20 text-blue-500 dark:text-blue-400 "
                       : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5"
                   }
                 `}
@@ -222,9 +224,13 @@ export default function MyCourses() {
                     dark:bg-[#091a2c]
                     border
                     border-gray-200
+                    shadow-2xl
+                    dark:shadow-sm
+                    dark:shadow-blue-500
                     dark:border-white/10
                     rounded-3xl
                     overflow-hidden
+                    cursor-pointer
                     transition-all
                     hover:-translate-y-1
                     hover:border-blue-500/40
@@ -370,6 +376,10 @@ export default function MyCourses() {
                         py-4
                         font-semibold
                         flex
+                        shadow-2xl
+                        dark:shadow-blue-700
+                        dark:shadow-sm
+                        cursor-pointer
                         items-center
                         justify-center
                         gap-3
@@ -387,7 +397,7 @@ export default function MyCourses() {
         )}
 
         {/* Footer callout */}
-        <div className="mt-7 bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 flex flex-col gap-5 md:flex-row md:items-center md:justify-between transition-colors">
+        <div className="mt-7 bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 flex flex-col gap-5 md:flex-row md:items-center md:justify-between transition-colors shadow-2xl dark:shadow-blue-500 dark:shadow-sm">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-2xl bg-blue-500/20 flex items-center justify-center">
               <Award className="text-blue-500 dark:text-blue-400" />
@@ -410,7 +420,11 @@ export default function MyCourses() {
               border
               border-blue-500/40
               text-blue-500
+              shadow-2xl
+              dark:shadow-blue-500
+              dark:shadow-sm
               dark:text-blue-400
+              cursor-pointer
               px-5
               py-3
               rounded-2xl
