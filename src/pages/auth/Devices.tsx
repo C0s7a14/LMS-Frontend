@@ -117,6 +117,8 @@ export default function Device() {
                   outline-none
                   focus:border-blue-500
                   transition-all
+                  shadow-2xl
+                  dark:shadow-sm dark:shadow-blue-500
                 "
               />
             </div>
@@ -138,6 +140,9 @@ export default function Device() {
                 items-center
                 justify-center
                 gap-2
+                shadow-2xl
+                dark:shadow-sm
+                dark:shadow-blue-500
               "
             >
               <Plus size={20} />
@@ -145,7 +150,7 @@ export default function Device() {
             </button>
 
             {/* View buttons */}
-            <div className="hidden sm:flex bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-2xl p-1">
+            <div className="hidden sm:flex bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-2xl p-1 shadow-2xl  dark:shadow-sm dark:shadow-blue-500">
               <button
                 onClick={() => setViewMode("grid")}
                 className={`
@@ -156,6 +161,7 @@ export default function Device() {
                   items-center
                   justify-center
                   transition-all
+                  cursor-pointer
                   ${
                     viewMode === "grid"
                       ? "bg-blue-500/20 text-blue-500 dark:text-blue-400"
@@ -176,6 +182,7 @@ export default function Device() {
                   items-center
                   justify-center
                   transition-all
+                  cursor-pointer
                   ${
                     viewMode === "list"
                       ? "bg-blue-500/20 text-blue-500 dark:text-blue-400"
@@ -191,14 +198,14 @@ export default function Device() {
 
         {/* Loading */}
         {loading && (
-          <div className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-10 text-center text-gray-500 dark:text-gray-400">
+          <div className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-10 text-center text-gray-500 dark:text-gray-400 ">
             Carregando dispositivos...
           </div>
         )}
 
         {/* Empty */}
         {!loading && filteredDevices.length === 0 && (
-          <div className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-10 text-center">
+          <div className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-10 text-center ">
             <div className="w-16 h-16 rounded-2xl bg-blue-500/20 flex items-center justify-center mx-auto mb-4">
               <Cpu size={36} className="text-blue-500 dark:text-blue-400" />
             </div>
@@ -236,6 +243,7 @@ export default function Device() {
                   hover:-translate-y-1
                   transition-all
                   overflow-hidden
+                  shadow-2xl dark:shadow-sm dark:shadow-blue-500
                   ${
                     viewMode === "list"
                       ? "flex flex-col md:flex-row md:items-center"
@@ -257,7 +265,7 @@ export default function Device() {
                     }
                   `}
                 >
-                  <div className="absolute top-5 left-5 z-10 bg-blue-500/20 text-blue-500 dark:text-blue-400 px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-medium">
+                  <div className="absolute top-5 left-5 z-10 bg-blue-500/20 text-blue-500 dark:text-blue-400 px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-medium ">
                     <Star size={16} fill="currentColor" />
                     {device.tipo || "Dispositivo"}
                   </div>
@@ -331,6 +339,7 @@ export default function Device() {
                         hover:bg-blue-500
                         hover:text-white
                         transition-all
+                        cursor-pointer
                       "
                     >
                       <ArrowRight size={24} />
