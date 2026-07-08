@@ -219,13 +219,125 @@ export default function CourseStudy() {
     );
   }
 
-  if (!course || !selectedAula) {
-    return (
-      <div className="min-h-[70vh] flex items-center justify-center text-gray-500 dark:text-gray-300">
-        Nenhuma aula encontrada para este curso.
-      </div>
-    );
-  }
+  if (!course) {
+  return (
+    <div className="min-h-[70vh] flex items-center justify-center text-gray-500 dark:text-gray-300">
+      Curso não encontrado.
+    </div>
+  );
+}
+
+if (course.total_aulas === 0 || aulas.length === 0) {
+  return (
+    <main className="space-y-6">
+      <section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 transition-colors shadow-2xl dark:shadow-sm dark:shadow-blue-500">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+          <div>
+            <div className="flex items-center gap-2 text-sm font-semibold text-blue-500 dark:text-blue-400">
+              <button
+                type="button"
+                onClick={() => navigate("/courses")}
+                className="hover:underline"
+              >
+                Meus Cursos
+              </button>
+
+              <ChevronRight size={16} />
+
+              <span className="text-gray-500 dark:text-gray-400">
+                Curso
+              </span>
+            </div>
+
+            <h1 className="mt-4 text-3xl lg:text-4xl font-bold text-[#080E2F] dark:text-white">
+              {course.titulo}
+            </h1>
+
+            {course.descricao && (
+              <p className="mt-3 max-w-4xl text-gray-500 dark:text-gray-400 leading-relaxed">
+                {course.descricao}
+              </p>
+            )}
+          </div>
+
+          <div className="w-full xl:w-[420px]">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-semibold text-[#080E2F] dark:text-white">
+                0% completo
+              </span>
+
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                0/0 aulas
+              </span>
+            </div>
+
+            <div className="h-3 bg-gray-200 dark:bg-[#132d46] rounded-full overflow-hidden">
+              <div className="h-full bg-blue-500 rounded-full transition-all w-0" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-10 text-center transition-colors shadow-2xl dark:shadow-sm dark:shadow-blue-500">
+        <div className="w-20 h-20 rounded-3xl bg-blue-500/10 flex items-center justify-center mx-auto">
+          <BookOpen
+            size={44}
+            className="text-blue-500 dark:text-blue-400"
+          />
+        </div>
+
+        <h2 className="text-2xl font-bold text-[#080E2F] dark:text-white mt-5">
+          Este curso ainda não possui aulas cadastradas
+        </h2>
+
+        <p className="text-gray-500 dark:text-gray-400 mt-3 max-w-2xl mx-auto">
+          O curso já foi criado, mas o conteúdo das aulas ainda não foi publicado. Assim que o administrador cadastrar as aulas, elas aparecerão aqui.
+        </p>
+
+        {course.modulos.length > 0 && (
+          <div className="mt-8 max-w-2xl mx-auto text-left">
+            <h3 className="font-bold text-[#080E2F] dark:text-white mb-3">
+              Módulos cadastrados
+            </h3>
+
+            <div className="space-y-3">
+              {course.modulos.map((modulo) => (
+                <div
+                  key={modulo.id}
+                  className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 rounded-2xl p-4"
+                >
+                  <p className="font-semibold text-[#080E2F] dark:text-white">
+                    {modulo.titulo}
+                  </p>
+
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    Nenhuma aula cadastrada neste módulo.
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={() => navigate("/courses")}
+          className="mt-8 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl px-6 py-4 font-semibold transition-all shadow-2xl dark:shadow-sm dark:shadow-blue-500"
+        >
+          Voltar para meus cursos
+        </button>
+      </section>
+    </main>
+  );
+}
+
+if (!selectedAula) {
+  return (
+    <div className="min-h-[70vh] flex items-center justify-center text-gray-500 dark:text-gray-300">
+      Nenhuma aula selecionada.
+    </div>
+  );
+}
 
   return (
     <main className="space-y-6">

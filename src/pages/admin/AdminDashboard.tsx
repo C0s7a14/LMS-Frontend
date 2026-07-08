@@ -526,10 +526,13 @@ async function loadDashboardData() {
 
           {currentTab === "courses" && (
             <CoursesTab
-              courses={courses}
-              search={search}
-              createCourse={() => navigate("/create-courses")}
-            />
+  courses={courses}
+  search={search}
+  createCourse={() => navigate("/create-courses")}
+  manageCourseLessons={(courseId) =>
+    navigate(`/admin/courses/${courseId}/aulas`)
+  }
+/>
           )}
 
           {currentTab === "certificates" && (
@@ -1182,14 +1185,18 @@ function DevicesTab({
   );
 }
 
+
+
 function CoursesTab({
   courses,
   search,
   createCourse,
+  manageCourseLessons,
 }: {
   courses: CourseType[];
   search: string;
   createCourse: () => void;
+  manageCourseLessons: (courseId: number) => void;
 }) {
   const filteredCourses = courses.filter((course) => {
     const term = search.toLowerCase();
@@ -1254,8 +1261,8 @@ function CoursesTab({
 
       <div className="grid grid-cols-1 2xl:grid-cols-[minmax(0,1.4fr)_minmax(360px,0.8fr)] gap-5 sm:gap-6">
         <TableCard title="Lista de Cursos">
-          <div className="min-w-[850px]">
-            <div className="grid grid-cols-[1.5fr_1fr_1fr_1fr_80px] text-sm text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-white/10 pb-3">
+          <div className="min-w-[950px]">
+            <div className="grid grid-cols-[1.5fr_1fr_1fr_1fr_160px] text-sm text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-white/10 pb-3">
               <span>Curso</span>
               <span>Status</span>
               <span>Alunos</span>
@@ -1266,7 +1273,7 @@ function CoursesTab({
             {filteredCourses.map((course) => (
               <div
                 key={course.id}
-                className="grid grid-cols-[1.5fr_1fr_1fr_1fr_80px] gap-4 items-center py-4 border-b border-gray-200 dark:border-white/10 last:border-b-0"
+                className="grid grid-cols-[1.5fr_1fr_1fr_1fr_160px] gap-4 items-center py-4 border-b border-gray-200 dark:border-white/10 last:border-b-0"
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-14 h-14 rounded-xl bg-gray-100 dark:bg-[#0d2238] overflow-hidden flex items-center justify-center shrink-0">
@@ -1306,42 +1313,66 @@ function CoursesTab({
                     : "-"}
                 </p>
 
-                <button className="ml-auto text-gray-500 hover:text-blue-600 dark:hover:text-blue-400">
-                  <MoreVertical size={22} />
-                </button>
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => manageCourseLessons(course.id)}
+                    className="
+                      inline-flex
+                      items-center
+                      justify-center
+                      gap-2
+                      rounded-xl
+                      bg-blue-500/10
+                      px-3
+                      py-2
+                      text-sm
+                      font-semibold
+                      text-blue-600
+                      dark:text-blue-400
+                      hover:bg-blue-500/20
+                      transition-all
+                    "
+                  >
+                    <BookOpen size={18} />
+                    Aulas
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         </TableCard>
 
         <TableCard title="Ações Rápidas">
-          <div className="grid grid-cols-1 gap-4">
-            <ActionButton
-              icon={BookOpen}
-              title="Criar curso"
-              subtitle="Iniciar um novo curso"
-              onClick={createCourse}
-            />
+        <div className="grid grid-cols-1 gap-4">
+          <ActionButton
+            icon={BookOpen}
+            title="Criar curso"
+            subtitle="Iniciar um novo curso"
+            onClick={createCourse}
+          />
 
-            <ActionButton
-              icon={Award}
-              title="Gerar certificado"
-              subtitle="Emitir certificados"
-              onClick={() => alert("Conectar emissão depois.")}
-            />
+          <ActionButton
+            icon={Award}
+            title="Gerar certificado"
+            subtitle="Emitir certificados"
+            onClick={() => alert("Conectar emissão depois.")}
+          />
 
-            <ActionButton
-              icon={Download}
-              title="Exportar catálogo"
-              subtitle="Exportar lista de cursos"
-              onClick={() => alert("Conectar exportação depois.")}
-            />
-          </div>
-        </TableCard>
-      </div>
+          <ActionButton
+            icon={Download}
+            title="Exportar catálogo"
+            subtitle="Exportar lista de cursos"
+            onClick={() => alert("Conectar exportação depois.")}
+          />
+        </div>
+      </TableCard>
+            </div>
     </div>
   );
 }
+
+
 
 function CertificatesTab() {
   return (
