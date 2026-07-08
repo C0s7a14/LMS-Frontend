@@ -1,4 +1,4 @@
-import logo from "../../assets/logo.png";
+import logo from "../../assets/logo_sirros_roxa_transparente(1).png";
 
 import { Link, useNavigate } from "react-router-dom";
 

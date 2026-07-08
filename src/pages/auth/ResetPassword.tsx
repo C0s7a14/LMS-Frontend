@@ -1,4 +1,4 @@
-import logo from "../../assets/logo.png";
+import logo from "../../assets/logo_sirros_roxa_transparente(1).png";
 
 
 
@@ -98,7 +98,7 @@ export default function ResetPassword() {
           <img
             src={logo}
             alt="Sirros logo"
-            className="w-28 sm:w-36 md:w-52"
+            className="w-28 sm:w-36 md:w-52 fill-pink-700"
           />
         </div>
 
