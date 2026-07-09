@@ -1,19 +1,21 @@
 import {
   BookOpen,
-  Save,
-  Upload,
-  FileText,
-  Box,
-  Plus,
-  Trash2,
+  CheckCircle2,
   Cpu,
+  FileText,
+  Loader2,
+  RefreshCcw,
+  Save,
+  Sparkles,
+  Trash2,
+  Upload,
+  Wand2,
 } from "lucide-react";
 
 import {
   useEffect,
   useRef,
   useState,
-  type FormEvent,
 } from "react";
 
 import { api } from "../../services/api";
@@ -26,33 +28,46 @@ interface DeviceType {
   tipo?: string;
 }
 
-interface ModuleType {
+interface GeneratedAulaType {
   titulo: string;
-  conteudo: string;
+  descricao?: string;
+  conteudo?: string;
+  duracao?: number;
+  ordem?: number;
+}
+
+interface GeneratedModuloType {
+  titulo: string;
+  ordem?: number;
+  aulas: GeneratedAulaType[];
+}
+
+interface GeneratedCourseType {
+  titulo?: string;
+  descricao?: string;
+  modulos: GeneratedModuloType[];
 }
 
 export default function CreateCourse() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [titulo, setTitulo] = useState("");
-  const [categoria, setCategoria] = useState("");
-  const [nivel, setNivel] = useState("");
-  const [descricao, setDescricao] = useState("");
-  const [thumbnail, setThumbnail] = useState("");
-
-  const [pdfName, setPdfName] = useState("");
-
   const [devices, setDevices] = useState<DeviceType[]>([]);
   const [selectedDevices, setSelectedDevices] = useState<number[]>([]);
 
-  const [modules, setModules] = useState<ModuleType[]>([
-    {
-      titulo: "",
-      conteudo: "",
-    },
-  ]);
+  const [thumbnail, setThumbnail] = useState("");
+  const [baseTitle, setBaseTitle] = useState("");
 
-  const [saving, setSaving] = useState(false);
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [pdfName, setPdfName] = useState("");
+
+  const [generatedCourse, setGeneratedCourse] =
+    useState<GeneratedCourseType | null>(null);
+
+  const [createdCourseId, setCreatedCourseId] =
+    useState<number | null>(null);
+
+  const [generating, setGenerating] = useState(false);
+  const [publishing, setPublishing] = useState(false);
 
   async function getDevices() {
     try {
@@ -69,7 +84,13 @@ export default function CreateCourse() {
     getDevices();
   }, []);
 
+  const selectedDeviceObjects = devices.filter((device) =>
+    selectedDevices.includes(device.id)
+  );
+
   function toggleDevice(deviceId: number) {
+    setGeneratedCourse(null);
+
     if (selectedDevices.includes(deviceId)) {
       setSelectedDevices(
         selectedDevices.filter((id) => id !== deviceId)
@@ -77,37 +98,6 @@ export default function CreateCourse() {
     } else {
       setSelectedDevices([...selectedDevices, deviceId]);
     }
-  }
-
-  function handleAddModule() {
-    setModules([
-      ...modules,
-      {
-        titulo: "",
-        conteudo: "",
-      },
-    ]);
-  }
-
-  function handleRemoveModule(index: number) {
-    if (modules.length === 1) {
-      toast.error("O curso precisa ter pelo menos um módulo");
-      return;
-    }
-
-    setModules(modules.filter((_, i) => i !== index));
-  }
-
-  function handleModuleChange(
-    index: number,
-    field: keyof ModuleType,
-    value: string
-  ) {
-    const updatedModules = [...modules];
-
-    updatedModules[index][field] = value;
-
-    setModules(updatedModules);
   }
 
   function handleSelectPdf() {
@@ -123,360 +113,479 @@ export default function CreateCourse() {
       return;
     }
 
+    if (file.type !== "application/pdf") {
+      toast.error("Envie apenas arquivos PDF");
+      return;
+    }
+
+    setPdfFile(file);
     setPdfName(file.name);
+    setGeneratedCourse(null);
   }
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
+  function getInitialCourseTitle() {
+    if (baseTitle.trim()) {
+      return baseTitle.trim();
+    }
 
-    if (!titulo.trim()) {
-      toast.error("O título do curso é obrigatório");
+    if (selectedDeviceObjects.length > 0) {
+      return `Treinamento ${selectedDeviceObjects[0].nome}`;
+    }
+
+    if (pdfName) {
+      return pdfName.replace(/\.pdf$/i, "");
+    }
+
+    return "Curso gerado com IA";
+  }
+
+  async function createBaseCourseIfNeeded() {
+    if (createdCourseId) {
+      return createdCourseId;
+    }
+
+    const user = JSON.parse(
+      localStorage.getItem("user") || "{}"
+    );
+
+    if (!user?.id) {
+      throw new Error("Usuário logado não encontrado");
+    }
+
+    const response = await api.post("/courses", {
+      titulo: getInitialCourseTitle(),
+      descricao: "Curso criado com IA a partir de manual técnico.",
+      thumbnail,
+      criado_por: user.id,
+    });
+
+    const courseId =
+      response.data.courseId ||
+      response.data.cursoId ||
+      response.data.id;
+
+    if (!courseId) {
+      throw new Error("Curso criado, mas o ID não foi retornado");
+    }
+
+    setCreatedCourseId(courseId);
+
+    return courseId;
+  }
+
+  async function handleGenerateCourseWithAi() {
+    if (selectedDevices.length === 0) {
+      toast.error("Selecione pelo menos um dispositivo relacionado");
+      return;
+    }
+
+    if (!pdfFile) {
+      toast.error("Selecione o PDF de treinamento");
       return;
     }
 
     try {
-      setSaving(true);
+      setGenerating(true);
 
-      const user = JSON.parse(
-        localStorage.getItem("user") || "{}"
-      );
+      const courseId = await createBaseCourseIfNeeded();
 
-      if (!user?.id) {
-        toast.error("Usuário logado não encontrado");
-        return;
-      }
+      const formData = new FormData();
+      formData.append("pdf", pdfFile);
 
-      const validModules = modules.filter((module) =>
-        module.titulo.trim()
-      );
-
-      const response = await api.post("/courses", {
-        titulo,
-        descricao,
-        thumbnail,
-        criado_por: user.id,
-      });
-
-      const courseId =
-        response.data.courseId ||
-        response.data.cursoId ||
-        response.data.id;
-
-      if (!courseId) {
-        toast.error("Curso criado, mas o ID não foi retornado");
-        return;
-      }
-
-      if (selectedDevices.length > 0) {
-        await Promise.all(
-          selectedDevices.map((deviceId) =>
-            api.post(
-              `/devices/courses/${courseId}/devices/${deviceId}`
-            )
-          )
-        );
-      }
-
-      if (validModules.length > 0) {
-        await Promise.all(
-          validModules.map((module, index) =>
-            api.post(`/courses/${courseId}/modules`, {
-              titulo: module.titulo,
-              ordem: index + 1,
-            })
-          )
-        );
-      }
-
-      toast.success("Curso criado com sucesso!");
-
-      setTitulo("");
-      setCategoria("");
-      setNivel("");
-      setDescricao("");
-      setThumbnail("");
-      setPdfName("");
-      setSelectedDevices([]);
-      setModules([
+      const response = await api.post(
+        `/courses/${courseId}/ai/generate-from-pdf`,
+        formData,
         {
-          titulo: "",
-          conteudo: "",
-        },
-      ]);
+          timeout: 300000,
+        }
+      );
+
+      setGeneratedCourse(response.data.generated_course);
+
+      toast.success("Curso gerado com IA");
     } catch (error: any) {
       console.log(error);
 
       toast.error(
         error.response?.data?.error ||
           error.response?.data?.message ||
-          "Erro ao criar curso"
+          error.response?.data?.detail ||
+          error.message ||
+          "Erro ao gerar curso com IA"
       );
     } finally {
-      setSaving(false);
+      setGenerating(false);
     }
   }
 
+  async function handlePublishCourse() {
+    if (!createdCourseId) {
+      toast.error("Gere o curso com IA antes de publicar");
+      return;
+    }
+
+    if (!generatedCourse) {
+      toast.error("Nenhum conteúdo gerado para publicar");
+      return;
+    }
+
+    try {
+      setPublishing(true);
+
+      await api.post(
+        `/courses/${createdCourseId}/ai/apply-generated-course`,
+        {
+          replaceExisting: true,
+          generated_course: generatedCourse,
+        }
+      );
+
+      if (selectedDevices.length > 0) {
+        await Promise.all(
+          selectedDevices.map((deviceId) =>
+            api.post(
+              `/devices/courses/${createdCourseId}/devices/${deviceId}`
+            )
+          )
+        );
+      }
+
+      toast.success("Curso publicado com sucesso!");
+
+      resetPage();
+    } catch (error: any) {
+      console.log(error);
+
+      toast.error(
+        error.response?.data?.error ||
+          error.response?.data?.message ||
+          "Erro ao publicar curso"
+      );
+    } finally {
+      setPublishing(false);
+    }
+  }
+
+  function resetPage() {
+    setSelectedDevices([]);
+    setThumbnail("");
+    setBaseTitle("");
+    setPdfFile(null);
+    setPdfName("");
+    setGeneratedCourse(null);
+    setCreatedCourseId(null);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }
+
+  function updateGeneratedCourseField(
+    field: keyof GeneratedCourseType,
+    value: string
+  ) {
+    if (!generatedCourse) {
+      return;
+    }
+
+    setGeneratedCourse({
+      ...generatedCourse,
+      [field]: value,
+    });
+  }
+
+  function updateGeneratedModulo(
+    moduloIndex: number,
+    field: keyof GeneratedModuloType,
+    value: string
+  ) {
+    if (!generatedCourse) {
+      return;
+    }
+
+    const updatedModules = [...generatedCourse.modulos];
+
+    updatedModules[moduloIndex] = {
+      ...updatedModules[moduloIndex],
+      [field]: value,
+    };
+
+    setGeneratedCourse({
+      ...generatedCourse,
+      modulos: updatedModules,
+    });
+  }
+
+  function updateGeneratedAula(
+    moduloIndex: number,
+    aulaIndex: number,
+    field: keyof GeneratedAulaType,
+    value: string
+  ) {
+    if (!generatedCourse) {
+      return;
+    }
+
+    const updatedModules = [...generatedCourse.modulos];
+
+    const updatedAulas = [...updatedModules[moduloIndex].aulas];
+
+    updatedAulas[aulaIndex] = {
+      ...updatedAulas[aulaIndex],
+      [field]:
+        field === "duracao" || field === "ordem"
+          ? Number(value)
+          : value,
+    };
+
+    updatedModules[moduloIndex] = {
+      ...updatedModules[moduloIndex],
+      aulas: updatedAulas,
+    };
+
+    setGeneratedCourse({
+      ...generatedCourse,
+      modulos: updatedModules,
+    });
+  }
+
+  function removeGeneratedAula(
+    moduloIndex: number,
+    aulaIndex: number
+  ) {
+    if (!generatedCourse) {
+      return;
+    }
+
+    const updatedModules = [...generatedCourse.modulos];
+
+    updatedModules[moduloIndex] = {
+      ...updatedModules[moduloIndex],
+      aulas: updatedModules[moduloIndex].aulas.filter(
+        (_, index) => index !== aulaIndex
+      ),
+    };
+
+    setGeneratedCourse({
+      ...generatedCourse,
+      modulos: updatedModules,
+    });
+  }
+
+  const totalGeneratedLessons =
+    generatedCourse?.modulos.reduce(
+      (total, modulo) => total + modulo.aulas.length,
+      0
+    ) || 0;
+
   return (
-    <main className="min-h-screen bg-gray-50 dark:bg-[#071827] px-6 py-8 lg:px-12 transition-colors shadow-2xl shadow-2xl dark:shadow-sm dark:shadow-blue-500 rounded-2xl">
-      <form
-        onSubmit={handleSubmit}
-        className="max-w-[1500px] mx-auto space-y-6"
-      >
+    <main className="min-h-screen bg-gray-50 dark:bg-[#071827] px-6 py-8 lg:px-12 transition-colors">
+      <div className="max-w-[1500px] mx-auto space-y-6">
         {/* Header */}
-        <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+        <header className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h1 className="text-3xl lg:text-4xl font-bold text-[#080E2F] dark:text-white">
-              Criar Curso
+            <div className="inline-flex items-center gap-2 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 px-4 py-2 font-semibold mb-4">
+              <Sparkles size={18} />
+              IA para criação de treinamentos
+            </div>
+
+            <h1 className="text-3xl lg:text-5xl font-bold text-[#080E2F] dark:text-white">
+              Criar curso com IA
             </h1>
 
-            <p className="text-gray-500 dark:text-gray-400 mt-2 text-base lg:text-lg">
-              Cadastre um novo treinamento
+            <p className="text-gray-500 dark:text-gray-400 mt-3 text-base lg:text-lg max-w-3xl">
+              Escolha o dispositivo, envie o PDF técnico e deixe a IA gerar
+              automaticamente as informações do curso, módulos e aulas.
             </p>
           </div>
 
-          <button
-            type="submit"
-            disabled={saving}
-            className="
-              bg-blue-500
-              hover:bg-blue-600
-              text-white
-              px-6
-              py-4
-              rounded-2xl
-              font-semibold
-              transition-all
-              flex
-              items-center
-              justify-center
-              gap-3
-              disabled:opacity-60
-              disabled:cursor-not-allowed 
-              shadow-2xl
-              shadow-2xl dark:shadow-sm dark:shadow-blue-500
-            "
-          >
-            <Save size={22} />
+          <div className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl px-6 py-5 shadow-xl dark:shadow-sm dark:shadow-blue-500/30">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Fluxo
+            </p>
 
-            {saving ? "Salvando..." : "Salvar Curso"}
-          </button>
-        </div>
+            <strong className="text-[#080E2F] dark:text-white">
+              Dispositivo → PDF → IA → Publicar
+            </strong>
+          </div>
+        </header>
 
-        {/* Informações do curso */}
-        <section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 transition-colors shadow-2xl dark:shadow-sm dark:shadow-blue-500">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 rounded-2xl bg-blue-500/20 flex items-center justify-center">
-              <BookOpen className="text-blue-500 dark:text-blue-400" />
+        {/* Etapas */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white dark:bg-[#091a2c] border border-blue-500/20 rounded-3xl p-5 shadow-xl dark:shadow-sm dark:shadow-blue-500/30">
+            <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-500 flex items-center justify-center mb-4">
+              <Cpu size={26} />
             </div>
 
-            <h2 className="text-xl font-bold text-[#080E2F] dark:text-white">
-              Informações do Curso
+            <h2 className="font-bold text-[#080E2F] dark:text-white">
+              1. Dispositivo
             </h2>
+
+            <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
+              Escolha qual equipamento será treinado.
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300 ">
-                Título do Curso
-              </label>
-
-              <input
-                type="text"
-                value={titulo}
-                onChange={(e) => setTitulo(e.target.value)}
-                placeholder="Digite o título"
-                className="
-                bg-gray-50
-                dark:bg-[#0d2238]
-                border
-                border-gray-200
-                dark:border-white/10
-                text-[#080E2F]
-                dark:text-white
-                placeholder:text-gray-400
-                rounded-2xl
-                px-4
-                py-3
-                outline-none
-                shadow-xl
-                shadow-slate-300/40
-                dark:shadow-sm
-                dark:shadow-blue-500/30
-                focus:border-blue-500
-                focus:shadow-lg
-                focus:shadow-blue-500/20
-                transition-all
-                cursor-pointer"
-              />
+          <div className="bg-white dark:bg-[#091a2c] border border-purple-500/20 rounded-3xl p-5 shadow-xl dark:shadow-sm dark:shadow-blue-500/30">
+            <div className="w-12 h-12 rounded-2xl bg-purple-500/10 text-purple-500 flex items-center justify-center mb-4">
+              <FileText size={26} />
             </div>
 
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
-                Categoria
-              </label>
+            <h2 className="font-bold text-[#080E2F] dark:text-white">
+              2. PDF técnico
+            </h2>
 
-              <input
-                type="text"
-                value={categoria}
-                onChange={(e) => setCategoria(e.target.value)}
-                placeholder="Ex: IoT"
-                className=" bg-gray-50
-                dark:bg-[#0d2238]
-                border
-                border-gray-200
-                dark:border-white/10
-                text-[#080E2F]
-                dark:text-white
-                placeholder:text-gray-400
-                rounded-2xl
-                px-4
-                py-3
-                outline-none
-                shadow-xl
-                shadow-slate-300/40
-                dark:shadow-sm
-                dark:shadow-blue-500/30
-                focus:border-blue-500
-                focus:shadow-lg
-                focus:shadow-blue-500/20
-                transition-all
-                cursor-pointer"
-              />
+            <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
+              Envie o manual usado como base do curso.
+            </p>
+          </div>
+
+          <div className="bg-white dark:bg-[#091a2c] border border-green-500/20 rounded-3xl p-5 shadow-xl dark:shadow-sm dark:shadow-blue-500/30">
+            <div className="w-12 h-12 rounded-2xl bg-green-500/10 text-green-500 flex items-center justify-center mb-4">
+              <Wand2 size={26} />
             </div>
 
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
-                Nível
-              </label>
+            <h2 className="font-bold text-[#080E2F] dark:text-white">
+              3. Curso gerado
+            </h2>
 
-              <select
-                value={nivel}
-                onChange={(e) => setNivel(e.target.value)}
-                className=" bg-gray-50
-                dark:bg-[#0d2238]
-                border
-                border-gray-200
-                dark:border-white/10
-                text-[#080E2F]
-                dark:text-white
-                placeholder:text-gray-400
-                rounded-2xl
-                px-4
-                py-3
-                outline-none
-                shadow-xl
-                shadow-slate-300/40
-                dark:shadow-sm
-                dark:shadow-blue-500/30
-                focus:border-blue-500
-                focus:shadow-lg
-                focus:shadow-blue-500/20
-                transition-all
-                cursor-pointer"
-              >
-                <option value="">Selecione</option>
-                <option value="iniciante">Iniciante</option>
-                <option value="intermediario">Intermediário</option>
-                <option value="avancado">Avançado</option>
-              </select>
-            </div>
-
-            <div className="lg:col-span-3 flex flex-col gap-2">
-              <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
-                Descrição
-              </label>
-
-              <textarea
-                value={descricao}
-                onChange={(e) => setDescricao(e.target.value)}
-                placeholder="Descrição do curso"
-                rows={4}
-                className=" bg-gray-50
-                dark:bg-[#0d2238]
-                border
-                border-gray-200
-                dark:border-white/10
-                text-[#080E2F]
-                dark:text-white
-                placeholder:text-gray-400
-                rounded-2xl
-                px-4
-                py-3
-                outline-none
-                shadow-xl
-                shadow-slate-300/40
-                dark:shadow-sm
-                dark:shadow-blue-500/30
-                focus:border-blue-500
-                focus:shadow-lg
-                focus:shadow-blue-500/20
-                transition-all
-                cursor-pointer"
-              />
-            </div>
-
-            <div className="lg:col-span-3 flex flex-col gap-2">
-              <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
-                URL da Thumbnail
-              </label>
-
-              <input
-                type="text"
-                value={thumbnail}
-                onChange={(e) => setThumbnail(e.target.value)}
-                placeholder="https://imagem.com/curso.png"
-                className="b bg-gray-50
-                dark:bg-[#0d2238]
-                border
-                border-gray-200
-                dark:border-white/10
-                text-[#080E2F]
-                dark:text-white
-                placeholder:text-gray-400
-                rounded-2xl
-                px-4
-                py-3
-                outline-none
-                shadow-xl
-                shadow-slate-300/40
-                dark:shadow-sm
-                dark:shadow-blue-500/30
-                focus:border-blue-500
-                focus:shadow-lg
-                focus:shadow-blue-500/20
-                transition-all
-                cursor-pointer"
-              />
-            </div>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
+              Revise módulos e aulas antes de publicar.
+            </p>
           </div>
         </section>
 
+        {/* Dispositivos */}
+        <section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 transition-colors shadow-xl dark:shadow-sm dark:shadow-blue-500/30">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-12 h-12 rounded-2xl bg-blue-500/20 flex items-center justify-center">
+              <Cpu className="text-blue-500 dark:text-blue-400" />
+            </div>
+
+            <div>
+              <h2 className="text-xl font-bold text-[#080E2F] dark:text-white">
+                Dispositivo relacionado
+              </h2>
+
+              <p className="text-gray-500 dark:text-gray-400 text-sm">
+                Selecione o dispositivo que condiz com o PDF de treinamento.
+              </p>
+            </div>
+          </div>
+
+          {devices.length === 0 ? (
+            <div className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 rounded-2xl p-5 text-gray-500 dark:text-gray-400">
+              Nenhum dispositivo cadastrado.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {devices.map((device) => {
+                const selected = selectedDevices.includes(device.id);
+
+                return (
+                  <button
+                    key={device.id}
+                    type="button"
+                    onClick={() => toggleDevice(device.id)}
+                    disabled={generating || publishing}
+                    className={`
+                      text-left rounded-2xl border p-5 transition-all
+                      disabled:opacity-60 disabled:cursor-not-allowed
+                      ${
+                        selected
+                          ? "bg-blue-500/15 border-blue-500 text-blue-600 dark:text-blue-400 shadow-lg shadow-blue-500/10"
+                          : "bg-gray-50 dark:bg-[#0d2238] border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:border-blue-500"
+                      }
+                    `}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-bold text-lg">
+                          {device.nome}
+                        </p>
+
+                        <span className="text-sm opacity-80">
+                          {device.modelo || device.tipo || "Dispositivo"}
+                        </span>
+                      </div>
+
+                      {selected && (
+                        <CheckCircle2
+                          size={24}
+                          className="text-blue-500"
+                        />
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
         {/* PDF */}
-        <section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 transition-colors shadow-2xl dark:shadow-sm dark:shadow-blue-500">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
+        <section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 transition-colors shadow-xl dark:shadow-sm dark:shadow-blue-500/30">
+          <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6 items-center">
             <div className="flex items-center justify-center">
-              <div className="w-44 h-44 rounded-full bg-blue-500/10 flex items-center justify-center">
-                <FileText size={80} className="text-blue-500 dark:text-blue-400" />
+              <div className="w-44 h-44 rounded-full bg-gradient-to-br from-blue-500/15 to-purple-500/15 flex items-center justify-center">
+                <FileText
+                  size={82}
+                  className="text-blue-500 dark:text-blue-400"
+                />
               </div>
             </div>
 
-            <div className="lg:col-span-2 text-center lg:text-left">
-              <div className="w-14 h-14 rounded-2xl bg-blue-500/20 flex items-center justify-center mx-auto lg:mx-0 mb-4">
+            <div>
+              <div className="w-14 h-14 rounded-2xl bg-blue-500/20 flex items-center justify-center mb-4">
                 <FileText className="text-blue-500 dark:text-blue-400" />
               </div>
 
               <h2 className="text-2xl font-bold text-[#080E2F] dark:text-white">
-                Adicionar PDF ao treinamento
+                Adicionar PDF de treinamento
               </h2>
 
               <p className="text-gray-500 dark:text-gray-400 mt-2">
-                Faça upload do material do curso SIRROS
+                Esse PDF será lido pela IA para gerar título, descrição,
+                módulos e aulas automaticamente.
               </p>
 
               {pdfName && (
-                <p className="text-blue-500 dark:text-blue-400 mt-3 font-medium">
-                  PDF selecionado: {pdfName}
-                </p>
+                <div className="mt-5 rounded-2xl bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 p-4 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-11 h-11 rounded-xl bg-red-500/10 text-red-500 flex items-center justify-center shrink-0">
+                      <FileText size={23} />
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="font-bold text-[#080E2F] dark:text-white truncate">
+                        {pdfName}
+                      </p>
+
+                      {pdfFile && (
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {(pdfFile.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPdfFile(null);
+                      setPdfName("");
+                      setGeneratedCourse(null);
+
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = "";
+                      }
+                    }}
+                    disabled={generating || publishing}
+                    className="text-red-500 font-semibold hover:underline disabled:opacity-60"
+                  >
+                    Remover
+                  </button>
+                </div>
               )}
 
               <input
@@ -487,156 +596,357 @@ export default function CreateCourse() {
                 className="hidden"
               />
 
-              <button
-                type="button"
-                onClick={handleSelectPdf}
-                className="mt-5 bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-2xl font-semibold flex items-center gap-3 mx-auto lg:mx-0 transition-all"
-              >
-                <Upload size={20} />
-                Selecionar PDF
-              </button>
+              <div className="flex flex-col sm:flex-row gap-3 mt-5">
+                <button
+                  type="button"
+                  onClick={handleSelectPdf}
+                  disabled={generating || publishing}
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-2xl font-semibold flex items-center justify-center gap-3 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  <Upload size={20} />
+                  Selecionar PDF
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleGenerateCourseWithAi}
+                  disabled={
+                    generating ||
+                    publishing ||
+                    !pdfFile ||
+                    selectedDevices.length === 0
+                  }
+                  className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {generating ? (
+                    <>
+                      <Loader2 size={21} className="animate-spin" />
+                      Gerando curso...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={21} />
+                      Gerar curso com IA
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </section>
 
-        {/* Dispositivos relacionados */}
-        <section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 transition-colors shadow-2xl dark:shadow-sm dark:shadow-blue-500">
+        {/* Ajustes opcionais */}
+        <section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 transition-colors shadow-xl dark:shadow-sm dark:shadow-blue-500/30">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 rounded-2xl bg-blue-500/20 flex items-center justify-center">
-              <Cpu className="text-blue-500 dark:text-blue-400" />
+            <div className="w-12 h-12 rounded-2xl bg-purple-500/20 flex items-center justify-center">
+              <BookOpen className="text-purple-500 dark:text-purple-400" />
             </div>
 
             <div>
               <h2 className="text-xl font-bold text-[#080E2F] dark:text-white">
-                Dispositivos Relacionados
+                Ajustes opcionais
               </h2>
 
               <p className="text-gray-500 dark:text-gray-400 text-sm">
-                Selecione os dispositivos que fazem parte deste curso
+                A IA pode gerar o título e a descrição, mas você pode informar
+                uma base se quiser.
               </p>
             </div>
           </div>
 
-          {devices.length === 0 ? (
-            <div className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 rounded-2xl p-5 text-gray-500 dark:text-gray-400">
-              Nenhum dispositivo cadastrado.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 ">
-              {devices.map((device) => {
-                const selected = selectedDevices.includes(device.id);
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
+                Nome base do curso
+              </label>
 
-                return (
-                  <button
-                    key={device.id}
-                    type="button"
-                    onClick={() => toggleDevice(device.id)}
-                    className={`
-                      text-left
-                      rounded-2xl
-                      border
-                      p-4
-                      transition-all
-                      shadow-2xl
-                      dark:shadow-sm
-                      dark:shadow-blue-300
-                      cursor-pointer
-                      ${
-                        selected
-                          ? "bg-blue-500/20 border-blue-500 text-blue-600 dark:text-blue-400"
-                          : "bg-gray-50 dark:bg-[#0d2238] border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:border-blue-500"
-                      }
-                    `}
-                  >
-                    <p className="font-semibold">
-                      {device.nome}
-                    </p>
-
-                    <span className="text-sm opacity-80">
-                      {device.modelo || device.tipo || "Dispositivo"}
-                    </span>
-                  </button>
-                );
-              })}
+              <input
+                type="text"
+                value={baseTitle}
+                onChange={(e) => setBaseTitle(e.target.value)}
+                disabled={generating || publishing || !!generatedCourse}
+                placeholder="Ex: Treinamento Sirros S1"
+                className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 transition-all disabled:opacity-60"
+              />
             </div>
-          )}
+
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
+                URL da thumbnail
+              </label>
+
+              <input
+                type="text"
+                value={thumbnail}
+                onChange={(e) => setThumbnail(e.target.value)}
+                disabled={generating || publishing || !!generatedCourse}
+                placeholder="https://imagem.com/curso.png"
+                className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 transition-all disabled:opacity-60"
+              />
+            </div>
+          </div>
         </section>
 
-        {/* Módulos */}
-        <section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 transition-colors shadow-2xl dark:shadow-sm dark:shadow-blue-500">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-5">
-            <div className="flex items-center gap-3">
-              <Box className="text-blue-500 dark:text-blue-400" />
-
-              <h2 className="text-xl font-bold text-[#080E2F] dark:text-white">
-                Módulos do Curso
-              </h2>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleAddModule}
-              className="border border-blue-500 text-blue-500 dark:text-blue-400 px-5 py-3 rounded-2xl flex items-center justify-center gap-2 hover:bg-blue-500/10 transition-all"
-            >
-              <Plus size={20} />
-              Adicionar Módulo
-            </button>
-          </div>
-
-          <div className="space-y-4 ">
-            {modules.map((module, index) => (
-              <div
-                key={index}
-                className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 rounded-2xl p-4"
-              >
-                <div className="flex items-center justify-between mb-3 ">
-                  <h3 className="font-semibold text-[#080E2F] dark:text-white">
-                    Módulo {index + 1}
-                  </h3>
-
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveModule(index)}
-                    className="text-red-500 hover:text-red-600"
-                  >
-                    <Trash2 size={20} />
-                  </button>
+        {/* Preview */}
+        {generatedCourse && (
+          <section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 transition-colors shadow-xl dark:shadow-sm dark:shadow-blue-500/30">
+            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5 mb-6">
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 px-4 py-2 text-sm font-semibold mb-4">
+                  <CheckCircle2 size={18} />
+                  Curso gerado pela IA
                 </div>
 
-                <div className="space-y-3 ">
+                <h2 className="text-2xl font-bold text-[#080E2F] dark:text-white">
+                  Revisar informações do curso
+                </h2>
+
+                <p className="text-gray-500 dark:text-gray-400 mt-2">
+                  Confira e ajuste antes de publicar.
+                </p>
+              </div>
+
+              <div className="rounded-2xl bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 p-4 min-w-[220px]">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Total gerado
+                </p>
+
+                <p className="text-2xl font-bold text-[#080E2F] dark:text-white mt-1">
+                  {generatedCourse.modulos.length} módulos
+                </p>
+
+                <p className="text-gray-500 dark:text-gray-400 mt-1">
+                  {totalGeneratedLessons} aulas
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-5">
+              <div className="grid grid-cols-1 gap-4">
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
+                    Título gerado
+                  </label>
+
                   <input
                     type="text"
-                    value={module.titulo}
+                    value={generatedCourse.titulo || ""}
                     onChange={(e) =>
-                      handleModuleChange(
-                        index,
+                      updateGeneratedCourseField(
                         "titulo",
                         e.target.value
                       )
                     }
-                    placeholder="Título do módulo"
-                    className="w-full bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 shadow-2xl dark:shadow-sm dark:shadow-blue-500"
+                    className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500"
                   />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
+                    Descrição gerada
+                  </label>
 
                   <textarea
-                    value={module.conteudo}
+                    value={generatedCourse.descricao || ""}
                     onChange={(e) =>
-                      handleModuleChange(
-                        index,
-                        "conteudo",
+                      updateGeneratedCourseField(
+                        "descricao",
                         e.target.value
                       )
                     }
-                    placeholder="Conteúdo do módulo"
-                    rows={3}
-                    className="w-full bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 resize-none shadow-2xl dark:shadow-sm dark:shadow-blue-500"
+                    rows={4}
+                    className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500 resize-none"
                   />
                 </div>
               </div>
-            ))}
-          </div>
-        </section>
-      </form>
+
+              <div className="space-y-4">
+                {generatedCourse.modulos.map((modulo, moduloIndex) => (
+                  <div
+                    key={`${modulo.titulo}-${moduloIndex}`}
+                    className="rounded-3xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#0d2238] p-5"
+                  >
+                    <div className="grid grid-cols-1 md:grid-cols-[1fr_120px] gap-3">
+                      <input
+                        type="text"
+                        value={modulo.titulo}
+                        onChange={(e) =>
+                          updateGeneratedModulo(
+                            moduloIndex,
+                            "titulo",
+                            e.target.value
+                          )
+                        }
+                        className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500 font-bold"
+                      />
+
+                      <input
+                        type="number"
+                        value={modulo.ordem || moduloIndex + 1}
+                        onChange={(e) =>
+                          updateGeneratedModulo(
+                            moduloIndex,
+                            "ordem",
+                            e.target.value
+                          )
+                        }
+                        className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500"
+                      />
+                    </div>
+
+                    <div className="mt-4 space-y-3">
+                      {modulo.aulas.map((aula, aulaIndex) => (
+                        <div
+                          key={`${aula.titulo}-${aulaIndex}`}
+                          className="rounded-2xl bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 p-4"
+                        >
+                          <div className="flex items-start justify-between gap-3 mb-3">
+                            <h3 className="font-bold text-[#080E2F] dark:text-white">
+                              Aula {aulaIndex + 1}
+                            </h3>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                removeGeneratedAula(
+                                  moduloIndex,
+                                  aulaIndex
+                                )
+                              }
+                              className="text-red-500 hover:text-red-600"
+                            >
+                              <Trash2 size={20} />
+                            </button>
+                          </div>
+
+                          <div className="space-y-3">
+                            <input
+                              type="text"
+                              value={aula.titulo}
+                              onChange={(e) =>
+                                updateGeneratedAula(
+                                  moduloIndex,
+                                  aulaIndex,
+                                  "titulo",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Título da aula"
+                              className="w-full bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500"
+                            />
+
+                            <textarea
+                              value={aula.descricao || ""}
+                              onChange={(e) =>
+                                updateGeneratedAula(
+                                  moduloIndex,
+                                  aulaIndex,
+                                  "descricao",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Descrição da aula"
+                              rows={2}
+                              className="w-full bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500 resize-none"
+                            />
+
+                            <textarea
+                              value={aula.conteudo || ""}
+                              onChange={(e) =>
+                                updateGeneratedAula(
+                                  moduloIndex,
+                                  aulaIndex,
+                                  "conteudo",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Conteúdo da aula"
+                              rows={5}
+                              className="w-full bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500 resize-none"
+                            />
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              <input
+                                type="number"
+                                value={aula.duracao || 10}
+                                onChange={(e) =>
+                                  updateGeneratedAula(
+                                    moduloIndex,
+                                    aulaIndex,
+                                    "duracao",
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="Duração em minutos"
+                                className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500"
+                              />
+
+                              <input
+                                type="number"
+                                value={aula.ordem || aulaIndex + 1}
+                                onChange={(e) =>
+                                  updateGeneratedAula(
+                                    moduloIndex,
+                                    aulaIndex,
+                                    "ordem",
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="Ordem"
+                                className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={handleGenerateCourseWithAi}
+                  disabled={generating || publishing}
+                  className="flex-1 rounded-2xl border border-gray-200 dark:border-white/10 px-5 py-4 font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+                >
+                  {generating ? (
+                    <>
+                      <Loader2 size={22} className="animate-spin" />
+                      Gerando novamente...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCcw size={22} />
+                      Gerar novamente
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handlePublishCourse}
+                  disabled={publishing || generating}
+                  className="flex-1 rounded-2xl bg-blue-500 px-5 py-4 font-bold text-white hover:bg-blue-600 transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {publishing ? (
+                    <>
+                      <Loader2 size={22} className="animate-spin" />
+                      Publicando...
+                    </>
+                  ) : (
+                    <>
+                      <Save size={22} />
+                      Publicar curso
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </section>
+        )}
+      </div>
     </main>
   );
 }

@@ -15,6 +15,11 @@ import {
   Trash2,
   Video,
   X,
+  Brain,
+Loader2,
+Sparkles,
+UploadCloud,
+Wand2,
 } from "lucide-react";
 
 import { api } from "../../services/api";
@@ -92,6 +97,26 @@ type DeleteTarget =
       aulasCount: number;
     };
 
+  interface GeneratedAulaType {
+  titulo: string;
+  descricao?: string;
+  conteudo?: string;
+  duracao?: number;
+  ordem?: number;
+}
+
+interface GeneratedModuloType {
+  titulo: string;
+  ordem?: number;
+  aulas: GeneratedAulaType[];
+}
+
+interface GeneratedCourseType {
+  titulo?: string;
+  descricao?: string;
+  modulos: GeneratedModuloType[];
+}
+
 export default function ManageCourseLessons() {
   const { courseId } = useParams();
   const navigate = useNavigate();
@@ -112,6 +137,120 @@ export default function ManageCourseLessons() {
   
 
   const [form, setForm] = useState<AulaFormType>(emptyForm);
+
+  const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [aiPdf, setAiPdf] = useState<File | null>(null);
+  const [generatedCourse, setGeneratedCourse] =
+    useState<GeneratedCourseType | null>(null);
+
+  const [generatingWithAi, setGeneratingWithAi] = useState(false);
+  const [applyingGeneratedCourse, setApplyingGeneratedCourse] =
+    useState(false);
+
+  const [replaceExistingContent, setReplaceExistingContent] =
+    useState(false);
+
+  function handleCloseAiModal() {
+  if (generatingWithAi || applyingGeneratedCourse) {
+    return;
+  }
+
+  setAiModalOpen(false);
+  setAiPdf(null);
+  setGeneratedCourse(null);
+  setReplaceExistingContent(false);
+}
+
+async function handleGenerateCourseWithAi() {
+  if (!courseId) {
+    toast.error("Curso não encontrado");
+    return;
+  }
+
+  if (!aiPdf) {
+    toast.error("Selecione um PDF primeiro");
+    return;
+  }
+
+  if (aiPdf.type !== "application/pdf") {
+    toast.error("Envie apenas arquivos PDF");
+    return;
+  }
+
+  try {
+    setGeneratingWithAi(true);
+    setGeneratedCourse(null);
+
+    const formData = new FormData();
+
+    formData.append("pdf", aiPdf);
+
+    const response = await api.post(
+      `/courses/${courseId}/ai/generate-from-pdf`,
+      formData,
+      {
+        timeout: 300000,
+      }
+    );
+
+    setGeneratedCourse(response.data.generated_course);
+
+    toast.success("Estrutura gerada com IA");
+  } catch (error: any) {
+    console.log(error);
+
+    toast.error(
+      error.response?.data?.error ||
+        error.response?.data?.message ||
+        "Erro ao gerar aulas com IA"
+    );
+  } finally {
+    setGeneratingWithAi(false);
+  }
+}
+
+async function handleApplyGeneratedCourse() {
+  if (!courseId) {
+    toast.error("Curso não encontrado");
+    return;
+  }
+
+  if (!generatedCourse) {
+    toast.error("Nenhuma estrutura gerada para aplicar");
+    return;
+  }
+
+  try {
+    setApplyingGeneratedCourse(true);
+
+    await api.post(`/courses/${courseId}/ai/apply-generated-course`, {
+      replaceExisting: replaceExistingContent,
+      generated_course: generatedCourse,
+    });
+
+    toast.success("Curso gerado aplicado com sucesso");
+
+    setAiModalOpen(false);
+    setAiPdf(null);
+    setGeneratedCourse(null);
+    setReplaceExistingContent(false);
+
+    await loadCourseContent();
+  } catch (error: any) {
+    console.log(error);
+
+    toast.error(
+      error.response?.data?.error ||
+        error.response?.data?.message ||
+        "Erro ao aplicar curso gerado"
+    );
+  } finally {
+    setApplyingGeneratedCourse(false);
+  }
+}
+
+
+
 
   async function loadCourseContent() {
     try {
@@ -380,36 +519,47 @@ function handleDeleteModulo(modulo: ModuloType) {
   return (
     <main className="min-h-screen bg-gray-50 dark:bg-[#071827] px-6 py-8 lg:px-12 transition-colors">
       <div className="max-w-[1500px] mx-auto space-y-6">
-        <header className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <button
-              type="button"
-              onClick={() => navigate("/dashboard?tab=courses")}
-              className="inline-flex items-center gap-2 text-blue-500 dark:text-blue-400 font-semibold mb-4"
-            >
-              <ArrowLeft size={20} />
-              Voltar
-            </button>
+       <header className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+  <div>
+    <button
+      type="button"
+      onClick={() => navigate("/dashboard?tab=courses")}
+      className="inline-flex items-center gap-2 text-blue-500 dark:text-blue-400 font-semibold mb-4"
+    >
+      <ArrowLeft size={20} />
+      Voltar
+    </button>
 
-            <h1 className="text-3xl lg:text-4xl font-bold text-[#080E2F] dark:text-white">
-              Gerenciar Aulas
-            </h1>
+    <h1 className="text-3xl lg:text-4xl font-bold text-[#080E2F] dark:text-white">
+      Gerenciar Aulas
+    </h1>
 
-            <p className="text-gray-500 dark:text-gray-400 mt-2 text-base lg:text-lg">
-              Curso: {course.titulo}
-            </p>
-          </div>
+    <p className="text-gray-500 dark:text-gray-400 mt-2 text-base lg:text-lg">
+      Curso: {course.titulo}
+    </p>
+  </div>
 
-          <div className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl px-6 py-4 shadow-xl dark:shadow-sm dark:shadow-blue-500/30">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Total de aulas
-            </p>
+  <div className="flex flex-col sm:flex-row gap-3">
+    <button
+      type="button"
+      onClick={() => setAiModalOpen(true)}
+      className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-2xl px-5 py-3 font-semibold flex items-center justify-center gap-2 transition-all shadow-xl dark:shadow-sm dark:shadow-blue-500/40"
+    >
+      <Sparkles size={22} />
+      Gerar com IA
+    </button>
 
-            <strong className="text-3xl text-[#080E2F] dark:text-white">
-              {course.total_aulas}
-            </strong>
-          </div>
-        </header>
+    <div className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl px-6 py-4 shadow-xl dark:shadow-sm dark:shadow-blue-500/30">
+      <p className="text-sm text-gray-500 dark:text-gray-400">
+        Total de aulas
+      </p>
+
+      <strong className="text-3xl text-[#080E2F] dark:text-white">
+        {course.total_aulas}
+      </strong>
+    </div>
+  </div>
+</header>
 
         <div className="grid grid-cols-1 xl:grid-cols-[1fr_480px] gap-6">
           {/* Lista de módulos e aulas */}
@@ -918,6 +1068,286 @@ function handleDeleteModulo(modulo: ModuloType) {
             ? "Excluindo..."
             : "Excluir"}
         </button>
+      </div>
+    </div>
+  </div>
+)}
+
+
+{aiModalOpen && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
+    <div className="w-full max-w-5xl max-h-[92vh] overflow-y-auto rounded-3xl bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 shadow-2xl">
+      <div className="sticky top-0 z-10 bg-white/95 dark:bg-[#091a2c]/95 backdrop-blur-xl border-b border-gray-200 dark:border-white/10 p-6 rounded-t-3xl">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-r from-blue-500 to-purple-600 text-white flex items-center justify-center shrink-0">
+              <Brain size={32} />
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-bold text-[#080E2F] dark:text-white">
+                Gerar aulas com IA
+              </h2>
+
+              <p className="text-gray-500 dark:text-gray-400 mt-1">
+                Envie um manual em PDF para a IA sugerir módulos e aulas em texto.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleCloseAiModal}
+            disabled={generatingWithAi || applyingGeneratedCourse}
+            className="w-11 h-11 rounded-2xl border border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-300 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-white/5 transition-all disabled:opacity-60"
+          >
+            <X size={24} />
+          </button>
+        </div>
+      </div>
+
+      <div className="p-6 space-y-6">
+        {/* Upload */}
+        <section className="rounded-3xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#0d2238] p-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+            <div>
+              <h3 className="text-xl font-bold text-[#080E2F] dark:text-white flex items-center gap-2">
+                <UploadCloud size={24} className="text-blue-500" />
+                Manual técnico em PDF
+              </h3>
+
+              <p className="text-gray-500 dark:text-gray-400 mt-2">
+                Selecione o PDF do dispositivo. A IA vai gerar uma estrutura editável antes de salvar.
+              </p>
+            </div>
+
+            <label className="cursor-pointer rounded-2xl bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 px-5 py-4 font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 transition-all flex items-center justify-center gap-2">
+              <UploadCloud size={22} />
+              Selecionar PDF
+
+              <input
+                type="file"
+                accept="application/pdf"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+
+                  if (!file) {
+                    return;
+                  }
+
+                  setAiPdf(file);
+                  setGeneratedCourse(null);
+                }}
+              />
+            </label>
+          </div>
+
+          {aiPdf && (
+            <div className="mt-5 rounded-2xl bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 p-4 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-11 h-11 rounded-xl bg-red-500/10 text-red-500 flex items-center justify-center shrink-0">
+                  <FileText size={24} />
+                </div>
+
+                <div className="min-w-0">
+                  <p className="font-bold text-[#080E2F] dark:text-white truncate">
+                    {aiPdf.name}
+                  </p>
+
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {(aiPdf.size / 1024 / 1024).toFixed(2)} MB
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setAiPdf(null);
+                  setGeneratedCourse(null);
+                }}
+                disabled={generatingWithAi}
+                className="text-red-500 font-semibold hover:underline disabled:opacity-60"
+              >
+                Remover
+              </button>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={handleGenerateCourseWithAi}
+            disabled={!aiPdf || generatingWithAi}
+            className="mt-5 w-full rounded-2xl bg-gradient-to-r from-blue-500 to-purple-600 px-5 py-4 font-bold text-white flex items-center justify-center gap-2 hover:from-blue-600 hover:to-purple-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {generatingWithAi ? (
+              <>
+                <Loader2 size={24} className="animate-spin" />
+                Gerando estrutura com IA...
+              </>
+            ) : (
+              <>
+                <Wand2 size={24} />
+                Gerar estrutura com IA
+              </>
+            )}
+          </button>
+        </section>
+
+        {/* Preview */}
+        {generatedCourse && (
+          <section className="rounded-3xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#091a2c] p-6">
+            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5 mb-6">
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 px-4 py-2 text-sm font-semibold mb-4">
+                  <CheckCircle2 size={18} />
+                  Estrutura gerada
+                </div>
+
+                <h3 className="text-2xl font-bold text-[#080E2F] dark:text-white">
+                  {generatedCourse.titulo || "Curso gerado com IA"}
+                </h3>
+
+                {generatedCourse.descricao && (
+                  <p className="text-gray-500 dark:text-gray-400 mt-2 leading-relaxed">
+                    {generatedCourse.descricao}
+                  </p>
+                )}
+              </div>
+
+              <div className="rounded-2xl bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 p-4 min-w-[220px]">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Total gerado
+                </p>
+
+                <p className="text-2xl font-bold text-[#080E2F] dark:text-white mt-1">
+                  {generatedCourse.modulos.length} módulos
+                </p>
+
+                <p className="text-gray-500 dark:text-gray-400 mt-1">
+                  {generatedCourse.modulos.reduce(
+                    (total, modulo) => total + modulo.aulas.length,
+                    0
+                  )}{" "}
+                  aulas
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {generatedCourse.modulos.map((modulo, moduloIndex) => (
+                <div
+                  key={`${modulo.titulo}-${moduloIndex}`}
+                  className="rounded-3xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#0d2238] p-5"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h4 className="text-lg font-bold text-[#080E2F] dark:text-white">
+                        {modulo.titulo}
+                      </h4>
+
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        {modulo.aulas.length} aula(s)
+                      </p>
+                    </div>
+
+                    <span className="rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 px-3 py-1 text-sm font-bold">
+                      Ordem {modulo.ordem || moduloIndex + 1}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 space-y-3">
+                    {modulo.aulas.map((aula, aulaIndex) => (
+                      <div
+                        key={`${aula.titulo}-${aulaIndex}`}
+                        className="rounded-2xl bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 p-4"
+                      >
+                        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                          <div>
+                            <h5 className="font-bold text-[#080E2F] dark:text-white">
+                              {aula.titulo}
+                            </h5>
+
+                            {aula.descricao && (
+                              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                {aula.descricao}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 shrink-0">
+                            <Clock3 size={16} />
+                            {aula.duracao || 10} min
+                          </div>
+                        </div>
+
+                        {aula.conteudo && (
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-3 line-clamp-3">
+                            {aula.conteudo}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 rounded-2xl border border-orange-500/20 bg-orange-500/10 p-4">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={replaceExistingContent}
+                  onChange={(e) =>
+                    setReplaceExistingContent(e.target.checked)
+                  }
+                  className="mt-1 w-5 h-5 accent-blue-600"
+                />
+
+                <div>
+                  <p className="font-bold text-[#080E2F] dark:text-white">
+                    Substituir módulos e aulas atuais
+                  </p>
+
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    Se marcado, o sistema apagará o conteúdo atual do curso e salvará apenas a estrutura gerada pela IA.
+                  </p>
+                </div>
+              </label>
+            </div>
+
+            <div className="mt-6 flex flex-col sm:flex-row gap-3">
+              <button
+                type="button"
+                onClick={() => setGeneratedCourse(null)}
+                disabled={applyingGeneratedCourse}
+                className="flex-1 rounded-2xl border border-gray-200 dark:border-white/10 px-5 py-4 font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-all disabled:opacity-60"
+              >
+                Gerar novamente
+              </button>
+
+              <button
+                type="button"
+                onClick={handleApplyGeneratedCourse}
+                disabled={applyingGeneratedCourse}
+                className="flex-1 rounded-2xl bg-blue-500 px-5 py-4 font-bold text-white hover:bg-blue-600 transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {applyingGeneratedCourse ? (
+                  <>
+                    <Loader2 size={22} className="animate-spin" />
+                    Aplicando...
+                  </>
+                ) : (
+                  <>
+                    <Save size={22} />
+                    Aplicar ao curso
+                  </>
+                )}
+              </button>
+            </div>
+          </section>
+        )}
       </div>
     </div>
   </div>
