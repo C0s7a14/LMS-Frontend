@@ -1,4 +1,4 @@
-import logo from "../../assets/logo_sirros_roxa_transparente(1).png";
+import logo from "../../assets/logo3.png";
 
 import { Link } from "react-router-dom";
 import { useState, type FormEvent } from "react";
@@ -74,12 +74,6 @@ export default function ForgotPassword() {
         {/* Lado esquerdo */}
         <section className="hidden lg:flex flex-col justify-center px-16 xl:px-24 py-12 relative">
           <div className="max-w-[720px]">
-            <img
-              src={logo}
-              alt="Sirros"
-              className="w-52 mb-20 object-contain"
-            />
-
             <h1 className="text-[86px] xl:text-[105px] font-black leading-[0.9] tracking-tight text-[#071827]">
               SIRROS
               <span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">

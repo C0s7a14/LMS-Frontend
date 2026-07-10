@@ -19,6 +19,7 @@ import {
   Download,
   Calendar,
   Activity,
+  Trash2,
 } from "lucide-react";
 
 import {
@@ -165,6 +166,12 @@ export default function AdminDashboard() {
 
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [deviceModalOpen, setDeviceModalOpen] = useState(false);
+
+  const [deleteCourseTarget, setDeleteCourseTarget] =
+  useState<CourseType | null>(null);
+
+const [deletingCourseId, setDeletingCourseId] =
+  useState<number | null>(null);
 
   const navigate = useNavigate();
 
@@ -321,6 +328,55 @@ async function loadDashboardData() {
       toast.error("Exportação de relatório será conectada depois.");
     }
   }
+
+  async function confirmDeleteCourse() {
+  if (!deleteCourseTarget) {
+    return;
+  }
+
+  try {
+    setDeletingCourseId(deleteCourseTarget.id);
+
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      toast.error("Sessão expirada. Faça login novamente.");
+      navigate("/");
+      return;
+    }
+
+    await axios.delete(
+      `http://localhost:3333/courses/${deleteCourseTarget.id}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    toast.success("Curso excluído com sucesso");
+
+    setDeleteCourseTarget(null);
+
+    await loadDashboardData();
+  } catch (error) {
+    console.log(error);
+
+    if (axios.isAxiosError(error)) {
+      toast.error(
+        error.response?.data?.error ||
+          error.response?.data?.message ||
+          "Erro ao excluir curso"
+      );
+
+      return;
+    }
+
+    toast.error("Erro inesperado ao excluir curso");
+  } finally {
+    setDeletingCourseId(null);
+  }
+}
 
   const header = getHeaderInfo();
 
@@ -525,14 +581,15 @@ async function loadDashboardData() {
           )}
 
           {currentTab === "courses" && (
-            <CoursesTab
-  courses={courses}
-  search={search}
-  createCourse={() => navigate("/create-courses")}
-  manageCourseLessons={(courseId) =>
-    navigate(`/admin/courses/${courseId}/aulas`)
-  }
-/>
+          <CoursesTab
+            courses={courses}
+            search={search}
+            createCourse={() => navigate("/create-courses")}
+            manageCourseLessons={(courseId) =>
+              navigate(`/admin/courses/${courseId}/aulas`)
+            }
+            deleteCourse={(course) => setDeleteCourseTarget(course)}
+          />
           )}
 
           {currentTab === "certificates" && (
@@ -549,11 +606,61 @@ async function loadDashboardData() {
         </>
       )}
 
+
+{deleteCourseTarget && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+    <div className="w-full max-w-md rounded-3xl bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 p-6 shadow-2xl">
+      <div className="w-16 h-16 rounded-2xl bg-red-500/10 text-red-500 flex items-center justify-center mx-auto">
+        <Trash2 size={36} />
+      </div>
+
+      <h2 className="text-2xl font-bold text-[#080E2F] dark:text-white text-center mt-5">
+        Excluir curso
+      </h2>
+
+      <p className="text-gray-500 dark:text-gray-400 text-center mt-3 leading-relaxed">
+        Tem certeza que deseja excluir o curso{" "}
+        <strong className="text-[#080E2F] dark:text-white">
+          “{deleteCourseTarget.titulo}”
+        </strong>
+        ?
+      </p>
+
+      <div className="mt-5 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-red-500 text-sm font-medium">
+        Essa ação removerá módulos, aulas, quizzes, progresso das aulas e vínculos com dispositivos.
+      </div>
+
+      <div className="mt-6 flex flex-col sm:flex-row gap-3">
+        <button
+          type="button"
+          onClick={() => setDeleteCourseTarget(null)}
+          disabled={deletingCourseId === deleteCourseTarget.id}
+          className="flex-1 rounded-2xl border border-gray-200 dark:border-white/10 px-5 py-3 font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-all disabled:opacity-60"
+        >
+          Cancelar
+        </button>
+
+        <button
+          type="button"
+          onClick={confirmDeleteCourse}
+          disabled={deletingCourseId === deleteCourseTarget.id}
+          className="flex-1 rounded-2xl bg-red-500 px-5 py-3 font-semibold text-white hover:bg-red-600 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          {deletingCourseId === deleteCourseTarget.id
+            ? "Excluindo..."
+            : "Excluir"}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+
       <UserModal
-        isOpen={userModalOpen}
-        onClose={() => setUserModalOpen(false)}
-        onSuccess={loadDashboardData}
-      />
+  isOpen={userModalOpen}
+  onClose={() => setUserModalOpen(false)}
+  onSuccess={loadDashboardData}
+/>
 
       <DeviceModal
         isOpen={deviceModalOpen}
@@ -1192,11 +1299,13 @@ function CoursesTab({
   search,
   createCourse,
   manageCourseLessons,
+  deleteCourse,
 }: {
   courses: CourseType[];
   search: string;
   createCourse: () => void;
   manageCourseLessons: (courseId: number) => void;
+  deleteCourse: (course: CourseType) => void;
 }) {
   const filteredCourses = courses.filter((course) => {
     const term = search.toLowerCase();
@@ -1262,7 +1371,7 @@ function CoursesTab({
       <div className="grid grid-cols-1 2xl:grid-cols-[minmax(0,1.4fr)_minmax(360px,0.8fr)] gap-5 sm:gap-6">
         <TableCard title="Lista de Cursos">
           <div className="min-w-[950px]">
-            <div className="grid grid-cols-[1.5fr_1fr_1fr_1fr_160px] text-sm text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-white/10 pb-3">
+            <div className="grid grid-cols-[1.5fr_1fr_1fr_1fr_260px] text-sm text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-white/10 pb-3">
               <span>Curso</span>
               <span>Status</span>
               <span>Alunos</span>
@@ -1273,7 +1382,7 @@ function CoursesTab({
             {filteredCourses.map((course) => (
               <div
                 key={course.id}
-                className="grid grid-cols-[1.5fr_1fr_1fr_1fr_160px] gap-4 items-center py-4 border-b border-gray-200 dark:border-white/10 last:border-b-0"
+                className="grid grid-cols-[1.5fr_1fr_1fr_1fr_260px] gap-4 items-center py-4 border-b border-gray-200 dark:border-white/10 last:border-b-0"
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-14 h-14 rounded-xl bg-gray-100 dark:bg-[#0d2238] overflow-hidden flex items-center justify-center shrink-0">
@@ -1313,31 +1422,54 @@ function CoursesTab({
                     : "-"}
                 </p>
 
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => manageCourseLessons(course.id)}
-                    className="
-                      inline-flex
-                      items-center
-                      justify-center
-                      gap-2
-                      rounded-xl
-                      bg-blue-500/10
-                      px-3
-                      py-2
-                      text-sm
-                      font-semibold
-                      text-blue-600
-                      dark:text-blue-400
-                      hover:bg-blue-500/20
-                      transition-all
-                    "
-                  >
-                    <BookOpen size={18} />
-                    Aulas
-                  </button>
-                </div>
+                <div className="flex justify-end gap-2">
+  <button
+    type="button"
+    onClick={() => manageCourseLessons(course.id)}
+    className="
+      inline-flex
+      items-center
+      justify-center
+      gap-2
+      rounded-xl
+      bg-blue-500/10
+      px-3
+      py-2
+      text-sm
+      font-semibold
+      text-blue-600
+      dark:text-blue-400
+      hover:bg-blue-500/20
+      transition-all
+    "
+  >
+    <BookOpen size={18} />
+    Aulas
+  </button>
+
+  <button
+    type="button"
+    onClick={() => deleteCourse(course)}
+    className="
+      inline-flex
+      items-center
+      justify-center
+      gap-2
+      rounded-xl
+      bg-red-500/10
+      px-3
+      py-2
+      text-sm
+      font-semibold
+      text-red-500
+      hover:bg-red-500/20
+      transition-all
+    "
+  >
+    <Trash2 size={18} />
+    Excluir
+  </button>
+</div>
               </div>
             ))}
           </div>
