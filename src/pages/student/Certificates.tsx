@@ -11,13 +11,18 @@ import {
   ShieldCheck,
   TrendingUp,
   Wrench,
+  Loader2 // spinner icon
 } from "lucide-react";
 
-import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useMemo, useState, useEffect } from "react";
+
+import { getCertificates, downloadCertificatePdf } from "../../services/certificateService";
+
+import CertificateModal from "../../components/modals/CertificateModal";
 
 interface CertificateType {
-  id: string;
+  dbId: number; // real MySQL ID used for downloading
+  id: string;   // validation_code to display
   title: string;
   academy: string;
   conclusionDate: string;
@@ -27,74 +32,117 @@ interface CertificateType {
   icon: "monitor" | "wrench" | "award";
 }
 
-const certificates: CertificateType[] = [
-  {
-    id: "CERT-2026-0148",
-    title: "Instalação e Configuração do SIRROS LogiTrack",
-    academy: "SIRROS Academy",
-    conclusionDate: "24 de maio de 2026",
-    validUntil: "24/05/2027",
-    score: "96%",
-    workload: "8h",
-    icon: "award",
-  },
-  {
-    id: "CERT-2026-0122",
-    title: "Operação e Monitoramento de Dispositivos",
-    academy: "SIRROS Academy",
-    conclusionDate: "12/03/2026",
-    validUntil: "12/03/2027",
-    score: "92%",
-    workload: "6h",
-    icon: "monitor",
-  },
-  {
-    id: "CERT-2026-0109",
-    title: "Manutenção Preventiva de Dispositivos",
-    academy: "SIRROS Academy",
-    conclusionDate: "05/02/2026",
-    validUntil: "05/02/2027",
-    score: "94%",
-    workload: "5h",
-    icon: "wrench",
-  },
-];
-
 function getUserFromStorage() {
   return JSON.parse(localStorage.getItem("user") || "{}");
 }
 
 export default function Certificates() {
+  const [certificates, setCertificates] = useState<CertificateType[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
-  const navigate = useNavigate();
-
   const user = getUserFromStorage();
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedCert, setSelectedCert] = useState<CertificateType | null>(null);
+
+  // API Call 
+  useEffect(() => {
+    async function fetchMyCertificates() {
+      try {
+        const data = await getCertificates();
+        
+       // Ensure data is an array to prevent runtime errors
+        const safeData = Array.isArray(data) ? data : [];
+        
+        const formattedCertificates = safeData.map((cert: any) => {
+          // Safe date parsing
+          const issueDate = cert.emitido_em ? new Date(cert.emitido_em) : new Date();
+          const validDate = new Date(issueDate);
+          validDate.setFullYear(validDate.getFullYear() + 1);
+
+          return {
+            dbId: cert.id || 0,
+            id: cert.validation_code || "Código Indisponível",
+            // If backend doesn't send curso_titulo, fallback to showing the ID
+            title: cert.curso_titulo || `Curso de ID: ${cert.curso_id || 'Desconhecido'}`,
+            academy: "SIRROS Academy",
+            conclusionDate: issueDate.toLocaleDateString('pt-BR'),
+            validUntil: validDate.toLocaleDateString('pt-BR'),
+            score: "100%", 
+            workload: "8h", 
+            icon: "award" as const,
+          };
+        });
+
+        setCertificates(formattedCertificates);
+      } catch (error) {
+        console.error("Erro ao buscar certificados:", error);
+        // if fetching fails, we can set an empty array to avoid rendering issues
+        setCertificates([]); 
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchMyCertificates();
+  }, []);
+
+  // download handler
+async function handleDownload(dbId: number, title: string) {
+  try {
+    const blob = await downloadCertificatePdf(dbId);
+    
+    // Create a temporary link to force the browser to download the PDF blob
+    const url = window.URL.createObjectURL(new Blob([blob]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `Certificado-${title.replace(/\s+/g, '-')}.pdf`);
+    
+    document.body.appendChild(link);
+    link.click();
+    
+    // clean way to remove the element from the DOM
+    link.remove(); 
+    
+    // Tell the browser to delete the temporary file from memory
+    window.URL.revokeObjectURL(url); 
+    
+  } catch (error) {
+    console.error(error);
+    alert("Erro ao baixar o certificado.");
+  }
+}
 
   const filteredCertificates = useMemo(() => {
     const term = search.toLowerCase();
-
     return certificates.filter((certificate) =>
-      certificate.title.toLowerCase().includes(term) ||
-      certificate.id.toLowerCase().includes(term)
+      (certificate.title || "").toLowerCase().includes(term) ||
+      (certificate.id || "").toLowerCase().includes(term)
     );
-  }, [search]);
+  }, [search, certificates]);
 
   const featuredCertificate = filteredCertificates[0];
-
   const otherCertificates = filteredCertificates.slice(1);
 
   function getCertificateIcon(type: CertificateType["icon"]) {
-    if (type === "monitor") {
-      return Monitor;
-    }
-
-    if (type === "wrench") {
-      return Wrench;
-    }
-
+    if (type === "monitor") return Monitor;
+    if (type === "wrench") return Wrench;
     return Award;
+  }
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <main className="min-h-screen bg-gray-50 dark:bg-[#071827] flex flex-col items-center justify-center transition-colors">
+        <Loader2 className="w-12 h-12 text-blue-500 animate-spin mb-4" />
+        <h2 className="text-xl font-semibold text-[#080E2F] dark:text-white animate-pulse">
+          Carregando seus certificados...
+        </h2>
+      </main>
+    );
   }
 
   return (
@@ -209,7 +257,7 @@ export default function Certificates() {
           <CertificateStatCard
             icon={TrendingUp}
             title="Média de Notas"
-            value="96%"
+            value="100%"
             subtitle="Desempenho geral"
             color="bg-green-500/15 text-green-600 dark:text-green-400"
           />
@@ -217,16 +265,22 @@ export default function Certificates() {
           <CertificateStatCard
             icon={Calendar}
             title="Último Certificado"
-            value="24/05/2026"
+            value={featuredCertificate ? featuredCertificate.conclusionDate : "Nenhum"}
             subtitle="Data de emissão"
             color="bg-blue-500/15 text-blue-600 dark:text-blue-400"
           />
         </div>
 
+        {certificates.length === 0 && (
+          <div className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-10 text-center shadow-sm">
+            <h3 className="text-xl font-bold text-[#080E2F] dark:text-white mb-2">Nenhum certificado encontrado</h3>
+            <p className="text-gray-500 dark:text-gray-400">Você ainda não concluiu nenhum curso na plataforma Sirros.</p>
+          </div>
+        )}
+
         {/* Featured certificate */}
         {featuredCertificate && (
-          <section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-5 sm:p-6 shadow-2xl transition-all duration-300 ease-in-out
-      hover:scale-105 dark:shadow-blue-500 dark:shadow-xs cursor-pointer">
+          <section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-5 sm:p-6 shadow-2xl transition-all duration-300 ease-in-out hover:scale-105 dark:shadow-blue-500 dark:shadow-xs cursor-pointer">
             <div className="grid grid-cols-1 xl:grid-cols-[320px_1fr] gap-6">
 
               {/* Preview */}
@@ -266,7 +320,7 @@ export default function Certificates() {
 
                   <InfoItem
                     icon={Award}
-                    title="ID do Certificado:"
+                    title="Cód. Validação:"
                     value={featuredCertificate.id}
                   />
 
@@ -278,48 +332,22 @@ export default function Certificates() {
                   />
                 </div>
 
+                {/* BOTÕES DO MODAL AQUI */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5">
                   <button
-                    onClick={() => navigate(`/certificate/${featuredCertificate.id}`)}
-                    className="
-                      bg-blue-600
-                      hover:bg-blue-700
-                      text-white
-                      rounded-2xl
-                      py-4
-                      font-semibold
-                      flex
-                      items-center
-                      justify-center
-                      gap-3
-                      transition
-                      shadow-2xl
-                      cursor-pointer
-                    "
+                    onClick={() => {
+                      setSelectedCert(featuredCertificate);
+                      setIsModalOpen(true);
+                    }}
+                    className="bg-blue-600 hover:bg-blue-700 text-white rounded-2xl py-4 font-semibold flex items-center justify-center gap-3 transition shadow-2xl cursor-pointer"
                   >
                     <Eye size={22} />
                     Ver certificado
                   </button>
 
                   <button
-                    className="
-                      border
-                      border-blue-500/40
-                      text-blue-600
-                      dark:text-blue-400
-                      rounded-2xl
-                      py-4
-                      font-semibold
-                      flex
-                      items-center
-                      justify-center
-                      gap-3
-                      hover:bg-blue-500/10
-                      transition
-                      shadow-2xl
-                      cursor-pointer
-        
-                    "
+                    onClick={() => handleDownload(featuredCertificate.dbId, featuredCertificate.title)}
+                    className="border border-blue-500/40 text-blue-600 dark:text-blue-400 rounded-2xl py-4 font-semibold flex items-center justify-center gap-3 hover:bg-blue-500/10 transition shadow-2xl cursor-pointer"
                   >
                     <Download size={22} />
                     Baixar PDF
@@ -331,111 +359,90 @@ export default function Certificates() {
         )}
 
         {/* Other certificates */}
-        <section>
-          <h2 className="text-2xl font-bold text-[#080E2F] dark:text-white mb-5">
-            Outros certificados emitidos
-          </h2>
+        {otherCertificates.length > 0 && (
+          <section>
+            <h2 className="text-2xl font-bold text-[#080E2F] dark:text-white mb-5">
+              Outros certificados emitidos
+            </h2>
 
-          <div
-            className={
-              viewMode === "grid"
-                ? "grid grid-cols-1 xl:grid-cols-2 gap-6"
-                : "flex flex-col gap-4"
-            }
-          >
-            {otherCertificates.map((certificate) => {
-              const Icon = getCertificateIcon(certificate.icon);
+            <div
+              className={
+                viewMode === "grid"
+                  ? "grid grid-cols-1 xl:grid-cols-2 gap-6"
+                  : "flex flex-col gap-4"
+              }
+            >
+              {otherCertificates.map((certificate) => {
+                const Icon = getCertificateIcon(certificate.icon);
 
-              return (
-                <article
-                  key={certificate.id}
-                  className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-5 sm:p-6 shadow-2xl transition-all duration-300 ease-in-out
-      hover:scale-105 dark:shadow-blue-500 dark:shadow-sm cursor-pointer"
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 ">
-                    <div className="flex gap-4">
-                      <div className="w-16 h-16 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-                        <Icon size={34} />
-                      </div>
+                return (
+                  <article
+                    key={certificate.dbId}
+                    className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-5 sm:p-6 shadow-2xl transition-all duration-300 ease-in-out hover:scale-105 dark:shadow-blue-500 dark:shadow-sm cursor-pointer"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 ">
+                      <div className="flex gap-4">
+                        <div className="w-16 h-16 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                          <Icon size={34} />
+                        </div>
 
-                      <div>
-                        <h3 className="text-xl font-bold text-[#080E2F] dark:text-white">
-                          {certificate.title}
-                        </h3>
+                        <div>
+                          <h3 className="text-xl font-bold text-[#080E2F] dark:text-white">
+                            {certificate.title}
+                          </h3>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-5">
-                          <SmallInfo
-                            icon={Calendar}
-                            title="Data de Conclusão:"
-                            value={certificate.conclusionDate}
-                          />
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-5">
+                            <SmallInfo
+                              icon={Calendar}
+                              title="Data de Conclusão:"
+                              value={certificate.conclusionDate}
+                            />
 
-                          <SmallInfo
-                            icon={ShieldCheck}
-                            title="Validade: 1 ano"
-                            value={`Válido até ${certificate.validUntil}`}
-                            success
-                          />
+                            <SmallInfo
+                              icon={ShieldCheck}
+                              title="Validade: 1 ano"
+                              value={`Válido até ${certificate.validUntil}`}
+                              success
+                            />
+                          </div>
                         </div>
                       </div>
+
+                      <span className="w-fit rounded-2xl bg-green-500/15 text-green-600 dark:text-green-400 px-5 py-2 font-semibold text-sm">
+                        Emitido
+                      </span>
                     </div>
 
-                    <span className="w-fit rounded-2xl bg-green-500/15 text-green-600 dark:text-green-400 px-5 py-2 font-semibold text-sm">
-                      Emitido
-                    </span>
-                  </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
+                      <button
+                        onClick={() => {
+                          setSelectedCert(certificate);
+                          setIsModalOpen(true);
+                        }}
+                        className="
+                          border border-blue-500/40 text-blue-600 dark:text-blue-400 rounded-2xl py-3 font-semibold flex items-center justify-center gap-3 hover:bg-blue-500/10 transition cursor-pointer
+                        "
+                      >
+                        <Eye size={21} />
+                        Ver certificado
+                      </button>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
-                    <button
-                      onClick={() => navigate(`/certificate/${certificate.id}`)}
-                      className="
-                        border
-                        border-blue-500/40
-                        text-blue-600
-                        dark:text-blue-400
-                        rounded-2xl
-                        py-3
-                        font-semibold
-                        flex
-                        items-center
-                        justify-center
-                        gap-3
-                        hover:bg-blue-500/10
-                        transition
-                        cursor-pointer
-                      "
-                    >
-                      <Eye size={21} />
-                      Ver certificado
-                    </button>
-
-                    <button
-                      className="
-                        border
-                        border-blue-500/40
-                        text-blue-600
-                        dark:text-blue-400
-                        rounded-2xl
-                        py-3
-                        font-semibold
-                        flex
-                        items-center
-                        justify-center
-                        gap-3
-                        hover:bg-blue-500/10
-                        transition
-                        cursor-pointer
-                      "
-                    >
-                      <Download size={21} />
-                      Baixar PDF
-                    </button>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        </section>
+                      <button
+                        onClick={() => handleDownload(certificate.dbId, certificate.title)}
+                        className="
+                          border border-blue-500/40 text-blue-600 dark:text-blue-400 rounded-2xl py-3 font-semibold flex items-center justify-center gap-3 hover:bg-blue-500/10 transition cursor-pointer
+                        "
+                      >
+                        <Download size={21} />
+                        Baixar PDF
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         <div className="bg-white dark:bg-[#091a2c] border border-blue-500/20 rounded-2xl p-4 flex items-center gap-3 text-gray-600 dark:text-gray-400 shadow-2xl dark:shadow-blue-500 dark:shadow-sm">
           <Info className="text-blue-600 dark:text-blue-400 shrink-0" />
@@ -443,6 +450,17 @@ export default function Certificates() {
             Os certificados emitidos têm validade de 1 ano a partir da data de emissão.
           </p>
         </div>
+
+        {/* 🚨 O MODAL ENTRA AQUI 🚨 */}
+        <CertificateModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          certificateId={selectedCert?.dbId || null}
+          certificateTitle={selectedCert?.title || ""}
+          studentName={user?.name || "Aluno"}
+          emitidoEm={selectedCert?.conclusionDate || ""}
+        />
+
       </div>
     </main>
   );
@@ -462,8 +480,7 @@ function CertificateStatCard({
   color: string;
 }) {
   return (
-    <div className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-2xl dark:shadow-sm dark:shadow-blue-500 cursor-pointer transition-all duration-300 ease-in-out
-      hover:scale-105">
+    <div className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-2xl dark:shadow-sm dark:shadow-blue-500 cursor-pointer transition-all duration-300 ease-in-out hover:scale-105">
       <div className="flex items-center gap-5">
         <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${color}`}>
           <Icon size={34} />
