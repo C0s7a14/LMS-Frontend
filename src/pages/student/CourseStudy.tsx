@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
+import { getCourseQuizzes } from "../../services/quizService";
+import type { Quiz } from "../../types/quiz";
 
 import {
   ArrowRight,
@@ -61,89 +63,94 @@ export default function CourseStudy() {
 
   const [course, setCourse] = useState<CourseContentType | null>(null);
   const [selectedAulaId, setSelectedAulaId] = useState<number | null>(null);
+  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [loading, setLoading] = useState(true);
   const [completing, setCompleting] = useState(false);
 
   async function loadCourseContent() {
-    try {
-      setLoading(true);
+  try {
+    setLoading(true);
 
-      const response = await api.get<CourseContentType>(
-        `/courses/${courseId}/content`
-      );
+    const response = await api.get<CourseContentType>(
+      `/courses/${courseId}/content`
+    );
 
-      setCourse(response.data);
+    setCourse(response.data);
 
-      const allAulas = response.data.modulos.flatMap(
-        (modulo) => modulo.aulas
-      );
+    const quizzesData = await getCourseQuizzes(Number(courseId));
+    setQuizzes(quizzesData);
 
-      const firstIncompleteAula = allAulas.find(
-        (aula) => !aula.concluida
-      );
+    const allAulas = response.data.modulos.flatMap(
+      (modulo) => modulo.aulas
+    );
 
-      const firstAula = allAulas[0];
+    const firstIncompleteAula = allAulas.find(
+      (aula) => !aula.concluida
+    );
 
-      setSelectedAulaId((currentSelectedId) => {
-        if (currentSelectedId) {
-          return currentSelectedId;
-        }
+    const firstAula = allAulas[0];
 
-        return firstIncompleteAula?.id || firstAula?.id || null;
-      });
-    } catch (error) {
-      console.log(error);
-      toast.error("Erro ao carregar conteúdo do curso");
-    } finally {
-      setLoading(false);
-    }
+    setSelectedAulaId((currentSelectedId) => {
+      if (currentSelectedId) {
+        return currentSelectedId;
+      }
+
+      return firstIncompleteAula?.id || firstAula?.id || null;
+    });
+  } catch (error) {
+    console.log(error);
+    toast.error("Erro ao carregar conteúdo do curso");
+  } finally {
+    setLoading(false);
   }
+}
 
   useEffect(() => {
-    loadCourseContent();
-  }, [courseId]);
+  loadCourseContent();
+}, [courseId]);
 
-  const aulas = useMemo(() => {
-    if (!course) {
-      return [];
-    }
-
-    return course.modulos.flatMap((modulo) => modulo.aulas);
-  }, [course]);
-
-  const selectedAula =
-    aulas.find((aula) => aula.id === selectedAulaId) || null;
-
-  const selectedAulaIndex = selectedAula
-    ? aulas.findIndex((aula) => aula.id === selectedAula.id)
-    : -1;
-
-  const previousAula =
-    selectedAulaIndex > 0 ? aulas[selectedAulaIndex - 1] : null;
-
-  const nextAula =
-    selectedAulaIndex >= 0 && selectedAulaIndex < aulas.length - 1
-      ? aulas[selectedAulaIndex + 1]
-      : null;
-
-  function formatDuration(minutes: number | null) {
-    if (!minutes) {
-      return "Sem duração";
-    }
-
-    if (minutes < 60) {
-      return `${minutes} min`;
-    }
-
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-
-    if (remainingMinutes === 0) {
-      return `${hours}h`;
-    }
-
-    return `${hours}h ${remainingMinutes}min`;
+const aulas = useMemo(() => {
+  if (!course) {
+    return [];
   }
+
+  return course.modulos.flatMap((modulo) => modulo.aulas);
+}, [course]);
+
+const selectedAula =
+  aulas.find((aula) => aula.id === selectedAulaId) || null;
+
+const selectedAulaIndex = selectedAula
+  ? aulas.findIndex((aula) => aula.id === selectedAula.id)
+  : -1;
+
+const previousAula =
+  selectedAulaIndex > 0 ? aulas[selectedAulaIndex - 1] : null;
+
+const nextAula =
+  selectedAulaIndex >= 0 && selectedAulaIndex < aulas.length - 1
+    ? aulas[selectedAulaIndex + 1]
+    : null;
+
+function formatDuration(minutes: number | null) {
+  if (!minutes) {
+    return "Sem duração";
+  }
+
+  if (minutes < 60) {
+    return `${minutes} min`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+
+  if (remainingMinutes === 0) {
+    return `${hours}h`;
+  }
+
+  return `${hours}h ${remainingMinutes}min`;
+}
+
 
   function getModuleProgress(modulo: ModuloType) {
     const total = modulo.aulas.length;
@@ -209,6 +216,45 @@ export default function CourseStudy() {
     }
   }
 
+
+  const selectedModule =
+  course?.modulos.find((modulo) =>
+    modulo.aulas.some((aula) => aula.id === selectedAula?.id)
+  ) || null;
+
+const selectedModuleProgress = selectedModule
+  ? getModuleProgress(selectedModule)
+  : null;
+
+const selectedModuleCompleted =
+  selectedModuleProgress &&
+  selectedModuleProgress.total > 0 &&
+  selectedModuleProgress.completed === selectedModuleProgress.total;
+
+const lessonQuiz = selectedAula
+  ? quizzes.find(
+      (quiz) =>
+        quiz.tipo === "aula" &&
+        quiz.aula_id === selectedAula.id &&
+        quiz.status === "publicado"
+    )
+  : null;
+
+const moduleQuiz = selectedModule
+  ? quizzes.find(
+      (quiz) =>
+        quiz.tipo === "modulo" &&
+        quiz.modulo_id === selectedModule.id &&
+        quiz.status === "publicado"
+    )
+  : null;
+
+const finalExam = quizzes.find(
+  (quiz) =>
+    quiz.tipo === "prova_final" &&
+    quiz.status === "publicado"
+);
+  
   const courseCompleted = Number(course?.progresso || 0) >= 100;
 
   if (loading) {
@@ -537,6 +583,30 @@ if (!selectedAula) {
                 </a>
               )}
 
+              {lessonQuiz && selectedAula.concluida && (
+  <div className="mt-6 bg-blue-500/10 border border-blue-500/20 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h3 className="font-bold text-[#080E2F] dark:text-white">
+        Quiz da aula
+      </h3>
+
+      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+        Responda o quiz desta aula para validar seu aprendizado.
+      </p>
+    </div>
+
+    <button
+      type="button"
+      onClick={() =>
+        navigate(`/meus-cursos/avaliacao/${lessonQuiz.id}`)
+      }
+      className="bg-blue-500 hover:bg-blue-600 text-white rounded-2xl px-6 py-3 font-semibold transition-all shadow-2xl dark:shadow-sm dark:shadow-blue-500"
+    >
+      Fazer quiz
+    </button>
+  </div>
+)}
+
               <div className="flex flex-col sm:flex-row gap-3 mt-7">
                 <button
                   type="button"
@@ -606,77 +676,135 @@ if (!selectedAula) {
           </section>
 
           {/* Quiz do módulo */}
-          <section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 transition-colors shadow-2xl dark:shadow-sm
-                    dark:shadow-blue-500">
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex items-center gap-5">
-                <div className="w-20 h-20 rounded-3xl bg-blue-500/10 flex items-center justify-center">
-                  <FileText
-                    size={42}
-                    className="text-blue-500 dark:text-blue-400"
-                  />
-                </div>
+<section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 transition-colors shadow-2xl dark:shadow-sm dark:shadow-blue-500">
+  <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+    <div className="flex items-center gap-5">
+      <div className="w-20 h-20 rounded-3xl bg-blue-500/10 flex items-center justify-center">
+        <FileText
+          size={42}
+          className="text-blue-500 dark:text-blue-400"
+        />
+      </div>
 
-                <div>
-                  <h2 className="text-2xl font-bold text-[#080E2F] dark:text-white">
-                    Quiz do módulo
-                  </h2>
+      <div>
+        <h2 className="text-2xl font-bold text-[#080E2F] dark:text-white">
+          Quiz do módulo
+        </h2>
 
-                  <p className="text-gray-500 dark:text-gray-400 mt-1">
-                    O quiz será liberado após concluir as aulas do módulo.
-                  </p>
+        <p className="text-gray-500 dark:text-gray-400 mt-1">
+          {selectedModule
+            ? `Valide seus conhecimentos sobre o módulo "${selectedModule.titulo}".`
+            : "Selecione uma aula para visualizar o quiz do módulo."}
+        </p>
 
-                  <div className="mt-3 inline-flex items-center gap-2 bg-blue-500/10 text-blue-500 dark:text-blue-400 rounded-xl px-3 py-2 text-sm font-semibold">
-                    <Lock size={16} />
-                    Em breve
-                  </div>
-                </div>
-              </div>
+        {!moduleQuiz && (
+          <div className="mt-3 inline-flex items-center gap-2 bg-gray-100 dark:bg-[#132d46] text-gray-500 dark:text-gray-400 rounded-xl px-3 py-2 text-sm font-semibold">
+            <Lock size={16} />
+            Nenhum quiz cadastrado para este módulo
+          </div>
+        )}
 
-              <button
-                type="button"
-                disabled
-                className="bg-gray-200 dark:bg-[#132d46] text-gray-400 rounded-2xl px-6 py-4 font-semibold cursor-not-allowed shadow-2xl"
-              >
-                Ir para quiz
-              </button>
-            </div>
-          </section>
+        {moduleQuiz && !selectedModuleCompleted && (
+          <div className="mt-3 inline-flex items-center gap-2 bg-blue-500/10 text-blue-500 dark:text-blue-400 rounded-xl px-3 py-2 text-sm font-semibold">
+            <Lock size={16} />
+            Conclua as aulas do módulo para liberar
+          </div>
+        )}
+
+        {moduleQuiz && selectedModuleCompleted && (
+          <div className="mt-3 inline-flex items-center gap-2 bg-green-500/10 text-green-600 rounded-xl px-3 py-2 text-sm font-semibold">
+            <CheckCircle2 size={16} />
+            Quiz liberado
+          </div>
+        )}
+      </div>
+    </div>
+
+    <button
+      type="button"
+      disabled={!moduleQuiz || !selectedModuleCompleted}
+      onClick={() =>
+        moduleQuiz &&
+        navigate(`/meus-cursos/avaliacao/${moduleQuiz.id}`)
+      }
+      className={`
+        rounded-2xl px-6 py-4 font-semibold transition-all shadow-2xl
+        ${
+          moduleQuiz && selectedModuleCompleted
+            ? "bg-blue-500 hover:bg-blue-600 text-white dark:shadow-sm dark:shadow-blue-500"
+            : "bg-gray-200 dark:bg-[#132d46] text-gray-400 cursor-not-allowed"
+        }
+      `}
+    >
+      Ir para quiz
+    </button>
+  </div>
+</section>
 
           {/* Prova final */}
-          {courseCompleted && (
-            <section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 transition-colors">
-              <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-                <div className="flex items-center gap-5">
-                  <div className="w-20 h-20 rounded-3xl bg-green-500/10 flex items-center justify-center">
-                    <Trophy
-                      size={44}
-                      className="text-green-500"
-                    />
-                  </div>
+<section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 transition-colors shadow-2xl dark:shadow-sm dark:shadow-blue-500">
+  <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+    <div className="flex items-center gap-5">
+      <div className="w-20 h-20 rounded-3xl bg-green-500/10 flex items-center justify-center">
+        <Trophy
+          size={44}
+          className="text-green-500"
+        />
+      </div>
 
-                  <div>
-                    <h2 className="text-2xl font-bold text-[#080E2F] dark:text-white">
-                      Curso concluído com sucesso
-                    </h2>
+      <div>
+        <h2 className="text-2xl font-bold text-[#080E2F] dark:text-white">
+          Prova final
+        </h2>
 
-                    <p className="text-gray-500 dark:text-gray-400 mt-1">
-                      Você concluiu todas as aulas. A próxima etapa será a prova final.
-                    </p>
-                  </div>
-                </div>
+        <p className="text-gray-500 dark:text-gray-400 mt-1">
+          Finalize a prova final para validar o curso e liberar seu certificado.
+        </p>
 
-                <button
-                  type="button"
-                  disabled
-                  className="bg-blue-500 text-white rounded-2xl px-6 py-4 font-semibold opacity-70 cursor-not-allowed"
-                >
-                  Prova final em breve
-                </button>
-              </div>
-            </section>
-          )}
-        </div>
+        {!courseCompleted && (
+          <div className="mt-3 inline-flex items-center gap-2 bg-blue-500/10 text-blue-500 dark:text-blue-400 rounded-xl px-3 py-2 text-sm font-semibold">
+            <Lock size={16} />
+            Conclua todas as aulas para liberar
+          </div>
+        )}
+
+        {courseCompleted && !finalExam && (
+          <div className="mt-3 inline-flex items-center gap-2 bg-gray-100 dark:bg-[#132d46] text-gray-500 dark:text-gray-400 rounded-xl px-3 py-2 text-sm font-semibold">
+            <Lock size={16} />
+            Prova final ainda não cadastrada
+          </div>
+        )}
+
+        {courseCompleted && finalExam && (
+          <div className="mt-3 inline-flex items-center gap-2 bg-green-500/10 text-green-600 rounded-xl px-3 py-2 text-sm font-semibold">
+            <CheckCircle2 size={16} />
+            Prova final liberada
+          </div>
+        )}
+      </div>
+    </div>
+
+    <button
+      type="button"
+      disabled={!courseCompleted || !finalExam}
+      onClick={() =>
+        finalExam &&
+        navigate(`/meus-cursos/avaliacao/${finalExam.id}`)
+      }
+      className={`
+        rounded-2xl px-6 py-4 font-semibold transition-all shadow-2xl
+        ${
+          courseCompleted && finalExam
+            ? "bg-blue-500 hover:bg-blue-600 text-white dark:shadow-sm dark:shadow-blue-500"
+            : "bg-gray-200 dark:bg-[#132d46] text-gray-400 cursor-not-allowed"
+        }
+      `}
+    >
+      Fazer prova final
+    </button>
+  </div>
+</section>
+</div>
 
         {/* Lateral */}
         <aside className="space-y-6">
@@ -842,12 +970,16 @@ if (!selectedAula) {
             <div className="mt-5 rounded-2xl bg-blue-500/10 border border-blue-500/20 p-5 shadow-2xl dark:shadow-sm
                     dark:shadow-blue-500">
               <h3 className="font-bold text-[#080E2F] dark:text-white">
-                Certificado bloqueado
-              </h3>
+              {courseCompleted && finalExam
+                ? "Certificado quase liberado"
+                : "Certificado bloqueado"}
+            </h3>
 
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                O certificado será liberado após concluir as aulas, quizzes e prova final.
-              </p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+              {courseCompleted && finalExam
+                ? "Faça a prova final e atinja a nota mínima para liberar seu certificado."
+                : "O certificado será liberado após concluir as aulas, quizzes e prova final."}
+            </p>
             </div>
           </section>
         </aside>
