@@ -31,7 +31,11 @@ export default function AppRoutes() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
-
+       {/* Tela de avaliação fora do DashboardLayout */}
+        <Route
+          path="/meus-cursos/avaliacao/:quizId"
+          element={<QuizAttempt />}
+        />
 
          {/*Usuarios*/}
         <Route element={<DashboardLayout/>}>
@@ -47,7 +51,6 @@ export default function AppRoutes() {
         <Route path="/courses/:courseId" element={<CourseStudy/>} />
         <Route path="/admin/courses/:courseId/aulas" element={<ManageCourseLessons />}/>
         <Route path="/Dashboard" element={<AdminDashboard/>}/>
-        <Route path="/meus-cursos/avaliacao/:quizId" element={<QuizAttempt />} />
         
         </Route>
 

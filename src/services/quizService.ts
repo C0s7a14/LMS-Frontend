@@ -4,6 +4,7 @@ import type {
   Quiz,
   SubmitQuizAnswer,
   SubmitQuizResult,
+  StartQuizAttemptResponse,
 } from "../types/quiz";
 
 export async function getQuizById(quizId: number): Promise<Quiz> {
@@ -11,11 +12,20 @@ export async function getQuizById(quizId: number): Promise<Quiz> {
   return response.data;
 }
 
+export async function startQuizAttempt(
+  quizId: number
+): Promise<StartQuizAttemptResponse> {
+  const response = await api.post(`/quizzes/${quizId}/start`);
+  return response.data;
+}
+
 export async function submitQuiz(
   quizId: number,
+  tentativaId: number,
   respostas: SubmitQuizAnswer[]
 ): Promise<SubmitQuizResult> {
   const response = await api.post(`/quizzes/${quizId}/submit`, {
+    tentativa_id: tentativaId,
     respostas,
   });
 

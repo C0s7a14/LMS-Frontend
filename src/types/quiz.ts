@@ -26,6 +26,8 @@ export interface Quiz {
   tipo: QuizType;
   nota_minima: string | number;
   max_tentativas: number;
+  questoes_por_tentativa?: number;
+  sorteio_ativo?: number | boolean;
   status: "rascunho" | "publicado";
   criado_em?: string;
   atualizado_em?: string;
@@ -53,4 +55,8 @@ export interface SubmitQuizResult {
     max_tentativas: number;
     certificado_emitido: boolean;
   };
+}
+export interface StartQuizAttemptResponse {
+  tentativa_id: number;
+  quiz: Quiz;
 }

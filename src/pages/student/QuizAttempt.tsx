@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 
@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 
 import {
-  getQuizById,
+  startQuizAttempt,
   submitQuiz,
 } from "../../services/quizService";
 
@@ -54,29 +54,57 @@ export default function QuizAttempt() {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<SubmitQuizResult | null>(null);
+  const [tentativaId, setTentativaId] = useState<number | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const hasStartedAttempt = useRef(false);
 
   useEffect(() => {
-    async function loadQuiz() {
-      try {
-        setLoading(true);
+  async function loadQuiz() {
+    if (hasStartedAttempt.current) return;
 
-        if (!numericQuizId || Number.isNaN(numericQuizId)) {
-          toast.error("Quiz inválido");
-          return;
-        }
+    try {
+      hasStartedAttempt.current = true;
+      setLoading(true);
 
-        const data = await getQuizById(numericQuizId);
-        setQuiz(data);
-      } catch (error) {
-        console.error(error);
-        toast.error("Erro ao carregar avaliação");
-      } finally {
-        setLoading(false);
+      if (!numericQuizId || Number.isNaN(numericQuizId)) {
+        toast.error("Quiz inválido");
+        return;
       }
-    }
 
-    loadQuiz();
-  }, [numericQuizId]);
+      const data = await startQuizAttempt(numericQuizId);
+
+      setQuiz(data.quiz);
+      setTentativaId(data.tentativa_id);
+    } catch (error) {
+  console.error(error);
+
+  const err = error as {
+    response?: {
+      data?: {
+        message?: string;
+        error?: string;
+        detail?: string;
+      };
+    };
+  };
+
+  const message =
+    err.response?.data?.message ||
+    err.response?.data?.error ||
+    err.response?.data?.detail ||
+    "Erro ao carregar avaliação";
+
+  setLoadError(message);
+  toast.error(message);
+  hasStartedAttempt.current = false;
+} finally {
+  setLoading(false);
+}
+  }
+
+  loadQuiz();
+}, [numericQuizId]);
 
   const isFinalExam = quiz?.tipo === "prova_final";
 
@@ -104,6 +132,39 @@ export default function QuizAttempt() {
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [isFinalExam, result]);
+
+
+useEffect(() => {
+  if (!isFinalExam || result || !quiz?.id) return;
+
+  const assessmentPath = `/meus-cursos/avaliacao/${quiz.id}`;
+
+  window.history.pushState(
+    { finalExamLocked: true },
+    "",
+    assessmentPath
+  );
+
+  function handlePopState() {
+    toast.error("Você precisa finalizar a prova antes de sair.");
+
+    window.history.pushState(
+      { finalExamLocked: true },
+      "",
+      assessmentPath
+    );
+
+    navigate(assessmentPath, { replace: true });
+  }
+
+  window.addEventListener("popstate", handlePopState);
+
+  return () => {
+    window.removeEventListener("popstate", handlePopState);
+  };
+}, [isFinalExam, result, quiz?.id, navigate]);
+
+
 
   const currentQuestion = quiz?.questoes[currentQuestionIndex];
 
@@ -162,8 +223,30 @@ export default function QuizAttempt() {
     });
   }
 
+  function handleExitAssessment() {
+  if (isFinalExam && !result) {
+    toast.error("Finalize a prova antes de sair desta página.");
+    return;
+  }
+
+  if (quiz?.curso_id) {
+    navigate(`/courses/${quiz.curso_id}`);
+    return;
+  }
+
+  navigate("/courses");
+}
+
+
+
   async function handleSubmitQuiz() {
     if (!quiz) return;
+
+
+    if (!tentativaId) {
+  toast.error("Tentativa não iniciada. Recarregue a avaliação.");
+  return;
+}
 
     if (answeredQuestions < quiz.questoes.length) {
       toast.error("Responda todas as questões antes de finalizar");
@@ -178,7 +261,11 @@ export default function QuizAttempt() {
     try {
       setSubmitting(true);
 
-      const submitResult = await submitQuiz(quiz.id, respostas);
+      const submitResult = await submitQuiz(
+  quiz.id,
+  tentativaId,
+  respostas
+);
 
       setResult(submitResult);
 
@@ -229,8 +316,8 @@ export default function QuizAttempt() {
           </h1>
 
           <p className="text-slate-500 mt-2">
-            Não foi possível carregar as perguntas deste quiz.
-          </p>
+            {loadError || "Não foi possível carregar as perguntas deste quiz."}
+            </p>
         </div>
       </div>
     );
@@ -291,30 +378,38 @@ export default function QuizAttempt() {
           )}
 
           <div className="flex flex-col md:flex-row gap-3 mt-8">
-            <button
-              onClick={() => navigate("/meus-cursos")}
-              className="h-12 flex-1 rounded-xl border border-slate-300 text-slate-700 font-semibold hover:bg-slate-50 transition"
+                        <button
+            type="button"
+            onClick={handleExitAssessment}
+            className="h-12 flex-1 rounded-xl border border-slate-300 text-slate-700 font-semibold hover:bg-slate-50 transition"
             >
-              Voltar aos cursos
+            Voltar ao curso
             </button>
-
-            {result.tentativa.certificado_emitido && (
+                        {result.tentativa.certificado_emitido && (
               <button
-                onClick={() => navigate("/certificados")}
+                onClick={() => navigate("/certificate")}
                 className="h-12 flex-1 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition"
               >
                 Ver certificado
               </button>
             )}
 
-            {!result.tentativa.aprovado && (
-              <button
+            {!result.tentativa.aprovado && isFinalExam && (
+            <button
+                onClick={() => navigate(`/courses/${quiz.curso_id}?review=1`)}
+                className="h-12 flex-1 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition"
+            >
+                Revisar curso
+            </button>
+            )}
+
+            {!result.tentativa.aprovado && !isFinalExam && (
+            <button
                 onClick={() => window.location.reload()}
                 className="h-12 flex-1 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition flex items-center justify-center gap-2"
-              >
-                <RotateCcw className="w-5 h-5" />
+            >
                 Tentar novamente
-              </button>
+            </button>
             )}
           </div>
         </div>
@@ -331,11 +426,16 @@ export default function QuizAttempt() {
               <div>
                 <div className="flex items-center gap-2 text-sm font-semibold mb-4">
                   <button
-                    onClick={() => navigate("/meus-cursos")}
-                    className="text-indigo-600 hover:underline"
-                  >
+                    type="button"
+                    onClick={handleExitAssessment}
+                    className={`${
+                        isFinalExam
+                        ? "text-slate-400 cursor-not-allowed"
+                        : "text-indigo-600 hover:underline"
+                    }`}
+                    >
                     Meus Cursos
-                  </button>
+                    </button>
 
                   <span className="text-slate-400">›</span>
                   <span>Curso</span>
@@ -404,7 +504,11 @@ export default function QuizAttempt() {
 
               <SummaryCard
                 icon={<Clock3 className="w-6 h-6" />}
-                title={`${quiz.max_tentativas} tentativa(s)`}
+               title={
+                isFinalExam
+                    ? "Tentativa final"
+                    : `${quiz.max_tentativas} tentativa(s)`
+                }
               />
             </div>
 
@@ -611,11 +715,8 @@ export default function QuizAttempt() {
               <div className="space-y-3">
                 <RuleItem
                   checked
-                  label={
-                    isFinalExam
-                      ? "Aulas concluídas"
-                      : "Aulas do módulo concluídas"
-                  }
+                  label={isFinalExam
+                    ? "Ambiente de prova seguro" : "Quiz em andamento"}
                 />
 
                 <RuleItem

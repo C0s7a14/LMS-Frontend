@@ -20,6 +20,7 @@ import {
 
 import { api } from "../../services/api";
 import toast from "react-hot-toast";
+import { generateCourseAssessments } from "../../services/aiAssessmentService";
 
 interface DeviceType {
   id: number;
@@ -68,6 +69,9 @@ export default function CreateCourse() {
 
   const [generating, setGenerating] = useState(false);
   const [publishing, setPublishing] = useState(false);
+
+  const [generateAssessments, setGenerateAssessments] = useState(true);
+  const [generatingAssessments, setGeneratingAssessments] = useState(false);
 
   async function getDevices() {
     try {
@@ -218,53 +222,71 @@ export default function CreateCourse() {
     }
   }
 
-  async function handlePublishCourse() {
-    if (!createdCourseId) {
-      toast.error("Gere o curso com IA antes de publicar");
-      return;
-    }
-
-    if (!generatedCourse) {
-      toast.error("Nenhum conteúdo gerado para publicar");
-      return;
-    }
-
-    try {
-      setPublishing(true);
-
-      await api.post(
-        `/courses/${createdCourseId}/ai/apply-generated-course`,
-        {
-          replaceExisting: true,
-          generated_course: generatedCourse,
-        }
-      );
-
-      if (selectedDevices.length > 0) {
-        await Promise.all(
-          selectedDevices.map((deviceId) =>
-            api.post(
-              `/devices/courses/${createdCourseId}/devices/${deviceId}`
-            )
-          )
-        );
-      }
-
-      toast.success("Curso publicado com sucesso!");
-
-      resetPage();
-    } catch (error: any) {
-      console.log(error);
-
-      toast.error(
-        error.response?.data?.error ||
-          error.response?.data?.message ||
-          "Erro ao publicar curso"
-      );
-    } finally {
-      setPublishing(false);
-    }
+  
+async function handlePublishCourse() {
+  if (!createdCourseId) {
+    toast.error("Gere o curso com IA antes de publicar");
+    return;
   }
+
+  if (!generatedCourse) {
+    toast.error("Nenhum conteúdo gerado para publicar");
+    return;
+  }
+
+  try {
+    setPublishing(true);
+
+    await api.post(
+      `/courses/${createdCourseId}/ai/apply-generated-course`,
+      {
+        replaceExisting: true,
+        generated_course: generatedCourse,
+      }
+    );
+
+    if (selectedDevices.length > 0) {
+      await Promise.all(
+        selectedDevices.map((deviceId) =>
+          api.post(
+            `/devices/courses/${createdCourseId}/devices/${deviceId}`
+          )
+        )
+      );
+    }
+
+    if (generateAssessments) {
+      setGeneratingAssessments(true);
+
+      await generateCourseAssessments(createdCourseId, {
+        moduleQuestions: 5,
+        finalExamQuestions: 10,
+        status: "publicado",
+        nota_minima: 70,
+        max_tentativas: 3,
+      });
+
+      toast.success("Curso, quizzes e prova final gerados com sucesso!");
+    } else {
+      toast.success("Curso publicado com sucesso!");
+    }
+
+    resetPage();
+  } catch (error: any) {
+    console.log(error);
+
+    toast.error(
+      error.response?.data?.error ||
+        error.response?.data?.message ||
+        error.response?.data?.detail ||
+        "Erro ao publicar curso ou gerar avaliações"
+    );
+  } finally {
+    setPublishing(false);
+    setGeneratingAssessments(false);
+  }
+}
+
 
   function resetPage() {
     setSelectedDevices([]);
@@ -487,7 +509,7 @@ export default function CreateCourse() {
                     key={device.id}
                     type="button"
                     onClick={() => toggleDevice(device.id)}
-                    disabled={generating || publishing}
+                    disabled={publishing || generating || generatingAssessments}
                     className={`
                       text-left rounded-2xl border p-5 transition-all
                       disabled:opacity-60 disabled:cursor-not-allowed
@@ -608,28 +630,29 @@ export default function CreateCourse() {
                 </button>
 
                 <button
-                  type="button"
-                  onClick={handleGenerateCourseWithAi}
-                  disabled={
-                    generating ||
-                    publishing ||
-                    !pdfFile ||
-                    selectedDevices.length === 0
-                  }
-                  className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  {generating ? (
-                    <>
-                      <Loader2 size={21} className="animate-spin" />
-                      Gerando curso...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles size={21} />
-                      Gerar curso com IA
-                    </>
-                  )}
-                </button>
+                type="button"
+                onClick={handleGenerateCourseWithAi}
+                disabled={
+                  generating ||
+                  publishing ||
+                  generatingAssessments ||
+                  !pdfFile ||
+                  selectedDevices.length === 0
+                }
+                className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {generating ? (
+                  <>
+                    <Loader2 size={21} className="animate-spin" />
+                    Gerando curso...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={21} />
+                    Gerar curso com IA
+                  </>
+                )}
+              </button>
               </div>
             </div>
           </div>
@@ -903,6 +926,24 @@ export default function CreateCourse() {
                   </div>
                 ))}
               </div>
+              <label className="flex items-start gap-3 bg-indigo-50 border border-indigo-100 rounded-2xl p-4 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={generateAssessments}
+                onChange={(event) => setGenerateAssessments(event.target.checked)}
+                className="mt-1"
+              />
+
+              <div>
+                <p className="font-bold text-indigo-950">
+                  Gerar quizzes e prova final automaticamente
+                </p>
+
+                <p className="text-sm text-indigo-700 mt-1">
+                  Após criar o curso, a IA irá gerar um quiz para cada módulo e uma prova final publicada.
+                </p>
+              </div>
+            </label>
 
               <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <button
@@ -925,23 +966,28 @@ export default function CreateCourse() {
                 </button>
 
                 <button
-                  type="button"
-                  onClick={handlePublishCourse}
-                  disabled={publishing || generating}
-                  className="flex-1 rounded-2xl bg-blue-500 px-5 py-4 font-bold text-white hover:bg-blue-600 transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  {publishing ? (
-                    <>
-                      <Loader2 size={22} className="animate-spin" />
-                      Publicando...
-                    </>
-                  ) : (
-                    <>
-                      <Save size={22} />
-                      Publicar curso
-                    </>
-                  )}
-                </button>
+                type="button"
+                onClick={handlePublishCourse}
+                disabled={publishing || generating || generatingAssessments}
+                className="flex-1 rounded-2xl bg-blue-500 px-5 py-4 font-bold text-white hover:bg-blue-600 transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {generatingAssessments ? (
+                  <>
+                    <Loader2 size={22} className="animate-spin" />
+                    Gerando quizzes e prova final...
+                  </>
+                ) : publishing ? (
+                  <>
+                    <Loader2 size={22} className="animate-spin" />
+                    Publicando curso...
+                  </>
+                ) : (
+                  <>
+                    <Save size={22} />
+                    Publicar curso
+                  </>
+                )}
+              </button>
               </div>
             </div>
           </section>
