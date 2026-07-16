@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { getCourseQuizzes } from "../../services/quizService";
 import type { Quiz } from "../../types/quiz";
-
+import { completeCourseReview, getCourseReviewStatus, } from "../../services/courseReviewService";
 import {
   ArrowRight,
   Award,
@@ -67,6 +67,10 @@ export default function CourseStudy() {
   const [loading, setLoading] = useState(true);
   const [completing, setCompleting] = useState(false);
 
+  const [reviewStatus, setReviewStatus] = useState<string>("sem_tentativa");
+  const [courseAttempt, setCourseAttempt] = useState<any>(null);
+  const [completingReview, setCompletingReview] = useState(false);
+
   async function loadCourseContent() {
   try {
     setLoading(true);
@@ -77,8 +81,12 @@ export default function CourseStudy() {
 
     setCourse(response.data);
 
-    const quizzesData = await getCourseQuizzes(Number(courseId));
-    setQuizzes(quizzesData);
+   const quizzesData = await getCourseQuizzes(Number(courseId));
+   setQuizzes(quizzesData);
+
+   const reviewData = await getCourseReviewStatus(Number(courseId));
+   setReviewStatus(reviewData.status);
+   setCourseAttempt(reviewData.curso_tentativa);
 
     const allAulas = response.data.modulos.flatMap(
       (modulo) => modulo.aulas
@@ -257,6 +265,17 @@ const finalExam = quizzes.find(
   
   const courseCompleted = Number(course?.progresso || 0) >= 100;
 
+  const isInReview = reviewStatus === "em_revisao";
+  const isCourseApproved = reviewStatus === "aprovado";
+  const isCourseBlocked = reviewStatus === "bloqueado";
+
+  const canAccessFinalExam =
+    courseCompleted &&
+    Boolean(finalExam) &&
+    !isInReview &&
+    !isCourseApproved &&
+    !isCourseBlocked;
+
   if (loading) {
     return (
       <div className="min-h-[70vh] flex items-center justify-center text-gray-500 dark:text-gray-300">
@@ -271,6 +290,44 @@ const finalExam = quizzes.find(
       Curso não encontrado.
     </div>
   );
+}
+
+async function handleCompleteReview() {
+  if (!courseId) {
+    toast.error("Curso inválido");
+    return;
+  }
+
+  try {
+    setCompletingReview(true);
+
+    await completeCourseReview(Number(courseId));
+
+    toast.success("Revisão concluída. Nova tentativa da prova final liberada.");
+
+    await loadCourseContent();
+  } catch (error) {
+    console.log(error);
+
+    const err = error as {
+      response?: {
+        data?: {
+          message?: string;
+          error?: string;
+          detail?: string;
+        };
+      };
+    };
+
+    toast.error(
+      err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.response?.data?.detail ||
+        "Erro ao concluir revisão"
+    );
+  } finally {
+    setCompletingReview(false);
+  }
 }
 
 if (course.total_aulas === 0 || aulas.length === 0) {
@@ -422,12 +479,12 @@ if (!selectedAula) {
           <div className="w-full xl:w-[420px]">
             <div className="flex items-center justify-between mb-2">
               <span className="font-semibold text-[#080E2F] dark:text-white">
-                {course.progresso}% completo
+                {isInReview ? "Em revisão" : `${course.progresso}% completo`}
               </span>
 
               <span className="text-sm text-gray-500 dark:text-gray-400">
-                {course.aulas_concluidas}/{course.total_aulas} aulas
-              </span>
+              {course.aulas_concluidas}/{course.total_aulas} aulas concluídas
+            </span>
             </div>
 
             <div className="h-3 bg-gray-200 dark:bg-[#132d46] rounded-full overflow-hidden">
@@ -441,6 +498,45 @@ if (!selectedAula) {
           </div>
         </div>
       </section>
+
+      {isInReview && (
+  <section className="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800 rounded-3xl p-6 shadow-2xl dark:shadow-sm">
+    <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex items-start gap-4">
+        <div className="w-14 h-14 rounded-2xl bg-yellow-500/10 flex items-center justify-center shrink-0">
+          <Clock3 size={30} className="text-yellow-600 dark:text-yellow-400" />
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-bold text-[#080E2F] dark:text-white">
+            Você está em revisão
+          </h2>
+
+          <p className="text-gray-600 dark:text-gray-300 mt-2 leading-relaxed">
+            Você não atingiu a nota mínima na prova final. Revise o conteúdo do curso antes de liberar uma nova tentativa.
+          </p>
+
+          {courseAttempt?.nota_final && (
+            <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-2 font-semibold">
+              Nota da última prova: {courseAttempt.nota_final}%
+            </p>
+          )}
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={handleCompleteReview}
+        disabled={completingReview}
+        className="bg-yellow-500 hover:bg-yellow-600 text-white rounded-2xl px-6 py-4 font-semibold transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+      >
+        {completingReview
+          ? "Liberando nova tentativa..."
+          : "Concluir revisão e liberar prova"}
+      </button>
+    </div>
+  </section>
+)}
 
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_430px] gap-6">
         {/* Conteúdo principal */}
@@ -746,10 +842,7 @@ if (!selectedAula) {
   <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
     <div className="flex items-center gap-5">
       <div className="w-20 h-20 rounded-3xl bg-green-500/10 flex items-center justify-center">
-        <Trophy
-          size={44}
-          className="text-green-500"
-        />
+        <Trophy size={44} className="text-green-500" />
       </div>
 
       <div>
@@ -761,21 +854,42 @@ if (!selectedAula) {
           Finalize a prova final para validar o curso e liberar seu certificado.
         </p>
 
-        {!courseCompleted && (
+        {isInReview && (
+          <div className="mt-3 inline-flex items-center gap-2 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 rounded-xl px-3 py-2 text-sm font-semibold">
+            <Lock size={16} />
+            Prova bloqueada até concluir a revisão
+          </div>
+        )}
+
+        {isCourseApproved && (
+          <div className="mt-3 inline-flex items-center gap-2 bg-green-500/10 text-green-600 rounded-xl px-3 py-2 text-sm font-semibold">
+            <CheckCircle2 size={16} />
+            Curso aprovado
+          </div>
+        )}
+
+        {isCourseBlocked && (
+          <div className="mt-3 inline-flex items-center gap-2 bg-red-500/10 text-red-600 rounded-xl px-3 py-2 text-sm font-semibold">
+            <Lock size={16} />
+            Limite de tentativas atingido
+          </div>
+        )}
+
+        {!isInReview && !isCourseApproved && !isCourseBlocked && !courseCompleted && (
           <div className="mt-3 inline-flex items-center gap-2 bg-blue-500/10 text-blue-500 dark:text-blue-400 rounded-xl px-3 py-2 text-sm font-semibold">
             <Lock size={16} />
             Conclua todas as aulas para liberar
           </div>
         )}
 
-        {courseCompleted && !finalExam && (
+        {!isInReview && !isCourseApproved && !isCourseBlocked && courseCompleted && !finalExam && (
           <div className="mt-3 inline-flex items-center gap-2 bg-gray-100 dark:bg-[#132d46] text-gray-500 dark:text-gray-400 rounded-xl px-3 py-2 text-sm font-semibold">
             <Lock size={16} />
             Prova final ainda não cadastrada
           </div>
         )}
 
-        {courseCompleted && finalExam && (
+        {canAccessFinalExam && (
           <div className="mt-3 inline-flex items-center gap-2 bg-green-500/10 text-green-600 rounded-xl px-3 py-2 text-sm font-semibold">
             <CheckCircle2 size={16} />
             Prova final liberada
@@ -786,21 +900,28 @@ if (!selectedAula) {
 
     <button
       type="button"
-      disabled={!courseCompleted || !finalExam}
+      disabled={!canAccessFinalExam}
       onClick={() =>
         finalExam &&
+        canAccessFinalExam &&
         navigate(`/meus-cursos/avaliacao/${finalExam.id}`)
       }
       className={`
         rounded-2xl px-6 py-4 font-semibold transition-all shadow-2xl
         ${
-          courseCompleted && finalExam
+          canAccessFinalExam
             ? "bg-blue-500 hover:bg-blue-600 text-white dark:shadow-sm dark:shadow-blue-500"
             : "bg-gray-200 dark:bg-[#132d46] text-gray-400 cursor-not-allowed"
         }
       `}
     >
-      Fazer prova final
+      {isInReview
+        ? "Prova bloqueada"
+        : isCourseApproved
+        ? "Curso aprovado"
+        : isCourseBlocked
+        ? "Bloqueado"
+        : "Fazer prova final"}
     </button>
   </div>
 </section>
@@ -970,16 +1091,24 @@ if (!selectedAula) {
             <div className="mt-5 rounded-2xl bg-blue-500/10 border border-blue-500/20 p-5 shadow-2xl dark:shadow-sm
                     dark:shadow-blue-500">
               <h3 className="font-bold text-[#080E2F] dark:text-white">
-              {courseCompleted && finalExam
-                ? "Certificado quase liberado"
-                : "Certificado bloqueado"}
-            </h3>
+                {isCourseApproved
+                  ? "Certificado liberado"
+                  : isInReview
+                  ? "Curso em revisão"
+                  : courseCompleted && finalExam
+                  ? "Certificado quase liberado"
+                  : "Certificado bloqueado"}
+              </h3>
 
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-              {courseCompleted && finalExam
-                ? "Faça a prova final e atinja a nota mínima para liberar seu certificado."
-                : "O certificado será liberado após concluir as aulas, quizzes e prova final."}
-            </p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                {isCourseApproved
+                  ? "Você foi aprovado na prova final. O certificado já está disponível."
+                  : isInReview
+                  ? "Revise o conteúdo do curso e conclua a revisão para liberar uma nova tentativa da prova final."
+                  : courseCompleted && finalExam
+                  ? "Faça a prova final e atinja a nota mínima para liberar seu certificado."
+                  : "O certificado será liberado após concluir as aulas, quizzes e prova final."}
+              </p>
             </div>
           </section>
         </aside>

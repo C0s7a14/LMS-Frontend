@@ -30,6 +30,14 @@ interface CourseType {
   total_aulas?: number;
   duracao?: string;
   categoria?: string;
+
+  curso_status?:
+    | "sem_tentativa"
+    | "em_andamento"
+    | "em_revisao"
+    | "aprovado"
+    | "bloqueado"
+    | "reprovado";
 }
 
 export default function MyCourses() {
@@ -77,6 +85,46 @@ export default function MyCourses() {
     return course.categoria || "Treinamento";
   }
 
+  function getCourseStatusLabel(course: CourseType) {
+  const progress = getCourseProgress(course);
+
+  if (course.curso_status === "em_revisao") {
+    return "Em revisão";
+  }
+
+  if (course.curso_status === "aprovado") {
+    return "Aprovado";
+  }
+
+  if (course.curso_status === "bloqueado") {
+    return "Bloqueado";
+  }
+
+  return `${progress}% completo`;
+}
+
+function getCourseButtonLabel(course: CourseType) {
+  const progress = getCourseProgress(course);
+
+  if (course.curso_status === "em_revisao") {
+    return "Continuar revisão";
+  }
+
+  if (course.curso_status === "aprovado") {
+    return "Rever curso";
+  }
+
+  if (course.curso_status === "bloqueado") {
+    return "Curso bloqueado";
+  }
+
+  if (progress === 0) {
+    return "Iniciar curso";
+  }
+
+  return "Continuar curso";
+}
+
   return (
     <main className="min-h-screen bg-gray-50 dark:bg-[#071827] px-6 py-8 lg:px-12 transition-colors">
       <div className="max-w-[1500px] mx-auto">
@@ -89,12 +137,12 @@ export default function MyCourses() {
             </h1>
 
             <p className="text-gray-500 dark:text-gray-400 mt-2 text-base lg:text-lg">
-              Acompanhe seus cursos em andamento
+              Acompanhe seus cursos, revisões e certificados
             </p>
 
             <div className="mt-5 inline-flex items-center gap-2 bg-blue-500/10 text-blue-500 dark:text-blue-400 border border-blue-500/20 rounded-2xl px-5 py-2 font-medium">
               <Users size={20} />
-              {filteredCourses.length} cursos em andamento
+              {filteredCourses.length} cursos disponíveis
             </div>
           </div>
 
@@ -276,12 +324,19 @@ export default function MyCourses() {
 
                     {/* Progress badge */}
                     <div className="absolute top-5 right-5 bg-white/90 dark:bg-[#091a2c]/90 border border-gray-200 dark:border-white/10 rounded-2xl px-4 py-2 text-[#080E2F] dark:text-white font-medium">
-                      {progress}% completo
+                      {getCourseStatusLabel(course)}
                     </div>
 
-                    {/* Play button */}
+                   {/* Play button */}
                     <button
-                      onClick={() => navigate(`/courses/${course.id}`)}
+                      disabled={course.curso_status === "bloqueado"}
+                      onClick={() => {
+                        if (course.curso_status === "bloqueado") {
+                          return;
+                        }
+
+                        navigate(`/courses/${course.id}`);
+                      }}
                       className="
                         absolute
                         left-1/2
@@ -301,6 +356,8 @@ export default function MyCourses() {
                         shadow-xl
                         hover:scale-105
                         transition-all
+                        disabled:opacity-60
+                        disabled:cursor-not-allowed
                       "
                     >
                       <Play size={34} fill="currentColor" />
@@ -364,31 +421,34 @@ export default function MyCourses() {
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => navigate(`/courses/${course.id}`)}
-                      className="
-                        mt-6
-                        w-full
-                        bg-blue-500
-                        hover:bg-blue-600
-                        text-white
-                        rounded-2xl
-                        py-4
-                        font-semibold
-                        flex
-                        shadow-2xl
-                        dark:shadow-blue-700
-                        dark:shadow-sm
-                        cursor-pointer
-                        items-center
-                        justify-center
-                        gap-3
-                        transition-all
-                      "
-                    >
-                      Continuar Curso
-                      <ArrowRight size={22} />
-                    </button>
+                 <button
+                  disabled={course.curso_status === "bloqueado"}
+                  onClick={() => navigate(`/courses/${course.id}`)}
+                  className="
+                    mt-6
+                    w-full
+                    bg-blue-500
+                    hover:bg-blue-600
+                    text-white
+                    rounded-2xl
+                    py-4
+                    font-semibold
+                    flex
+                    shadow-2xl
+                    dark:shadow-blue-700
+                    dark:shadow-sm
+                    cursor-pointer
+                    items-center
+                    justify-center
+                    gap-3
+                    transition-all
+                    disabled:opacity-60
+                    disabled:cursor-not-allowed
+                  "
+                >
+                  {getCourseButtonLabel(course)}
+                  <ArrowRight size={22} />
+                </button>
                   </div>
                 </div>
               );
