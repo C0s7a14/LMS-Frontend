@@ -85,6 +85,11 @@ interface CourseType {
   criado_por?: number;
   criado_em?: string;
   criador?: string;
+
+  status?: "rascunho" | "publicado" | "arquivado";
+  curso_publicacao_status?: "rascunho" | "publicado" | "arquivado";
+  dispositivo_nome?: string;
+  total_aulas?: number;
 }
 
 interface DeviceType {
@@ -96,6 +101,75 @@ interface DeviceType {
   imagem_url?: string;
   criado_em?: string;
 }
+
+interface AdminDashboardResumo {
+  totalUsuarios: number;
+  totalAlunos: number;
+  totalClientes: number;
+  totalAdmins: number;
+
+  totalCursos: number;
+  cursosPublicados: number;
+  cursosRascunho: number;
+  cursosArquivados: number;
+
+  totalDispositivos: number;
+  certificadosEmitidos: number;
+  revisoesPendentes: number;
+}
+
+interface AdminDashboardCourse {
+  id: number;
+  titulo: string;
+  descricao?: string;
+  status: "rascunho" | "publicado" | "arquivado";
+  criado_em?: string;
+  criador?: string;
+  dispositivo_nome?: string;
+  total_aulas: number;
+}
+
+interface AdminDashboardUser {
+  id: number;
+  name: string;
+  email: string;
+  role: "student" | "client" | "admin";
+  criado_em?: string;
+}
+
+interface AdminDashboardReview {
+  curso_tentativa_id: number;
+  usuario_id: number;
+  aluno_nome: string;
+  aluno_email: string;
+  curso_id: number;
+  curso_titulo: string;
+  numero_tentativa: number;
+  nota_final: string | number | null;
+  status: string;
+  atualizado_em?: string;
+}
+
+interface AdminDashboardCertificate {
+  id: number;
+  usuario_id: number;
+  aluno_nome: string;
+  aluno_email: string;
+  curso_id: number;
+  curso_titulo: string;
+  validation_code: string;
+  emitido_em?: string;
+}
+
+interface AdminDashboardData {
+  resumo: AdminDashboardResumo;
+  ultimosCursos: AdminDashboardCourse[];
+  ultimosUsuarios: AdminDashboardUser[];
+  revisoesPendentes: AdminDashboardReview[];
+  ultimosCertificados: AdminDashboardCertificate[];
+}
+
+
 
 interface TabItem {
   id: AdminTab;
@@ -158,9 +232,13 @@ export default function AdminDashboard() {
 
   const [search, setSearch] = useState("");
 
-  const [users, setUsers] = useState<UserType[]>([]);
-  const [courses, setCourses] = useState<CourseType[]>([]);
-  const [devices, setDevices] = useState<DeviceType[]>([]);
+const [users, setUsers] = useState<UserType[]>([]);
+const [courses, setCourses] = useState<CourseType[]>([]);
+const [devices, setDevices] = useState<DeviceType[]>([]);
+const [dashboardData, setDashboardData] = useState<AdminDashboardData | null>(
+  null
+);
+
 
   const [loading, setLoading] = useState(true);
 
@@ -194,22 +272,22 @@ async function loadDashboardData() {
       },
     };
 
-    const [usersResponse, coursesResponse, devicesResponse] =
-      await Promise.all([
-        axios.get<UserType[]>(
-          "http://localhost:3333/users",
-          config
-        ),
-        axios.get<CourseType[]>(
-          "http://localhost:3333/courses",
-          config
-        ),
-        axios.get<DeviceType[]>(
-          "http://localhost:3333/devices",
-          config
-        ),
-      ]);
+    const [
+      dashboardResponse,
+      usersResponse,
+      coursesResponse,
+      devicesResponse,
+    ] = await Promise.all([
+      axios.get<AdminDashboardData>(
+        "http://localhost:3333/admin/dashboard",
+        config
+      ),
+      axios.get<UserType[]>("http://localhost:3333/users", config),
+      axios.get<CourseType[]>("http://localhost:3333/courses", config),
+      axios.get<DeviceType[]>("http://localhost:3333/devices", config),
+    ]);
 
+    setDashboardData(dashboardResponse.data);
     setUsers(usersResponse.data);
     setCourses(coursesResponse.data);
     setDevices(devicesResponse.data);
@@ -231,7 +309,6 @@ async function loadDashboardData() {
     setLoading(false);
   }
 }
-
 
   useEffect(() => {
     loadDashboardData();
@@ -553,14 +630,15 @@ async function loadDashboardData() {
         <>
           {currentTab === "overview" && (
             <OverviewTab
-              users={users}
-              courses={courses}
-              devices={devices}
-              totalStudents={totalStudents}
-              changeTab={changeTab}
-              openDeviceModal={() => setDeviceModalOpen(true)}
-              createCourse={() => navigate("/create-courses")}
-            />
+            dashboardData={dashboardData}
+            users={users}
+            courses={courses}
+            devices={devices}
+            totalStudents={totalStudents}
+            changeTab={changeTab}
+            openDeviceModal={() => setDeviceModalOpen(true)}
+            createCourse={() => navigate("/create-courses")}
+          />
           )}
 
           {currentTab === "users" && (
@@ -581,9 +659,10 @@ async function loadDashboardData() {
           )}
 
           {currentTab === "courses" && (
-          <CoursesTab
+        <CoursesTab
             courses={courses}
             search={search}
+            dashboardData={dashboardData}
             createCourse={() => navigate("/create-courses")}
             manageCourseLessons={(courseId) =>
               navigate(`/admin/courses/${courseId}/aulas`)
@@ -593,7 +672,7 @@ async function loadDashboardData() {
           )}
 
           {currentTab === "certificates" && (
-            <CertificatesTab />
+            <CertificatesTab dashboardData={dashboardData} />
           )}
 
           {currentTab === "reports" && (
@@ -841,6 +920,7 @@ function MetricChart({
 
 
 function OverviewTab({
+  dashboardData,
   users,
   courses,
   devices,
@@ -849,6 +929,7 @@ function OverviewTab({
   openDeviceModal,
   createCourse,
 }: {
+  dashboardData: AdminDashboardData | null;
   users: UserType[];
   courses: CourseType[];
   devices: DeviceType[];
@@ -857,123 +938,170 @@ function OverviewTab({
   openDeviceModal: () => void;
   createCourse: () => void;
 }) {
+  const resumo = dashboardData?.resumo;
+
+  const latestUser = dashboardData?.ultimosUsuarios?.[0];
+  const latestCourse = dashboardData?.ultimosCursos?.[0];
+  const latestCertificate = dashboardData?.ultimosCertificados?.[0];
+  const latestReview = dashboardData?.revisoesPendentes?.[0];
+
   return (
-    <div className="space-y-6 sm:space-y-8 ">
+    <div className="space-y-6 sm:space-y-8">
       <StatsGrid>
         <StatCard
           title="Total de Usuários"
-          value={users.length}
+          value={resumo?.totalUsuarios ?? users.length}
           subtitle="Todos os perfis"
           icon={Users}
           color="bg-purple-500/15 text-purple-600 dark:text-purple-400"
+          onClick={() => changeTab("users")}
         />
 
         <StatCard
-          title="Dispositivos Ativos"
-          value={devices.length}
+          title="Dispositivos"
+          value={resumo?.totalDispositivos ?? devices.length}
           subtitle="Cadastrados"
           icon={Monitor}
           color="bg-green-500/15 text-green-600 dark:text-green-400"
+          onClick={() => changeTab("devices")}
         />
 
         <StatCard
           title="Cursos Publicados"
-          value={courses.length}
-          subtitle="Disponíveis"
+          value={resumo?.cursosPublicados ?? courses.length}
+          subtitle={`${resumo?.cursosRascunho ?? 0} rascunhos`}
           icon={BookOpen}
           color="bg-orange-500/15 text-orange-600 dark:text-orange-400"
+          onClick={() => changeTab("courses")}
         />
 
         <StatCard
           title="Certificados"
-          value="56"
-          subtitle="Este mês"
+          value={resumo?.certificadosEmitidos ?? 0}
+          subtitle="Emitidos"
           icon={Award}
           color="bg-blue-500/15 text-blue-600 dark:text-blue-400"
+          onClick={() => changeTab("certificates")}
         />
 
         <StatCard
           title="Alunos"
-          value={totalStudents}
-          subtitle="Matriculados"
+          value={resumo?.totalAlunos ?? totalStudents}
+          subtitle="Perfil estudante"
           icon={UserPlus}
           color="bg-red-500/15 text-red-600 dark:text-red-400"
+          onClick={() => changeTab("users")}
         />
 
         <StatCard
-          title="Chamados IA"
-          value="24"
-          subtitle="Este mês"
-          icon={ShieldCheck}
+          title="Revisões"
+          value={resumo?.revisoesPendentes ?? 0}
+          subtitle="Pendentes"
+          icon={Clock3}
           color="bg-indigo-500/15 text-indigo-600 dark:text-indigo-400"
         />
       </StatsGrid>
 
-      <div className="grid grid-cols-1 2xl:grid-cols-[minmax(0,1.3fr)_minmax(380px,0.9fr)] gap-5 sm:gap-6  ">
+      <div className="grid grid-cols-1 2xl:grid-cols-[minmax(0,1.3fr)_minmax(380px,0.9fr)] gap-5 sm:gap-6">
         <TableCard title="Atividades Recentes">
           <div className="space-y-5">
-            <ActivityItem
-              icon={UserPlus}
-              title="Novo usuário cadastrado"
-              subtitle="Usuário criado na plataforma"
-              time="09:32"
-              color="bg-purple-500/15 text-purple-600 dark:text-purple-400"
-            />
+            {latestUser && (
+              <ActivityItem
+                icon={UserPlus}
+                title="Novo usuário cadastrado"
+                subtitle={`${latestUser.name} • ${latestUser.role}`}
+                time={
+                  latestUser.criado_em
+                    ? new Date(latestUser.criado_em).toLocaleDateString(
+                        "pt-BR"
+                      )
+                    : "-"
+                }
+                color="bg-purple-500/15 text-purple-600 dark:text-purple-400"
+              />
+            )}
 
-            <ActivityItem
-              icon={Award}
-              title="Certificado emitido"
-              subtitle="Novo certificado gerado"
-              time="08:50"
-              color="bg-blue-500/15 text-blue-600 dark:text-blue-400"
-            />
+            {latestCertificate && (
+              <ActivityItem
+                icon={Award}
+                title="Certificado emitido"
+                subtitle={`${latestCertificate.aluno_nome} • ${latestCertificate.curso_titulo}`}
+                time={
+                  latestCertificate.emitido_em
+                    ? new Date(
+                        latestCertificate.emitido_em
+                      ).toLocaleDateString("pt-BR")
+                    : "-"
+                }
+                color="bg-blue-500/15 text-blue-600 dark:text-blue-400"
+              />
+            )}
 
-            <ActivityItem
-              icon={BookOpen}
-              title="Curso atualizado"
-              subtitle="Conteúdo do curso alterado"
-              time="Ontem"
-              color="bg-orange-500/15 text-orange-600 dark:text-orange-400"
-            />
+            {latestCourse && (
+              <ActivityItem
+                icon={BookOpen}
+                title="Curso criado"
+                subtitle={`${latestCourse.titulo} • ${latestCourse.status}`}
+                time={
+                  latestCourse.criado_em
+                    ? new Date(latestCourse.criado_em).toLocaleDateString(
+                        "pt-BR"
+                      )
+                    : "-"
+                }
+                color="bg-orange-500/15 text-orange-600 dark:text-orange-400"
+              />
+            )}
 
-            <ActivityItem
-              icon={Cpu}
-              title="Dispositivo registrado"
-              subtitle="Novo dispositivo adicionado"
-              time="12/06"
-              color="bg-green-500/15 text-green-600 dark:text-green-400"
-            />
+            {latestReview && (
+              <ActivityItem
+                icon={Clock3}
+                title="Aluno em revisão"
+                subtitle={`${latestReview.aluno_nome} • ${latestReview.curso_titulo}`}
+                time={`Nota ${latestReview.nota_final ?? "-"}`}
+                color="bg-red-500/15 text-red-600 dark:text-red-400"
+              />
+            )}
+
+            {!latestUser &&
+              !latestCertificate &&
+              !latestCourse &&
+              !latestReview && (
+                <p className="text-gray-500 dark:text-gray-400 text-sm">
+                  Nenhuma atividade recente encontrada.
+                </p>
+              )}
           </div>
         </TableCard>
 
-        <div className="space-y-5 sm:space-y-6 rounded-3xl ">
+        <div className="space-y-5 sm:space-y-6 rounded-3xl">
           <TableCard title="Resumo por Módulo">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <QuickSummary
                 icon={Users}
                 title="Usuários"
-                value={users.length}
+                value={resumo?.totalUsuarios ?? users.length}
                 onClick={() => changeTab("users")}
               />
 
               <QuickSummary
                 icon={Cpu}
                 title="Dispositivos"
-                value={devices.length}
+                value={resumo?.totalDispositivos ?? devices.length}
                 onClick={() => changeTab("devices")}
               />
 
               <QuickSummary
                 icon={BookOpen}
                 title="Cursos"
-                value={courses.length}
+                value={resumo?.totalCursos ?? courses.length}
                 onClick={() => changeTab("courses")}
               />
 
               <QuickSummary
                 icon={Award}
                 title="Certificados"
-                value={56}
+                value={resumo?.certificadosEmitidos ?? 0}
                 onClick={() => changeTab("certificates")}
               />
             </div>
@@ -984,7 +1112,7 @@ function OverviewTab({
               <ActionButton
                 icon={Users}
                 title="Gerenciar usuários"
-                subtitle="Visualizar usuários"
+                subtitle="Visualizar e cadastrar usuários"
                 onClick={() => changeTab("users")}
               />
 
@@ -1292,36 +1420,68 @@ function DevicesTab({
   );
 }
 
-
-
 function CoursesTab({
   courses,
   search,
+  dashboardData,
   createCourse,
   manageCourseLessons,
   deleteCourse,
 }: {
   courses: CourseType[];
   search: string;
+  dashboardData: AdminDashboardData | null;
   createCourse: () => void;
   manageCourseLessons: (courseId: number) => void;
   deleteCourse: (course: CourseType) => void;
 }) {
+  const resumo = dashboardData?.resumo;
+
   const filteredCourses = courses.filter((course) => {
     const term = search.toLowerCase();
 
     return (
       course.titulo?.toLowerCase().includes(term) ||
-      course.descricao?.toLowerCase().includes(term)
+      course.descricao?.toLowerCase().includes(term) ||
+      course.status?.toLowerCase().includes(term) ||
+      course.curso_publicacao_status?.toLowerCase().includes(term)
     );
   });
+
+  function getCourseStatus(course: CourseType) {
+    return course.status || course.curso_publicacao_status || "publicado";
+  }
+
+  function getCourseStatusStyle(status: string) {
+    if (status === "publicado") {
+      return "bg-green-500/15 text-green-600 dark:text-green-400";
+    }
+
+    if (status === "rascunho") {
+      return "bg-orange-500/15 text-orange-600 dark:text-orange-400";
+    }
+
+    if (status === "arquivado") {
+      return "bg-gray-500/15 text-gray-600 dark:text-gray-400";
+    }
+
+    return "bg-gray-500/15 text-gray-600 dark:text-gray-400";
+  }
+
+  function getCourseStatusLabel(status: string) {
+    if (status === "publicado") return "Publicado";
+    if (status === "rascunho") return "Rascunho";
+    if (status === "arquivado") return "Arquivado";
+
+    return status;
+  }
 
   return (
     <div className="space-y-6 sm:space-y-8">
       <StatsGrid>
         <StatCard
           title="Total de Cursos"
-          value={courses.length}
+          value={resumo?.totalCursos ?? courses.length}
           subtitle="Todos os cursos"
           icon={BookOpen}
           color="bg-purple-500/15 text-purple-600 dark:text-purple-400"
@@ -1329,7 +1489,7 @@ function CoursesTab({
 
         <StatCard
           title="Publicados"
-          value={courses.length}
+          value={resumo?.cursosPublicados ?? 0}
           subtitle="Disponíveis"
           icon={ShieldCheck}
           color="bg-green-500/15 text-green-600 dark:text-green-400"
@@ -1337,34 +1497,34 @@ function CoursesTab({
 
         <StatCard
           title="Rascunhos"
-          value="0"
+          value={resumo?.cursosRascunho ?? 0}
           subtitle="Não publicados"
           icon={FileText}
           color="bg-orange-500/15 text-orange-600 dark:text-orange-400"
         />
 
         <StatCard
+          title="Arquivados"
+          value={resumo?.cursosArquivados ?? 0}
+          subtitle="Fora da listagem"
+          icon={Clock3}
+          color="bg-gray-500/15 text-gray-600 dark:text-gray-400"
+        />
+
+        <StatCard
           title="Alunos"
-          value="318"
-          subtitle="Matriculados"
+          value={resumo?.totalAlunos ?? 0}
+          subtitle="Perfil estudante"
           icon={Users}
           color="bg-blue-500/15 text-blue-600 dark:text-blue-400"
         />
 
         <StatCard
-          title="Conclusão"
-          value="68%"
-          subtitle="Média geral"
-          icon={BarChart3}
-          color="bg-orange-500/15 text-orange-600 dark:text-orange-400"
-        />
-
-        <StatCard
-          title="Avaliação"
-          value="4,6"
-          subtitle="De 5 estrelas"
-          icon={Star}
-          color="bg-purple-500/15 text-purple-600 dark:text-purple-400"
+          title="Revisões"
+          value={resumo?.revisoesPendentes ?? 0}
+          subtitle="Pendentes"
+          icon={Activity}
+          color="bg-red-500/15 text-red-600 dark:text-red-400"
         />
       </StatsGrid>
 
@@ -1374,254 +1534,267 @@ function CoursesTab({
             <div className="grid grid-cols-[1.5fr_1fr_1fr_1fr_260px] text-sm text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-white/10 pb-3">
               <span>Curso</span>
               <span>Status</span>
-              <span>Alunos</span>
-              <span>Atualização</span>
+              <span>Aulas</span>
+              <span>Criação</span>
               <span className="text-right">Ações</span>
             </div>
 
-            {filteredCourses.map((course) => (
-              <div
-                key={course.id}
-                className="grid grid-cols-[1.5fr_1fr_1fr_1fr_260px] gap-4 items-center py-4 border-b border-gray-200 dark:border-white/10 last:border-b-0"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-14 h-14 rounded-xl bg-gray-100 dark:bg-[#0d2238] overflow-hidden flex items-center justify-center shrink-0">
-                    {course.thumbnail ? (
-                      <img
-                        src={course.thumbnail}
-                        className="w-full h-full object-cover"
-                        alt={course.titulo}
-                      />
-                    ) : (
-                      <BookOpen className="text-blue-600 dark:text-blue-400" />
-                    )}
-                  </div>
+            {filteredCourses.length > 0 ? (
+              filteredCourses.map((course) => {
+                const status = getCourseStatus(course);
 
-                  <div className="min-w-0">
-                    <h3 className="font-semibold text-[#080E2F] dark:text-white truncate">
-                      {course.titulo}
-                    </h3>
+                return (
+                  <div
+                    key={course.id}
+                    className="grid grid-cols-[1.5fr_1fr_1fr_1fr_260px] gap-4 items-center py-4 border-b border-gray-200 dark:border-white/10 last:border-b-0"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-14 h-14 rounded-xl bg-gray-100 dark:bg-[#0d2238] overflow-hidden flex items-center justify-center shrink-0">
+                        {course.thumbnail ? (
+                          <img
+                            src={course.thumbnail}
+                            className="w-full h-full object-cover"
+                            alt={course.titulo}
+                          />
+                        ) : (
+                          <BookOpen className="text-blue-600 dark:text-blue-400" />
+                        )}
+                      </div>
 
-                    <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                      {course.descricao || "Sem descrição"}
+                      <div className="min-w-0">
+                        <h3 className="font-semibold text-[#080E2F] dark:text-white truncate">
+                          {course.titulo}
+                        </h3>
+
+                        <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                          {course.descricao || "Sem descrição"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <span
+                      className={`w-fit px-3 py-1 rounded-xl font-semibold text-sm ${getCourseStatusStyle(
+                        status
+                      )}`}
+                    >
+                      {getCourseStatusLabel(status)}
+                    </span>
+
+                    <p className="text-gray-600 dark:text-gray-400">
+                      {course.total_aulas ?? 0} aulas
                     </p>
+
+                    <p className="text-gray-600 dark:text-gray-400">
+                      {course.criado_em
+                        ? new Date(course.criado_em).toLocaleDateString(
+                            "pt-BR"
+                          )
+                        : "-"}
+                    </p>
+
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => manageCourseLessons(course.id)}
+                        className="
+                          inline-flex
+                          items-center
+                          justify-center
+                          gap-2
+                          rounded-xl
+                          bg-blue-500/10
+                          px-3
+                          py-2
+                          text-sm
+                          font-semibold
+                          text-blue-600
+                          dark:text-blue-400
+                          hover:bg-blue-500/20
+                          transition-all
+                        "
+                      >
+                        <BookOpen size={18} />
+                        Aulas
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => deleteCourse(course)}
+                        className="
+                          inline-flex
+                          items-center
+                          justify-center
+                          gap-2
+                          rounded-xl
+                          bg-red-500/10
+                          px-3
+                          py-2
+                          text-sm
+                          font-semibold
+                          text-red-500
+                          hover:bg-red-500/20
+                          transition-all
+                        "
+                      >
+                        <Trash2 size={18} />
+                        Excluir
+                      </button>
+                    </div>
                   </div>
-                </div>
-
-                <span className="w-fit px-3 py-1 rounded-xl bg-green-500/15 text-green-600 dark:text-green-400 font-semibold text-sm">
-                  Publicado
-                </span>
-
-                <p className="text-gray-600 dark:text-gray-400">
-                  0
-                </p>
-
-                <p className="text-gray-600 dark:text-gray-400">
-                  {course.criado_em
-                    ? new Date(course.criado_em).toLocaleDateString("pt-BR")
-                    : "-"}
-                </p>
-
-                <div className="flex justify-end gap-2">
-  <button
-    type="button"
-    onClick={() => manageCourseLessons(course.id)}
-    className="
-      inline-flex
-      items-center
-      justify-center
-      gap-2
-      rounded-xl
-      bg-blue-500/10
-      px-3
-      py-2
-      text-sm
-      font-semibold
-      text-blue-600
-      dark:text-blue-400
-      hover:bg-blue-500/20
-      transition-all
-    "
-  >
-    <BookOpen size={18} />
-    Aulas
-  </button>
-
-  <button
-    type="button"
-    onClick={() => deleteCourse(course)}
-    className="
-      inline-flex
-      items-center
-      justify-center
-      gap-2
-      rounded-xl
-      bg-red-500/10
-      px-3
-      py-2
-      text-sm
-      font-semibold
-      text-red-500
-      hover:bg-red-500/20
-      transition-all
-    "
-  >
-    <Trash2 size={18} />
-    Excluir
-  </button>
-</div>
+                );
+              })
+            ) : (
+              <div className="py-8 text-center text-gray-500 dark:text-gray-400">
+                Nenhum curso encontrado.
               </div>
-            ))}
+            )}
           </div>
         </TableCard>
 
         <TableCard title="Ações Rápidas">
-        <div className="grid grid-cols-1 gap-4">
-          <ActionButton
-            icon={BookOpen}
-            title="Criar curso"
-            subtitle="Iniciar um novo curso"
-            onClick={createCourse}
-          />
+          <div className="grid grid-cols-1 gap-4">
+            <ActionButton
+              icon={BookOpen}
+              title="Criar curso"
+              subtitle="Iniciar um novo curso"
+              onClick={createCourse}
+            />
 
-          <ActionButton
-            icon={Award}
-            title="Gerar certificado"
-            subtitle="Emitir certificados"
-            onClick={() => alert("Conectar emissão depois.")}
-          />
+            <ActionButton
+              icon={Award}
+              title="Ver certificados"
+              subtitle="Acompanhar certificados emitidos"
+              onClick={() => alert("Use a aba Certificados.")}
+            />
 
-          <ActionButton
-            icon={Download}
-            title="Exportar catálogo"
-            subtitle="Exportar lista de cursos"
-            onClick={() => alert("Conectar exportação depois.")}
-          />
-        </div>
-      </TableCard>
-            </div>
+            <ActionButton
+              icon={Download}
+              title="Exportar catálogo"
+              subtitle="Exportar lista de cursos"
+              onClick={() => alert("Conectar exportação depois.")}
+            />
+          </div>
+        </TableCard>
+      </div>
     </div>
   );
 }
 
 
+function CertificatesTab({
+  dashboardData,
+}: {
+  dashboardData: AdminDashboardData | null;
+}) {
+  const resumo = dashboardData?.resumo;
+  const certificates = dashboardData?.ultimosCertificados ?? [];
 
-function CertificatesTab() {
+  const lastCertificate = certificates[0];
+
   return (
     <div className="space-y-6 sm:space-y-8">
       <StatsGrid>
         <StatCard
           title="Total Emitidos"
-          value="284"
+          value={resumo?.certificadosEmitidos ?? 0}
           subtitle="Todos os certificados"
           icon={Award}
           color="bg-purple-500/15 text-purple-600 dark:text-purple-400"
         />
 
         <StatCard
-          title="Pendentes"
-          value="18"
-          subtitle="Aguardando emissão"
+          title="Últimos"
+          value={certificates.length}
+          subtitle="Listados"
           icon={Clock3}
           color="bg-orange-500/15 text-orange-600 dark:text-orange-400"
         />
 
         <StatCard
-          title="Verificados"
-          value="231"
-          subtitle="Certificados válidos"
+          title="Válidos"
+          value={resumo?.certificadosEmitidos ?? 0}
+          subtitle="Com código"
           icon={ShieldCheck}
           color="bg-green-500/15 text-green-600 dark:text-green-400"
         />
 
         <StatCard
-          title="Compartilhados"
-          value="146"
-          subtitle="Por link ou email"
-          icon={ArrowRight}
+          title="Cursos"
+          value={resumo?.totalCursos ?? 0}
+          subtitle="Na plataforma"
+          icon={BookOpen}
           color="bg-blue-500/15 text-blue-600 dark:text-blue-400"
         />
 
         <StatCard
-          title="Média de Notas"
-          value="8,7"
-          subtitle="De 0 a 10"
-          icon={Star}
+          title="Alunos"
+          value={resumo?.totalAlunos ?? 0}
+          subtitle="Podem certificar"
+          icon={Users}
           color="bg-orange-500/15 text-orange-600 dark:text-orange-400"
         />
 
         <StatCard
           title="Última Emissão"
-          value="14/06"
-          subtitle="09:32"
+          value={
+            lastCertificate?.emitido_em
+              ? new Date(lastCertificate.emitido_em).toLocaleDateString(
+                  "pt-BR"
+                )
+              : "-"
+          }
+          subtitle="Mais recente"
           icon={Calendar}
           color="bg-purple-500/15 text-purple-600 dark:text-purple-400"
         />
       </StatsGrid>
 
-      <TableCard title="Lista de Certificados">
-        <div className="min-w-[780px]">
-          <div className="grid grid-cols-[1fr_1.2fr_1.2fr_0.8fr_1fr_80px] text-sm text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-white/10 pb-3">
+      <TableCard title="Últimos Certificados Emitidos">
+        <div className="min-w-[900px]">
+          <div className="grid grid-cols-[0.9fr_1.2fr_1.5fr_1.3fr_1fr] text-sm text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-white/10 pb-3">
             <span>ID</span>
             <span>Aluno</span>
             <span>Curso</span>
-            <span>Nota</span>
-            <span>Status</span>
-            <span className="text-right">Ações</span>
+            <span>Código</span>
+            <span>Emissão</span>
           </div>
 
-          {[
-            {
-              id: "CERT-2026-0284",
-              aluno: "Mariana Rocha",
-              curso: "SIRROS Data Tag",
-              nota: "9,5",
-              status: "Verificado",
-            },
-            {
-              id: "CERT-2026-0283",
-              aluno: "Carlos Silva",
-              curso: "RTU Industrial",
-              nota: "8,0",
-              status: "Verificado",
-            },
-            {
-              id: "CERT-2026-0282",
-              aluno: "Amanda Ferreira",
-              curso: "Semáforo IoT",
-              nota: "9,0",
-              status: "Emitido",
-            },
-          ].map((certificate) => (
-            <div
-              key={certificate.id}
-              className="grid grid-cols-[1fr_1.2fr_1.2fr_0.8fr_1fr_80px] gap-4 items-center py-4 border-b border-gray-200 dark:border-white/10 last:border-b-0"
-            >
-              <span className="text-blue-600 dark:text-blue-400 font-semibold">
-                {certificate.id}
-              </span>
+          {certificates.length > 0 ? (
+            certificates.map((certificate) => (
+              <div
+                key={certificate.id}
+                className="grid grid-cols-[0.9fr_1.2fr_1.5fr_1.3fr_1fr] gap-4 items-center py-4 border-b border-gray-200 dark:border-white/10 last:border-b-0"
+              >
+                <span className="text-blue-600 dark:text-blue-400 font-semibold">
+                  #{certificate.id}
+                </span>
 
-              <span className="text-[#080E2F] dark:text-white font-semibold">
-                {certificate.aluno}
-              </span>
+                <span className="text-[#080E2F] dark:text-white font-semibold truncate">
+                  {certificate.aluno_nome}
+                </span>
 
-              <span className="text-gray-600 dark:text-gray-400">
-                {certificate.curso}
-              </span>
+                <span className="text-gray-600 dark:text-gray-400 truncate">
+                  {certificate.curso_titulo}
+                </span>
 
-              <span className="text-gray-600 dark:text-gray-400">
-                {certificate.nota}
-              </span>
+                <span className="text-gray-600 dark:text-gray-400 truncate">
+                  {certificate.validation_code}
+                </span>
 
-              <span className="w-fit px-3 py-1 rounded-xl bg-green-500/15 text-green-600 dark:text-green-400 font-semibold text-sm">
-                {certificate.status}
-              </span>
-
-              <button className="ml-auto text-gray-500 hover:text-blue-600 dark:hover:text-blue-400">
-                <MoreVertical size={22} />
-              </button>
+                <span className="text-gray-600 dark:text-gray-400">
+                  {certificate.emitido_em
+                    ? new Date(certificate.emitido_em).toLocaleDateString(
+                        "pt-BR"
+                      )
+                    : "-"}
+                </span>
+              </div>
+            ))
+          ) : (
+            <div className="py-8 text-center text-gray-500 dark:text-gray-400">
+              Nenhum certificado emitido até o momento.
             </div>
-          ))}
+          )}
         </div>
       </TableCard>
     </div>
