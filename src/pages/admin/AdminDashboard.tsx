@@ -340,6 +340,9 @@ const [unlinkingClientDeviceId, setUnlinkingClientDeviceId] = useState<
 const [deletingCourseId, setDeletingCourseId] =
   useState<number | null>(null);
 
+  const [updatingCourseStatusId, setUpdatingCourseStatusId] =
+  useState<number | null>(null);
+
   const navigate = useNavigate();
 
   
@@ -744,6 +747,55 @@ async function handleUnlinkDeviceFromClient(deviceId: number) {
     setDeletingCourseId(null);
   }
 }
+
+async function handleUpdateCourseStatus(
+  course: CourseType,
+  status: "rascunho" | "publicado" | "arquivado"
+) {
+  try {
+    if (status === "publicado" && Number(course.total_aulas ?? 0) === 0) {
+      toast.error("Não é possível publicar um curso sem aulas.");
+      return;
+    }
+
+    setUpdatingCourseStatusId(course.id);
+
+    const config = getAuthConfig();
+
+    if (!config) {
+      return;
+    }
+
+    await axios.patch(
+      `http://localhost:3333/admin/courses/${course.id}/status`,
+      {
+        status,
+      },
+      config
+    );
+
+    toast.success("Status do curso atualizado com sucesso.");
+
+    await loadDashboardData();
+  } catch (error) {
+    console.log(error);
+
+    if (axios.isAxiosError(error)) {
+      toast.error(
+        error.response?.data?.error ||
+          error.response?.data?.message ||
+          "Erro ao atualizar status do curso"
+      );
+
+      return;
+    }
+
+    toast.error("Erro inesperado ao atualizar status do curso.");
+  } finally {
+    setUpdatingCourseStatusId(null);
+  }
+}
+
 
   const header = getHeaderInfo();
 
@@ -1224,15 +1276,17 @@ async function handleSaveAiPrompt() {
 
           {currentTab === "courses" && (
         <CoursesTab
-            courses={courses}
-            search={search}
-            dashboardData={dashboardData}
-            createCourse={() => navigate("/create-courses")}
-            manageCourseLessons={(courseId) =>
-              navigate(`/admin/courses/${courseId}/aulas`)
-            }
-            deleteCourse={(course) => setDeleteCourseTarget(course)}
-          />
+          courses={courses}
+          search={search}
+          dashboardData={dashboardData}
+          createCourse={() => navigate("/create-courses")}
+          manageCourseLessons={(courseId) =>
+            navigate(`/admin/courses/${courseId}/aulas`)
+          }
+          deleteCourse={(course) => setDeleteCourseTarget(course)}
+          updateCourseStatus={handleUpdateCourseStatus}
+          updatingCourseStatusId={updatingCourseStatusId}
+        />
           )}
 
           {currentTab === "certificates" && (
@@ -1926,6 +1980,7 @@ function OverviewTab({
   createCourse: () => void;
 }) {
   const resumo = dashboardData?.resumo;
+  
 
   const latestUser = dashboardData?.ultimosUsuarios?.[0];
   const latestCourse = dashboardData?.ultimosCursos?.[0];
@@ -2477,6 +2532,8 @@ function CoursesTab({
   createCourse,
   manageCourseLessons,
   deleteCourse,
+  updateCourseStatus,
+  updatingCourseStatusId,
 }: {
   courses: CourseType[];
   search: string;
@@ -2484,8 +2541,15 @@ function CoursesTab({
   createCourse: () => void;
   manageCourseLessons: (courseId: number) => void;
   deleteCourse: (course: CourseType) => void;
+  updateCourseStatus: (
+    course: CourseType,
+    status: "rascunho" | "publicado" | "arquivado"
+  ) => void;
+  updatingCourseStatusId: number | null;
 }) {
   const resumo = dashboardData?.resumo;
+  const [selectedCourseActions, setSelectedCourseActions] =
+  useState<CourseType | null>(null);
 
   const filteredCourses = courses.filter((course) => {
     const term = search.toLowerCase();
@@ -2525,6 +2589,42 @@ function CoursesTab({
 
     return status;
   }
+
+  function getNextCourseStatus(status: string) {
+  if (status === "rascunho") {
+    return "publicado";
+  }
+
+  if (status === "publicado") {
+    return "arquivado";
+  }
+
+  return "rascunho";
+}
+
+function getStatusActionLabel(status: string) {
+  if (status === "rascunho") {
+    return "Publicar";
+  }
+
+  if (status === "publicado") {
+    return "Arquivar";
+  }
+
+  return "Restaurar";
+}
+
+function getStatusActionStyle(status: string) {
+  if (status === "rascunho") {
+    return "bg-green-500/10 text-green-600 dark:text-green-400 hover:bg-green-500/20";
+  }
+
+  if (status === "publicado") {
+    return "bg-orange-500/10 text-orange-600 dark:text-orange-400 hover:bg-orange-500/20";
+  }
+
+  return "bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20";
+}
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -2580,126 +2680,98 @@ function CoursesTab({
 
       <div className="grid grid-cols-1 2xl:grid-cols-[minmax(0,1.4fr)_minmax(360px,0.8fr)] gap-5 sm:gap-6">
         <TableCard title="Lista de Cursos">
-          <div className="min-w-[950px]">
-            <div className="grid grid-cols-[1.5fr_1fr_1fr_1fr_260px] text-sm text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-white/10 pb-3">
-              <span>Curso</span>
-              <span>Status</span>
-              <span>Aulas</span>
-              <span>Criação</span>
-              <span className="text-right">Ações</span>
+  <div className="w-full">
+    <div className="grid grid-cols-[minmax(0,1fr)_100px_80px_110px_56px] text-sm text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-white/10 pb-3">
+      <span>Curso</span>
+      <span>Status</span>
+      <span>Aulas</span>
+      <span>Criação</span>
+      <span className="text-right">Ações</span>
+    </div>
+
+    {filteredCourses.length > 0 ? (
+      filteredCourses.map((course) => {
+        const status = getCourseStatus(course);
+
+        return (
+          <div
+            key={course.id}
+            className="grid grid-cols-[minmax(0,1fr)_100px_80px_110px_56px] gap-4 items-center py-4 border-b border-gray-200 dark:border-white/10 last:border-b-0"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-14 h-14 rounded-xl bg-gray-100 dark:bg-[#0d2238] overflow-hidden flex items-center justify-center shrink-0">
+                {course.thumbnail ? (
+                  <img
+                    src={course.thumbnail}
+                    className="w-full h-full object-cover"
+                    alt={course.titulo}
+                  />
+                ) : (
+                  <BookOpen className="text-blue-600 dark:text-blue-400" />
+                )}
+              </div>
+
+              <div className="min-w-0">
+                <h3 className="font-semibold text-[#080E2F] dark:text-white truncate">
+                  {course.titulo}
+                </h3>
+
+                <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                  {course.descricao || "Sem descrição"}
+                </p>
+              </div>
             </div>
 
-            {filteredCourses.length > 0 ? (
-              filteredCourses.map((course) => {
-                const status = getCourseStatus(course);
+            <span
+              className={`w-fit px-3 py-1 rounded-xl font-semibold text-sm ${getCourseStatusStyle(
+                status
+              )}`}
+            >
+              {getCourseStatusLabel(status)}
+            </span>
 
-                return (
-                  <div
-                    key={course.id}
-                    className="grid grid-cols-[1.5fr_1fr_1fr_1fr_260px] gap-4 items-center py-4 border-b border-gray-200 dark:border-white/10 last:border-b-0"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-14 h-14 rounded-xl bg-gray-100 dark:bg-[#0d2238] overflow-hidden flex items-center justify-center shrink-0">
-                        {course.thumbnail ? (
-                          <img
-                            src={course.thumbnail}
-                            className="w-full h-full object-cover"
-                            alt={course.titulo}
-                          />
-                        ) : (
-                          <BookOpen className="text-blue-600 dark:text-blue-400" />
-                        )}
-                      </div>
+            <p className="text-gray-600 dark:text-gray-400">
+              {course.total_aulas ?? 0} aulas
+            </p>
 
-                      <div className="min-w-0">
-                        <h3 className="font-semibold text-[#080E2F] dark:text-white truncate">
-                          {course.titulo}
-                        </h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              {course.criado_em
+                ? new Date(course.criado_em).toLocaleDateString("pt-BR")
+                : "-"}
+            </p>
 
-                        <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                          {course.descricao || "Sem descrição"}
-                        </p>
-                      </div>
-                    </div>
-
-                    <span
-                      className={`w-fit px-3 py-1 rounded-xl font-semibold text-sm ${getCourseStatusStyle(
-                        status
-                      )}`}
-                    >
-                      {getCourseStatusLabel(status)}
-                    </span>
-
-                    <p className="text-gray-600 dark:text-gray-400">
-                      {course.total_aulas ?? 0} aulas
-                    </p>
-
-                    <p className="text-gray-600 dark:text-gray-400">
-                      {course.criado_em
-                        ? new Date(course.criado_em).toLocaleDateString(
-                            "pt-BR"
-                          )
-                        : "-"}
-                    </p>
-
-                    <div className="flex justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={() => manageCourseLessons(course.id)}
-                        className="
-                          inline-flex
-                          items-center
-                          justify-center
-                          gap-2
-                          rounded-xl
-                          bg-blue-500/10
-                          px-3
-                          py-2
-                          text-sm
-                          font-semibold
-                          text-blue-600
-                          dark:text-blue-400
-                          hover:bg-blue-500/20
-                          transition-all
-                        "
-                      >
-                        <BookOpen size={18} />
-                        Aulas
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => deleteCourse(course)}
-                        className="
-                          inline-flex
-                          items-center
-                          justify-center
-                          gap-2
-                          rounded-xl
-                          bg-red-500/10
-                          px-3
-                          py-2
-                          text-sm
-                          font-semibold
-                          text-red-500
-                          hover:bg-red-500/20
-                          transition-all
-                        "
-                      >
-                        <Trash2 size={18} />
-                        Excluir
-                      </button>
-                    </div>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="py-8 text-center text-gray-500 dark:text-gray-400">
-                Nenhum curso encontrado.
-              </div>
-            )}
+            <div className="flex justify-end">
+            <button
+            type="button"
+            onClick={() => setSelectedCourseActions(course)}
+            title="Ações do curso"
+            className="
+              inline-flex
+              h-10
+              w-10
+              items-center
+              justify-center
+              rounded-xl
+              bg-blue-500/10
+              text-blue-600
+              dark:text-blue-400
+              hover:bg-blue-500/20
+              transition-all
+            "
+          >
+            <MoreVertical size={20} />
+          </button>
+            </div>
           </div>
-        </TableCard>
+        );
+      })
+    ) : (
+      <div className="py-8 text-center text-gray-500 dark:text-gray-400">
+        Nenhum curso encontrado.
+      </div>
+    )}
+  </div>
+</TableCard>
 
         <TableCard title="Ações Rápidas">
           <div className="grid grid-cols-1 gap-4">
@@ -2725,8 +2797,140 @@ function CoursesTab({
             />
           </div>
         </TableCard>
-      </div>
+
+        {selectedCourseActions && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-md rounded-3xl bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-bold text-[#080E2F] dark:text-white">
+                  Ações do curso
+                </h2>
+
+                <p className="text-gray-500 dark:text-gray-400 mt-1">
+                  {selectedCourseActions.titulo}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelectedCourseActions(null)}
+                className="text-gray-500 hover:text-red-500 transition-all"
+              >
+                <X size={26} />
+              </button>
+            </div>
+
+            <div className="mt-6 space-y-3">
+              <button
+                type="button"
+                onClick={() => {
+                  manageCourseLessons(selectedCourseActions.id);
+                  setSelectedCourseActions(null);
+                }}
+                className="
+                  w-full
+                  inline-flex
+                  items-center
+                  justify-between
+                  gap-3
+                  rounded-2xl
+                  bg-blue-500/10
+                  px-4
+                  py-3
+                  text-sm
+                  font-semibold
+                  text-blue-600
+                  dark:text-blue-400
+                  hover:bg-blue-500/20
+                  transition-all
+                "
+              >
+                <span className="inline-flex items-center gap-2">
+                  <BookOpen size={18} />
+                  Gerenciar aulas
+                </span>
+
+                <ArrowRight size={18} />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const currentStatus = getCourseStatus(selectedCourseActions);
+
+                  updateCourseStatus(
+                    selectedCourseActions,
+                    getNextCourseStatus(currentStatus) as
+                      | "rascunho"
+                      | "publicado"
+                      | "arquivado"
+                  );
+
+                  setSelectedCourseActions(null);
+                }}
+                disabled={updatingCourseStatusId === selectedCourseActions.id}
+                className={`
+                  w-full
+                  inline-flex
+                  items-center
+                  justify-between
+                  gap-3
+                  rounded-2xl
+                  px-4
+                  py-3
+                  text-sm
+                  font-semibold
+                  transition-all
+                  disabled:opacity-60
+                  disabled:cursor-not-allowed
+                  ${getStatusActionStyle(getCourseStatus(selectedCourseActions))}
+                `}
+              >
+                <span className="inline-flex items-center gap-2">
+                  <ShieldCheck size={18} />
+                  {getStatusActionLabel(getCourseStatus(selectedCourseActions))}
+                </span>
+
+                <ArrowRight size={18} />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  deleteCourse(selectedCourseActions);
+                  setSelectedCourseActions(null);
+                }}
+                className="
+                  w-full
+                  inline-flex
+                  items-center
+                  justify-between
+                  gap-3
+                  rounded-2xl
+                  bg-red-500/10
+                  px-4
+                  py-3
+                  text-sm
+                  font-semibold
+                  text-red-500
+                  hover:bg-red-500/20
+                  transition-all
+                "
+              >
+                <span className="inline-flex items-center gap-2">
+                  <Trash2 size={18} />
+                  Excluir curso
+                </span>
+
+                <ArrowRight size={18} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+      </div>
   );
 }
 
