@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
+import axios from "axios";
 import toast from "react-hot-toast";
 
 import {
@@ -18,10 +19,44 @@ import {
   Zap,
 } from "lucide-react";
 
+interface DeviceType {
+  id: number;
+  nome: string;
+  modelo?: string | null;
+  tipo?: string | null;
+  descricao?: string | null;
+  imagem_url?: string | null;
+}
+
+interface ChatSource {
+  documento_id: number;
+  documento_titulo: string;
+  nome_arquivo_original: string;
+  pagina: number | null;
+  chunk_index: number;
+}
+
 interface ChatMessage {
   id: number;
   type: "user" | "ai";
   text: string;
+  sources?: ChatSource[];
+}
+
+interface AiConversation {
+  id: number;
+  usuario_id: number;
+  dispositivo_id: number;
+  dispositivo_nome: string;
+  titulo: string;
+  criado_em: string;
+  atualizado_em: string;
+}
+
+interface AiChatResponse {
+  conversa_id: number;
+  resposta: string;
+  fontes: ChatSource[];
 }
 
 const quickActions = [
@@ -48,16 +83,25 @@ const quickActions = [
 ];
 
 const suggestions = [
-  "Quais dispositivos estão offline?",
-  "Como está o consumo dos dispositivos?",
-  "Mostre os alertas ativos",
-  "Relatório de desempenho mensal",
-  "Quais dispositivos precisam de manutenção?",
+  "O que é o Sirros S1?",
+  "Como configurar o Wi-Fi do dispositivo?",
+  "O que significa o LED vermelho?",
+  "O que significa o LED verde?",
+  "Quais portas precisam estar liberadas na rede?",
 ];
 
 export default function Support() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [devices, setDevices] = useState<DeviceType[]>([]);
+const [selectedDeviceId, setSelectedDeviceId] = useState<number | null>(null);
+
+// arrumar depois const [conversations, setConversations] = useState<AiConversation[]>([]);
+const [currentConversationId, setCurrentConversationId] = useState<
+  number | null
+>(null);
+
+const [loadingInitialData, setLoadingInitialData] = useState(true);
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -67,39 +111,128 @@ export default function Support() {
     },
   ]);
 
+  useEffect(() => {
+  loadInitialData();
+}, []);
+
+async function loadInitialData() {
+  try {
+    setLoadingInitialData(true);
+
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      toast.error("Sessão expirada. Faça login novamente.");
+      return;
+    }
+
+    const config = {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    };
+
+    const [devicesResponse, conversationsResponse] = await Promise.all([
+      axios.get<DeviceType[]>("http://localhost:3333/devices", config),
+      axios.get<AiConversation[]>(
+        "http://localhost:3333/client/ai/conversations",
+        config
+      ),
+    ]);
+
+    setDevices(devicesResponse.data);
+    console.log(conversationsResponse.data);
+
+    if (devicesResponse.data.length > 0) {
+      setSelectedDeviceId(devicesResponse.data[0].id);
+    }
+  } catch (error) {
+    console.log(error);
+    toast.error("Erro ao carregar dados do suporte IA.");
+  } finally {
+    setLoadingInitialData(false);
+  }
+}
+
   function handleSuggestionClick(question: string) {
     setMessage(question);
   }
 
   async function handleSendMessage(e: FormEvent) {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!message.trim()) {
-      toast.error("Digite uma pergunta antes de enviar");
+  if (!message.trim()) {
+    toast.error("Digite uma pergunta antes de enviar");
+    return;
+  }
+
+  if (!selectedDeviceId) {
+    toast.error("Selecione um dispositivo antes de perguntar.");
+    return;
+  }
+
+  const question = message;
+
+  const userMessage: ChatMessage = {
+    id: Date.now(),
+    type: "user",
+    text: question,
+  };
+
+  setMessages((prev) => [...prev, userMessage]);
+  setMessage("");
+  setLoading(true);
+
+  try {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      toast.error("Sessão expirada. Faça login novamente.");
       return;
     }
 
-    const userMessage: ChatMessage = {
-      id: Date.now(),
-      type: "user",
-      text: message,
+    const response = await axios.post<AiChatResponse>(
+      "http://localhost:3333/client/ai/chat",
+      {
+        dispositivo_id: selectedDeviceId,
+        pergunta: question,
+        conversa_id: currentConversationId,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    setCurrentConversationId(response.data.conversa_id);
+
+    const aiMessage: ChatMessage = {
+      id: Date.now() + 1,
+      type: "ai",
+      text: response.data.resposta,
+      sources: response.data.fontes,
     };
 
-    setMessages((prev) => [...prev, userMessage]);
-    setMessage("");
-    setLoading(true);
+    setMessages((prev) => [...prev, aiMessage]);
 
-    setTimeout(() => {
-      const aiMessage: ChatMessage = {
-        id: Date.now() + 1,
-        type: "ai",
-        text: "Essa é uma resposta simulada do agente de IA. Depois vamos conectar essa tela com o backend e com a IA usando a documentação dos dispositivos da Sirros.",
-      };
+    await loadInitialData();
+  } catch (error) {
+    console.log(error);
 
-      setMessages((prev) => [...prev, aiMessage]);
-      setLoading(false);
-    }, 900);
+    const errorMessage: ChatMessage = {
+      id: Date.now() + 1,
+      type: "ai",
+      text: "Não consegui responder agora. Verifique se o backend e o serviço de IA estão rodando.",
+    };
+
+    setMessages((prev) => [...prev, errorMessage]);
+
+    toast.error("Erro ao enviar pergunta para o agente IA.");
+  } finally {
+    setLoading(false);
   }
+}
 
   return (
     <main className="min-h-screen bg-gray-50 dark:bg-[#071827] px-6 py-8 lg:px-12 transition-colors">
@@ -244,63 +377,111 @@ export default function Support() {
                   Faça perguntas sobre dispositivos e suporte técnico.
                 </p>
               </div>
-            </div>
 
-            <div className="h-[430px] overflow-y-auto pr-2 space-y-4">
-              {messages.map((item) => (
-                <div
-                  key={item.id}
-                  className={`flex gap-3 ${
-                    item.type === "user"
-                      ? "justify-end"
-                      : "justify-start"
-                  }`}
-                >
-                  {item.type === "ai" && (
-                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 dark:text-blue-400 flex items-center justify-center shrink-0">
-                      <Bot size={22} />
-                    </div>
-                  )}
-
-                  <div
-                    className={`
-                      max-w-[80%]
-                      rounded-2xl
-                      px-5
-                      py-4
-                      leading-relaxed
-                      ${
-                        item.type === "user"
-                          ? "bg-blue-500 text-white"
-                          : "bg-gray-50 dark:bg-[#0d2238] text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-white/10"
-                      }
-                    `}
-                  >
-                    {item.text}
-                  </div>
-
-                  {item.type === "user" && (
-                    <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-[#0d2238] text-gray-500 dark:text-gray-300 flex items-center justify-center shrink-0">
-                      <UserRound size={22} />
-                    </div>
-                  )}
-                </div>
+              <div className="ml-auto min-w-[260px]">
+            <select
+              value={selectedDeviceId ?? ""}
+              onChange={(event) => {
+                setSelectedDeviceId(Number(event.target.value));
+                setCurrentConversationId(null);
+                setMessages([
+                  {
+                    id: 1,
+                    type: "ai",
+                    text: "Olá! Selecionei outro dispositivo. Faça uma pergunta para consultar a base técnica cadastrada.",
+                  },
+                ]);
+              }}
+              disabled={loadingInitialData}
+              className="w-full bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500"
+            >
+              {devices.map((device) => (
+                <option key={device.id} value={device.id}>
+                  {device.nome}
+                </option>
               ))}
+            </select>
+          </div>
+                      </div>
 
-              {loading && (
-                <div className="flex items-center gap-3 text-gray-500 dark:text-gray-400">
-                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 dark:text-blue-400 flex items-center justify-center">
+            <div className="h-[560px] overflow-y-auto pr-2 space-y-4">
+            {messages.map((item) => (
+              <div
+                key={item.id}
+                className={`flex gap-3 ${
+                  item.type === "user" ? "justify-end" : "justify-start"
+                }`}
+              >
+                {item.type === "ai" && (
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 dark:text-blue-400 flex items-center justify-center shrink-0">
                     <Bot size={22} />
                   </div>
+                )}
 
-                  <div className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 rounded-2xl px-5 py-4 flex items-center gap-2">
-                    <Loader2 size={18} className="animate-spin" />
-                    Pensando...
-                  </div>
+                <div
+                  className={`
+                    max-w-[80%]
+                    rounded-2xl
+                    px-5
+                    py-4
+                    leading-relaxed
+                    ${
+                      item.type === "user"
+                        ? "bg-blue-500 text-white"
+                        : "bg-gray-50 dark:bg-[#0d2238] text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-white/10"
+                    }
+                  `}
+                >
+                  <p className="whitespace-pre-line">{item.text}</p>
+
+                  {item.type === "ai" && item.sources && item.sources.length > 0 && (
+            <div className="mt-4 border-t border-gray-200 dark:border-white/10 pt-3">
+              <p className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-2">
+                Fontes consultadas:
+              </p>
+
+                      <div className="space-y-2">
+              {item.sources.slice(0, 3).map((source, index) => (
+                <div
+                  key={`${source.documento_id}-${source.chunk_index}-${index}`}
+                  className="rounded-xl bg-white/70 dark:bg-white/5 border border-gray-200 dark:border-white/10 px-3 py-2 text-xs text-gray-500 dark:text-gray-400"
+                >
+                <strong>{source.documento_titulo}</strong>
+          <br />
+          {source.nome_arquivo_original}
                 </div>
+              ))}
+              {item.sources.length > 3 && (
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                  +{item.sources.length - 3} fontes adicionais consultadas.
+                </p>
               )}
-            </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
 
+                {item.type === "user" && (
+                  <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-[#0d2238] text-gray-500 dark:text-gray-300 flex items-center justify-center shrink-0">
+                    <UserRound size={22} />
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {loading && (
+              <div className="flex items-center gap-3 text-gray-500 dark:text-gray-400">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 dark:text-blue-400 flex items-center justify-center">
+                  <Bot size={22} />
+                </div>
+
+                <div className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 rounded-2xl px-5 py-4 flex items-center gap-2">
+                  <Loader2 size={18} className="animate-spin" />
+                  Pensando...
+                </div>
+              </div>
+            )}
+          </div>
             <form
               onSubmit={handleSendMessage}
               className="mt-5 flex flex-col sm:flex-row gap-3"
@@ -372,25 +553,27 @@ export default function Support() {
                     Backend IA
                   </span>
 
-                  <span className="text-yellow-500 font-semibold">
-                    Em breve
-                  </span>
+                  <span className="flex items-center gap-2 text-green-500 font-semibold">
+                  <CheckCircle2 size={18} />
+                  Ativo
+                </span>
                 </div>
 
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-gray-500 dark:text-gray-400">
-                    Base de manuais
-                  </span>
+                      <div className="flex items-center justify-between gap-3">
+              <span className="text-gray-500 dark:text-gray-400">
+                Base de manuais
+              </span>
 
-                  <span className="text-yellow-500 font-semibold">
-                    Em breve
-                  </span>
-                </div>
+              <span className="flex items-center gap-2 text-green-500 font-semibold">
+                <CheckCircle2 size={18} />
+                Ativo
+              </span>
+            </div>
               </div>
 
               <div className="mt-5 rounded-2xl bg-blue-500/10 border border-blue-500/20 p-4">
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Esta tela já está pronta visualmente. Depois vamos conectar com a IA e com os manuais dos dispositivos.
+                  O agente responde com base nos PDFs cadastrados pelo administrador para cada dispositivo.
                 </p>
               </div>
             </section>

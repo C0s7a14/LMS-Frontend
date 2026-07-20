@@ -2,7 +2,6 @@ import {
   Home,
   Cpu,
   BookOpen,
-  MessageSquare,
   Award,
   Settings,
   LogOut,
@@ -10,10 +9,8 @@ import {
   X,
   Moon,
   Sun,
-  Users,
   BotMessageSquare,
   Brain,
-  BarChart3,
 
 } from "lucide-react";
 
@@ -111,60 +108,50 @@ export default function Sidebar() {
     }
   }
 
-  const menuItems: MenuItem[] = [
-      {
-      name: "Dashboard",
-      icon: Brain,
-      path: "/Dashboard",
-      allowedRoles: ["admin"],
-    },
-    
-    {
-      name: "Home",
-      icon: Home,
-      path: "/home",
-      allowedRoles: ["student", "admin"],
-    },
-    {
-      name: "Dispositivos",
-      icon: Cpu,
-      path: "/devices",
-      allowedRoles: ["student", "admin"],
-    },
-    {
-      name: "Meus Cursos",
-      icon: BookOpen,
-      path: "/courses",
-      allowedRoles: ["student", "admin"],
-    },
-    {
-      name: "Suporte IA",
-      icon: BotMessageSquare,
-      path: "/support",
-      allowedRoles: ["client", "admin"],
-    },
-    {
-      name: "Certificados",
-      icon: Award,
-      path: "/certificate",
-      allowedRoles: ["student", "admin"],
-    },
-    {
-      name: "Usuários",
-      icon: Users,
-      path: "/users",
-      allowedRoles: ["admin"],
-    },
-    {
-      name: "Configurações",
-      icon: Settings,
-      path: "/settings",
-      allowedRoles: ["student", "client", "admin"],
-    },
-
-   
-
-  ];
+const menuItems: MenuItem[] = [
+  {
+    name: "Dashboard",
+    icon: Brain,
+    path: "/Dashboard",
+    allowedRoles: ["admin"],
+  },
+  {
+    name: "Home",
+    icon: Home,
+    path: "/home",
+    allowedRoles: ["student"],
+  },
+  {
+    name: "Dispositivos",
+    icon: Cpu,
+    path: "/devices",
+    allowedRoles: ["student", "client"],
+  },
+  {
+    name: "Meus Cursos",
+    icon: BookOpen,
+    path: "/courses",
+    allowedRoles: ["student"],
+  },
+  {
+    name: "Suporte IA",
+    icon: BotMessageSquare,
+    path: "/support",
+    allowedRoles: ["client", "admin"],
+  },
+  {
+    name: "Certificados",
+    icon: Award,
+    path: "/certificate",
+    allowedRoles: ["student"],
+  },
+  {
+    name: "Configurações",
+    icon: Settings,
+    path: "/settings",
+    allowedRoles: ["student", "client", "admin"],
+  },
+];
 
   const visibleMenuItems = menuItems.filter((item) =>
     item.allowedRoles.includes(role)

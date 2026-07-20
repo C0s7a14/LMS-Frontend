@@ -20,6 +20,8 @@ import {
   Calendar,
   Activity,
   Trash2,
+  BotMessageSquare,
+  X,
 } from "lucide-react";
 
 import {
@@ -41,6 +43,7 @@ import {
   useMemo,
   useState,
   type ReactNode,
+  type ChangeEvent,
 } from "react";
 
 import {
@@ -59,6 +62,7 @@ type AdminTab =
   | "devices"
   | "courses"
   | "certificates"
+  | "ai"
   | "reports";
 
   type MetricKey =
@@ -75,6 +79,33 @@ interface UserType {
   email: string;
   role: "student" | "client" | "admin";
   criado_em?: string;
+}
+
+interface AiKnowledgeSummary {
+  totalPrompts: number;
+  totalDocumentos: number;
+  totalChunks: number;
+  totalConversas: number;
+}
+
+interface AiPromptType {
+  id: number;
+  nome: string;
+  conteudo: string;
+  dispositivo_id: number | null;
+  dispositivo_nome?: string | null;
+  ativo: boolean | number;
+  criado_por?: number;
+  criado_por_nome?: string;
+  criado_em?: string;
+  atualizado_em?: string;
+}
+
+interface AiPromptFormState {
+  nome: string;
+  conteudo: string;
+  dispositivo_id: string;
+  ativo: boolean;
 }
 
 interface CourseType {
@@ -100,6 +131,12 @@ interface DeviceType {
   descricao?: string;
   imagem_url?: string;
   criado_em?: string;
+}
+
+interface AiDeviceType extends DeviceType {
+  total_documentos: number;
+  documentos_processados: number;
+  total_chunks: number;
 }
 
 interface AdminDashboardResumo {
@@ -204,6 +241,11 @@ const tabs: TabItem[] = [
     icon: Award,
   },
   {
+    id: "ai",
+    label: "IA técnica",
+    icon: BotMessageSquare,
+  },
+  {
     id: "reports",
     label: "Relatórios",
     icon: BarChart3,
@@ -217,11 +259,16 @@ function isValidTab(tab: string | null): tab is AdminTab {
     tab === "devices" ||
     tab === "courses" ||
     tab === "certificates" ||
+    tab === "ai" ||
     tab === "reports"
   );
 }
 
+const DEFAULT_AI_PROMPT =
+  "Você é um assistente técnico da Sirros. Responda apenas dúvidas relacionadas aos dispositivos da Sirros. Use somente as informações presentes nos documentos técnicos cadastrados pelo administrador. Se a resposta não estiver nos documentos, informe que não encontrou essa informação na base técnica disponível. Não invente dados técnicos, valores, configurações, códigos ou procedimentos. Responda de forma clara, objetiva e segura.";
+
 export default function AdminDashboard() {
+
   const [searchParams, setSearchParams] = useSearchParams();
 
   const tabParam = searchParams.get("tab");
@@ -238,6 +285,34 @@ const [devices, setDevices] = useState<DeviceType[]>([]);
 const [dashboardData, setDashboardData] = useState<AdminDashboardData | null>(
   null
 );
+
+const [aiSummary, setAiSummary] = useState<AiKnowledgeSummary | null>(null);
+const [selectedAiDevice, setSelectedAiDevice] = useState<DeviceType | null>(
+  null
+);
+const [aiPrompts, setAiPrompts] = useState<AiPromptType[]>([]);
+
+const [promptModalOpen, setPromptModalOpen] = useState(false);
+const [editingAiPrompt, setEditingAiPrompt] = useState<AiPromptType | null>(
+  null
+);
+
+const [aiPromptForm, setAiPromptForm] = useState<AiPromptFormState>({
+  nome: "",
+  conteudo: "",
+  dispositivo_id: "",
+  ativo: true,
+});
+
+const [savingAiPrompt, setSavingAiPrompt] = useState(false);
+
+const [deviceDocuments, setDeviceDocuments] = useState<any[]>([]);
+const [loadingDocuments, setLoadingDocuments] = useState(false);
+const [uploadingDocument, setUploadingDocument] = useState(false);
+const [processingDocumentId, setProcessingDocumentId] = useState<number | null>(
+  null
+);
+const [aiDevices, setAiDevices] = useState<AiDeviceType[]>([]);
 
 
   const [loading, setLoading] = useState(true);
@@ -272,25 +347,58 @@ async function loadDashboardData() {
       },
     };
 
-    const [
-      dashboardResponse,
-      usersResponse,
-      coursesResponse,
-      devicesResponse,
-    ] = await Promise.all([
-      axios.get<AdminDashboardData>(
-        "http://localhost:3333/admin/dashboard",
-        config
-      ),
-      axios.get<UserType[]>("http://localhost:3333/users", config),
-      axios.get<CourseType[]>("http://localhost:3333/courses", config),
-      axios.get<DeviceType[]>("http://localhost:3333/devices", config),
-    ]);
+  const [
+  dashboardResponse,
+  usersResponse,
+  coursesResponse,
+  devicesResponse,
+  aiSummaryResponse,
+  aiDevicesResponse,
+  aiPromptsResponse,
+] = await Promise.all([
+  axios.get<AdminDashboardData>(
+    "http://localhost:3333/admin/dashboard",
+    config
+  ),
 
-    setDashboardData(dashboardResponse.data);
-    setUsers(usersResponse.data);
-    setCourses(coursesResponse.data);
-    setDevices(devicesResponse.data);
+  axios.get<UserType[]>(
+    "http://localhost:3333/users",
+    config
+  ),
+
+  axios.get<CourseType[]>(
+    "http://localhost:3333/courses",
+    config
+  ),
+
+  axios.get<DeviceType[]>(
+    "http://localhost:3333/devices",
+    config
+  ),
+
+  axios.get<AiKnowledgeSummary>(
+    "http://localhost:3333/admin/ai/summary",
+    config
+  ),
+
+  axios.get<AiDeviceType[]>(
+    "http://localhost:3333/admin/ai/devices",
+    config
+  ),
+
+  axios.get<AiPromptType[]>(
+    "http://localhost:3333/admin/ai/prompts",
+    config
+  ),
+]);
+
+setDashboardData(dashboardResponse.data);
+setUsers(usersResponse.data);
+setCourses(coursesResponse.data);
+setDevices(devicesResponse.data);
+setAiSummary(aiSummaryResponse.data);
+setAiDevices(aiDevicesResponse.data);
+setAiPrompts(aiPromptsResponse.data);
   } catch (error) {
     console.log(error);
 
@@ -361,6 +469,16 @@ async function loadDashboardData() {
       };
     }
 
+     if (currentTab === "ai") {
+  return {
+    title: "IA Técnica",
+    subtitle:
+      "Configure a base de conhecimento do agente IA para responder dúvidas dos clientes sobre dispositivos Sirros.",
+    placeholder: "Buscar prompts, documentos ou dispositivos...",
+    button: "Novo Prompt",
+  };
+}
+
     if (currentTab === "reports") {
       return {
         title: "Relatórios e Métricas",
@@ -398,6 +516,11 @@ async function loadDashboardData() {
 
     if (currentTab === "certificates") {
       toast.error("Emissão de certificado será conectada depois.");
+      return;
+    }
+
+    if (currentTab === "ai") {
+      openAiPromptModal(null);
       return;
     }
 
@@ -469,6 +592,271 @@ async function loadDashboardData() {
     (user) => user.role === "admin"
   ).length;
 
+
+  async function openAiDocumentsModal(device: DeviceType) {
+  try {
+    setSelectedAiDevice(device);
+    setLoadingDocuments(true);
+
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      toast.error("Sessão expirada. Faça login novamente.");
+      navigate("/");
+      return;
+    }
+
+    const response = await axios.get(
+      `http://localhost:3333/admin/devices/${device.id}/documents`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    setDeviceDocuments(response.data);
+  } catch (error) {
+    console.log(error);
+    toast.error("Erro ao carregar documentos do dispositivo");
+  } finally {
+    setLoadingDocuments(false);
+  }
+}
+
+
+async function handleUploadAiDocument(
+  event: ChangeEvent<HTMLInputElement>
+){
+  try {
+    const file = event.target.files?.[0];
+
+    if (!file || !selectedAiDevice) {
+      return;
+    }
+
+    if (file.type !== "application/pdf") {
+      toast.error("Selecione apenas arquivos PDF.");
+      return;
+    }
+
+    setUploadingDocument(true);
+
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      toast.error("Sessão expirada. Faça login novamente.");
+      navigate("/");
+      return;
+    }
+
+    const formData = new FormData();
+
+    formData.append("file", file);
+    formData.append("titulo", file.name);
+    formData.append(
+      "descricao",
+      `Documento técnico vinculado ao dispositivo ${selectedAiDevice.nome}`
+    );
+
+    await axios.post(
+      `http://localhost:3333/admin/devices/${selectedAiDevice.id}/documents`,
+      formData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+
+    toast.success("PDF enviado com sucesso.");
+
+    await openAiDocumentsModal(selectedAiDevice);
+    await loadDashboardData();
+
+    event.target.value = "";
+  } catch (error) {
+    console.log(error);
+    toast.error("Erro ao enviar PDF.");
+  } finally {
+    setUploadingDocument(false);
+  }
+}
+
+async function handleProcessAiDocument(documentId: number) {
+  try {
+    if (!selectedAiDevice) {
+      return;
+    }
+
+    setProcessingDocumentId(documentId);
+
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      toast.error("Sessão expirada. Faça login novamente.");
+      navigate("/");
+      return;
+    }
+
+    const response = await axios.post(
+      `http://localhost:3333/admin/device-documents/${documentId}/process`,
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    toast.success(
+      `Documento processado com ${response.data.total_chunks} chunks.`
+    );
+
+    await openAiDocumentsModal(selectedAiDevice);
+    await loadDashboardData();
+  } catch (error) {
+    console.log(error);
+    toast.error("Erro ao processar PDF.");
+  } finally {
+    setProcessingDocumentId(null);
+  }
+}
+
+async function handleDeleteAiDocument(documentId: number) {
+  try {
+    if (!selectedAiDevice) {
+      return;
+    }
+
+    const confirmDelete = window.confirm(
+      "Tem certeza que deseja excluir este documento da base da IA?"
+    );
+
+    if (!confirmDelete) {
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      toast.error("Sessão expirada. Faça login novamente.");
+      navigate("/");
+      return;
+    }
+
+    await axios.delete(
+      `http://localhost:3333/admin/device-documents/${documentId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    toast.success("Documento excluído com sucesso.");
+
+    await openAiDocumentsModal(selectedAiDevice);
+    await loadDashboardData();
+  } catch (error) {
+    console.log(error);
+    toast.error("Erro ao excluir documento.");
+  }
+}
+
+function openAiPromptModal(prompt?: AiPromptType | null) {
+  if (prompt) {
+    setEditingAiPrompt(prompt);
+
+    setAiPromptForm({
+      nome: prompt.nome,
+      conteudo: prompt.conteudo,
+      dispositivo_id: prompt.dispositivo_id ? String(prompt.dispositivo_id) : "",
+      ativo: Boolean(prompt.ativo),
+    });
+
+    setPromptModalOpen(true);
+    return;
+  }
+
+  setEditingAiPrompt(null);
+
+  setAiPromptForm({
+    nome: "Prompt padrão - Agente Técnico Sirros",
+    conteudo: DEFAULT_AI_PROMPT,
+    dispositivo_id: "",
+    ativo: true,
+  });
+
+  setPromptModalOpen(true);
+}
+
+
+async function handleSaveAiPrompt() {
+  try {
+    if (!aiPromptForm.nome.trim()) {
+      toast.error("Informe o nome do prompt.");
+      return;
+    }
+
+    if (!aiPromptForm.conteudo.trim()) {
+      toast.error("Informe o conteúdo do prompt.");
+      return;
+    }
+
+    setSavingAiPrompt(true);
+
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      toast.error("Sessão expirada. Faça login novamente.");
+      navigate("/");
+      return;
+    }
+
+    const payload = {
+      nome: aiPromptForm.nome,
+      conteudo: aiPromptForm.conteudo,
+      dispositivo_id: aiPromptForm.dispositivo_id
+        ? Number(aiPromptForm.dispositivo_id)
+        : null,
+      ativo: aiPromptForm.ativo,
+    };
+
+    if (editingAiPrompt) {
+      await axios.patch(
+        `http://localhost:3333/admin/ai/prompts/${editingAiPrompt.id}`,
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      toast.success("Prompt atualizado com sucesso.");
+    } else {
+      await axios.post("http://localhost:3333/admin/ai/prompts", payload, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      toast.success("Prompt criado com sucesso.");
+    }
+
+    setPromptModalOpen(false);
+    setEditingAiPrompt(null);
+
+    await loadDashboardData();
+  } catch (error) {
+    console.log(error);
+    toast.error("Erro ao salvar prompt.");
+  } finally {
+    setSavingAiPrompt(false);
+  }
+}
   return (
     <div className="space-y-6 sm:space-y-8">
       {/* Header */}
@@ -585,7 +973,7 @@ async function loadDashboardData() {
 
       {/* Tabs internas */}
       <div className="border-b border-gray-200 dark:border-white/10 overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
-        <div className="grid grid-cols-3 gap-2 sm:gap-6 min-w-max md:grid md:grid-cols-6">
+        <div className="grid grid-cols-3 gap-2 sm:gap-6 min-w-max md:grid md:grid-cols-7">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = currentTab === tab.id;
@@ -675,6 +1063,17 @@ async function loadDashboardData() {
             <CertificatesTab dashboardData={dashboardData} />
           )}
 
+       {currentTab === "ai" && (
+          <AITab
+            devices={aiDevices}
+            aiSummary={aiSummary}
+            aiPrompts={aiPrompts}
+            changeTab={changeTab}
+            openDocumentsModal={openAiDocumentsModal}
+            openPromptModal={openAiPromptModal}
+          />
+        )}
+
           {currentTab === "reports" && (
             <ReportsTab
               users={users}
@@ -729,6 +1128,290 @@ async function loadDashboardData() {
             ? "Excluindo..."
             : "Excluir"}
         </button>
+      </div>
+    </div>
+  </div>
+)}
+
+
+{selectedAiDevice && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+    <div className="w-full max-w-4xl rounded-3xl bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-[#080E2F] dark:text-white">
+            PDFs da IA
+          </h2>
+
+          <p className="text-gray-500 dark:text-gray-400 mt-1">
+            Base de conhecimento do dispositivo{" "}
+            <strong>{selectedAiDevice.nome}</strong>
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedAiDevice(null);
+            setDeviceDocuments([]);
+          }}
+          className="text-gray-500 hover:text-red-500 transition-all"
+        >
+          <X size={26} />
+        </button>
+      </div>
+
+      <div className="mt-6 rounded-2xl border border-dashed border-blue-400 bg-blue-500/5 p-5">
+        <label className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 cursor-pointer">
+          <div>
+            <h3 className="font-bold text-[#080E2F] dark:text-white">
+              Adicionar PDF
+            </h3>
+
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Envie manuais, fichas técnicas ou documentos do dispositivo.
+            </p>
+          </div>
+
+          <span className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-white font-semibold hover:bg-blue-700 transition-all">
+            <Plus size={18} />
+            {uploadingDocument ? "Enviando..." : "Selecionar PDF"}
+          </span>
+
+          <input
+            type="file"
+            accept="application/pdf"
+            onChange={handleUploadAiDocument}
+            disabled={uploadingDocument}
+            className="hidden"
+          />
+        </label>
+      </div>
+
+      <div className="mt-6">
+        <h3 className="font-bold text-[#080E2F] dark:text-white mb-4">
+          Documentos cadastrados
+        </h3>
+
+        {loadingDocuments ? (
+          <div className="py-8 text-center text-gray-500 dark:text-gray-400">
+            Carregando documentos...
+          </div>
+        ) : deviceDocuments.length > 0 ? (
+          <div className="space-y-3">
+            {deviceDocuments.map((document) => (
+              <div
+                key={document.id}
+                className="rounded-2xl border border-gray-200 dark:border-white/10 p-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4"
+              >
+                <div className="min-w-0">
+                  <h4 className="font-bold text-[#080E2F] dark:text-white truncate">
+                    {document.titulo}
+                  </h4>
+
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 truncate">
+                    {document.nome_arquivo_original}
+                  </p>
+
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    <span className="px-3 py-1 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 text-sm font-semibold">
+                      {document.total_chunks ?? 0} chunks
+                    </span>
+
+                    <span
+                      className={`
+                        px-3 py-1 rounded-xl text-sm font-semibold
+                        ${
+                          document.status === "processado"
+                            ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                            : document.status === "erro"
+                            ? "bg-red-500/10 text-red-500"
+                            : "bg-orange-500/10 text-orange-600 dark:text-orange-400"
+                        }
+                      `}
+                    >
+                      {document.status}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleProcessAiDocument(document.id)}
+                    disabled={processingDocumentId === document.id}
+                    className="rounded-xl bg-green-500/10 px-4 py-2 text-sm font-semibold text-green-600 dark:text-green-400 hover:bg-green-500/20 transition-all disabled:opacity-60"
+                  >
+                    {processingDocumentId === document.id
+                      ? "Processando..."
+                      : "Processar"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteAiDocument(document.id)}
+                    className="rounded-xl bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-500 hover:bg-red-500/20 transition-all"
+                  >
+                    Excluir
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="py-8 text-center text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-white/10 rounded-2xl">
+            Nenhum PDF cadastrado para este dispositivo.
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+)}
+
+{promptModalOpen && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+    <div className="w-full max-w-3xl rounded-3xl bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-[#080E2F] dark:text-white">
+            {editingAiPrompt ? "Editar Prompt" : "Novo Prompt"}
+          </h2>
+
+          <p className="text-gray-500 dark:text-gray-400 mt-1">
+            Configure as instruções usadas pelo agente técnico da Sirros.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            setPromptModalOpen(false);
+            setEditingAiPrompt(null);
+          }}
+          className="text-gray-500 hover:text-red-500 transition-all"
+        >
+          <X size={26} />
+        </button>
+      </div>
+
+      <div className="mt-6 space-y-5">
+        <div>
+          <label className="block text-sm font-semibold text-[#080E2F] dark:text-white mb-2">
+            Nome do prompt
+          </label>
+
+          <input
+            value={aiPromptForm.nome}
+            onChange={(event) =>
+              setAiPromptForm((prev) => ({
+                ...prev,
+                nome: event.target.value,
+              }))
+            }
+            placeholder="Ex: Prompt padrão - Agente Técnico Sirros"
+            className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#0d2238] px-4 py-3 text-[#080E2F] dark:text-white outline-none focus:border-blue-500"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-[#080E2F] dark:text-white mb-2">
+            Aplicar em
+          </label>
+
+          <select
+            value={aiPromptForm.dispositivo_id}
+            onChange={(event) =>
+              setAiPromptForm((prev) => ({
+                ...prev,
+                dispositivo_id: event.target.value,
+              }))
+            }
+            className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#0d2238] px-4 py-3 text-[#080E2F] dark:text-white outline-none focus:border-blue-500"
+          >
+            <option value="">Prompt global</option>
+
+            {devices.map((device) => (
+              <option key={device.id} value={device.id}>
+                {device.nome}
+              </option>
+            ))}
+          </select>
+
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+            Use prompt global para todos os dispositivos ou selecione um
+            dispositivo específico.
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-[#080E2F] dark:text-white mb-2">
+            Conteúdo do prompt
+          </label>
+
+          <textarea
+            value={aiPromptForm.conteudo}
+            onChange={(event) =>
+              setAiPromptForm((prev) => ({
+                ...prev,
+                conteudo: event.target.value,
+              }))
+            }
+            rows={10}
+            placeholder="Digite as instruções do agente IA..."
+            className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#0d2238] px-4 py-3 text-[#080E2F] dark:text-white outline-none focus:border-blue-500 resize-none leading-relaxed"
+          />
+        </div>
+
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={aiPromptForm.ativo}
+            onChange={(event) =>
+              setAiPromptForm((prev) => ({
+                ...prev,
+                ativo: event.target.checked,
+              }))
+            }
+            className="w-5 h-5"
+          />
+
+          <span className="text-sm font-semibold text-[#080E2F] dark:text-white">
+            Prompt ativo
+          </span>
+        </label>
+
+        <div className="rounded-2xl border border-orange-500/20 bg-orange-500/10 p-4 text-sm text-orange-700 dark:text-orange-300 leading-relaxed">
+          O agente deve responder apenas dúvidas sobre dispositivos Sirros e usar
+          os documentos técnicos cadastrados. Evite prompts que permitam respostas
+          fora da base técnica.
+        </div>
+
+        <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2">
+          <button
+            type="button"
+            onClick={() => {
+              setPromptModalOpen(false);
+              setEditingAiPrompt(null);
+            }}
+            disabled={savingAiPrompt}
+            className="rounded-2xl border border-gray-200 dark:border-white/10 px-5 py-3 font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-all disabled:opacity-60"
+          >
+            Cancelar
+          </button>
+
+          <button
+            type="button"
+            onClick={handleSaveAiPrompt}
+            disabled={savingAiPrompt}
+            className="rounded-2xl bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {savingAiPrompt
+              ? "Salvando..."
+              : editingAiPrompt
+              ? "Salvar alterações"
+              : "Criar prompt"}
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -1797,6 +2480,248 @@ function CertificatesTab({
           )}
         </div>
       </TableCard>
+    </div>
+  );
+}
+
+  function AITab({
+    devices,
+    aiSummary,
+    aiPrompts,
+    changeTab,
+    openDocumentsModal,
+    openPromptModal,
+  }: {
+    devices: AiDeviceType[];
+    aiSummary: AiKnowledgeSummary | null;
+    aiPrompts: AiPromptType[];
+    changeTab: (tab: AdminTab) => void;
+    openDocumentsModal: (device: DeviceType) => void;
+    openPromptModal: (prompt?: AiPromptType | null) => void;
+  }) {
+    const mainPrompt =
+      aiPrompts.find((prompt) => Boolean(prompt.ativo) && !prompt.dispositivo_id) ||
+      aiPrompts[0];
+
+  return (
+    <div className="space-y-6 sm:space-y-8">
+      <StatsGrid>
+       <StatCard
+        title="Prompts"
+        value={aiSummary?.totalPrompts ?? 0}
+        subtitle="Configurados"
+        icon={BotMessageSquare}
+        color="bg-purple-500/15 text-purple-600 dark:text-purple-400"
+      />
+
+      <StatCard
+        title="Documentos"
+        value={aiSummary?.totalDocumentos ?? 0}
+        subtitle="PDFs cadastrados"
+        icon={FileText}
+        color="bg-blue-500/15 text-blue-600 dark:text-blue-400"
+      />
+
+      <StatCard
+        title="Dispositivos"
+        value={devices.length}
+        subtitle="Podem receber base IA"
+        icon={Cpu}
+        color="bg-green-500/15 text-green-600 dark:text-green-400"
+      />
+
+      <StatCard
+        title="Chunks"
+        value={aiSummary?.totalChunks ?? 0}
+        subtitle="Trechos processados"
+        icon={BarChart3}
+        color="bg-orange-500/15 text-orange-600 dark:text-orange-400"
+      />
+
+      <StatCard
+        title="Conversas"
+        value={aiSummary?.totalConversas ?? 0}
+        subtitle="Atendimentos IA"
+        icon={BotMessageSquare}
+        color="bg-indigo-500/15 text-indigo-600 dark:text-indigo-400"
+      />
+
+      <StatCard
+        title="Status"
+        value={(aiSummary?.totalChunks ?? 0) > 0 ? "Online" : "Offline"}
+        subtitle={
+          (aiSummary?.totalChunks ?? 0) > 0
+            ? "Base IA processada"
+            : "Sem documentos processados"
+        }
+        icon={Clock3}
+        color={
+          (aiSummary?.totalChunks ?? 0) > 0
+            ? "bg-green-500/15 text-green-600 dark:text-green-400"
+            : "bg-red-500/15 text-red-600 dark:text-red-400"
+        }
+      />
+      </StatsGrid>
+
+      <div className="grid grid-cols-1 2xl:grid-cols-[minmax(0,1.3fr)_minmax(380px,0.9fr)] gap-5 sm:gap-6">
+        <TableCard title="Base de Conhecimento por Dispositivo">
+          <div className="min-w-[760px]">
+            <div className="grid grid-cols-[1.4fr_1fr_1fr_1fr_120px] text-sm text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-white/10 pb-3">
+              <span>Dispositivo</span>
+              <span>Modelo</span>
+              <span>Categoria</span>
+              <span>Documentos</span>
+              <span className="text-right">Ações</span>
+            </div>
+
+            {devices.length > 0 ? (
+              devices.map((device) => (
+                <div
+                  key={device.id}
+                  className="grid grid-cols-[1.4fr_1fr_1fr_1fr_120px] gap-4 items-center py-4 border-b border-gray-200 dark:border-white/10 last:border-b-0"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-[#0d2238] overflow-hidden flex items-center justify-center shrink-0">
+                      {device.imagem_url ? (
+                        <img
+                          src={device.imagem_url}
+                          alt={device.nome}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Cpu className="text-blue-600 dark:text-blue-400" />
+                      )}
+                    </div>
+
+                    <div className="min-w-0">
+                      <h3 className="font-semibold text-[#080E2F] dark:text-white truncate">
+                        {device.nome}
+                      </h3>
+
+                      <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                        ID: {device.id}
+                      </p>
+                    </div>
+                  </div>
+
+                  <span className="text-gray-600 dark:text-gray-400 truncate">
+                    {device.modelo || "-"}
+                  </span>
+
+                  <span className="text-blue-600 dark:text-blue-400 font-semibold truncate">
+                    {device.tipo || "Sem categoria"}
+                  </span>
+
+                  <div>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    {device.total_documentos === 1
+                      ? "1 PDF"
+                      : `${device.total_documentos ?? 0} PDFs`}
+                  </p>
+
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                    {device.total_chunks ?? 0} chunks
+                  </p>
+                </div>
+
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                     onClick={() => openDocumentsModal(device)}
+                      className="
+                        inline-flex
+                        items-center
+                        justify-center
+                        gap-2
+                        rounded-xl
+                        bg-blue-500/10
+                        px-3
+                        py-2
+                        text-sm
+                        font-semibold
+                        text-blue-600
+                        dark:text-blue-400
+                        hover:bg-blue-500/20
+                        transition-all
+                      "
+                    >
+                      <FileText size={18} />
+                      PDFs
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="py-8 text-center text-gray-500 dark:text-gray-400">
+                Nenhum dispositivo cadastrado.
+              </div>
+            )}
+          </div>
+        </TableCard>
+
+        <div className="space-y-5 sm:space-y-6">
+          <TableCard title="Prompt Principal">
+      <div className="space-y-4">
+        <div className="rounded-2xl border border-gray-200 dark:border-white/10 p-4 bg-gray-50 dark:bg-white/5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="font-bold text-[#080E2F] dark:text-white">
+                {mainPrompt?.nome || "Nenhum prompt configurado"}
+              </h3>
+
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 leading-relaxed">
+                {mainPrompt?.conteudo
+                  ? mainPrompt.conteudo.length > 260
+                    ? `${mainPrompt.conteudo.slice(0, 260)}...`
+                    : mainPrompt.conteudo
+                  : "Configure um prompt para orientar as respostas do agente IA."}
+              </p>
+            </div>
+
+            {mainPrompt && (
+              <span
+                className={`
+                  px-3 py-1 rounded-xl text-xs font-semibold
+                  ${
+                    Boolean(mainPrompt.ativo)
+                      ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                      : "bg-gray-500/10 text-gray-500"
+                  }
+                `}
+              >
+                {Boolean(mainPrompt.ativo) ? "Ativo" : "Inativo"}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <ActionButton
+          icon={BotMessageSquare}
+          title="Configurar prompt"
+          subtitle="Editar instruções da IA"
+          onClick={() => openPromptModal(mainPrompt || null)}
+        />
+
+        <ActionButton
+          icon={Cpu}
+          title="Gerenciar dispositivos"
+          subtitle="Cadastrar ou editar dispositivos"
+          onClick={() => changeTab("devices")}
+        />
+      </div>
+    </TableCard>
+
+          <TableCard title="Regras do Agente">
+            <div className="space-y-3 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+              <p>• Responder apenas sobre dispositivos Sirros.</p>
+              <p>• Usar somente documentos cadastrados pelo admin.</p>
+              <p>• Não inventar dados técnicos.</p>
+              <p>• Informar quando não encontrar resposta na base.</p>
+              <p>• Atender principalmente usuários do tipo cliente.</p>
+            </div>
+          </TableCard>
+        </div>
+      </div>
     </div>
   );
 }
