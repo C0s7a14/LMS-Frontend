@@ -4,7 +4,6 @@ import {
   BookOpen,
   MessageSquare,
   Award,
-  PlusCircle,
   Settings,
   LogOut,
   Menu,
@@ -149,12 +148,6 @@ export default function Sidebar() {
       icon: Award,
       path: "/certificate",
       allowedRoles: ["student", "admin"],
-    },
-    {
-      name: "Criar Curso",
-      icon: PlusCircle,
-      path: "/create-courses",
-      allowedRoles: ["admin"],
     },
     {
       name: "Usuários",
