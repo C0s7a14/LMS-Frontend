@@ -61,7 +61,24 @@ export default function Login() {
 
       toast.success("Login feito com sucesso!");
 
+      const role = data.user.role;
+
+    if (role === "admin") {
+      navigate("/Dashboard");
+      return;
+    }
+
+    if (role === "student") {
       navigate("/home");
+      return;
+    }
+
+    if (role === "client") {
+      navigate("/devices");
+      return;
+    }
+
+    navigate("/login");
     } catch (error) {
       console.log(error);
 

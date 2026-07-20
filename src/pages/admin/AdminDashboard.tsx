@@ -319,6 +319,20 @@ const [aiDevices, setAiDevices] = useState<AiDeviceType[]>([]);
 
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [deviceModalOpen, setDeviceModalOpen] = useState(false);
+  const [selectedClientUser, setSelectedClientUser] = useState<UserType | null>(
+  null
+);
+
+const [clientDevices, setClientDevices] = useState<DeviceType[]>([]);
+const [selectedClientDeviceId, setSelectedClientDeviceId] = useState("");
+const [loadingClientDevices, setLoadingClientDevices] = useState(false);
+const [linkingClientDevice, setLinkingClientDevice] = useState(false);
+const [updatingUserRoleId, setUpdatingUserRoleId] = useState<number | null>(
+  null
+);
+const [unlinkingClientDeviceId, setUnlinkingClientDeviceId] = useState<
+  number | null
+>(null);
 
   const [deleteCourseTarget, setDeleteCourseTarget] =
   useState<CourseType | null>(null);
@@ -329,6 +343,22 @@ const [deletingCourseId, setDeletingCourseId] =
   const navigate = useNavigate();
 
   
+function getAuthConfig() {
+  const token = localStorage.getItem("token");
+
+  if (!token) {
+    toast.error("Sessão expirada. Faça login novamente.");
+    navigate("/");
+    return null;
+  }
+
+  return {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  };
+}
+
 async function loadDashboardData() {
   try {
     setLoading(true);
@@ -529,6 +559,143 @@ setAiPrompts(aiPromptsResponse.data);
     }
   }
 
+  async function handleUpdateUserRole(
+  userId: number,
+  role: UserType["role"]
+) {
+  try {
+    setUpdatingUserRoleId(userId);
+
+    const config = getAuthConfig();
+
+    if (!config) {
+      return;
+    }
+
+    await axios.patch(
+      `http://localhost:3333/admin/users/${userId}/role`,
+      {
+        role,
+      },
+      config
+    );
+
+    toast.success("Perfil do usuário atualizado com sucesso.");
+
+    await loadDashboardData();
+  } catch (error) {
+    console.log(error);
+
+    if (axios.isAxiosError(error)) {
+      toast.error(
+        error.response?.data?.error ||
+          error.response?.data?.message ||
+          "Erro ao atualizar perfil do usuário"
+      );
+
+      return;
+    }
+
+    toast.error("Erro inesperado ao atualizar perfil.");
+  } finally {
+    setUpdatingUserRoleId(null);
+  }
+}
+
+async function openClientDevicesModal(user: UserType) {
+  try {
+    setSelectedClientUser(user);
+    setLoadingClientDevices(true);
+    setSelectedClientDeviceId("");
+
+    const config = getAuthConfig();
+
+    if (!config) {
+      return;
+    }
+
+    const response = await axios.get<DeviceType[]>(
+      `http://localhost:3333/admin/clients/${user.id}/devices`,
+      config
+    );
+
+    setClientDevices(response.data);
+  } catch (error) {
+    console.log(error);
+    toast.error("Erro ao carregar dispositivos do cliente.");
+  } finally {
+    setLoadingClientDevices(false);
+  }
+}
+
+async function handleLinkDeviceToClient() {
+  try {
+    if (!selectedClientUser) {
+      return;
+    }
+
+    if (!selectedClientDeviceId) {
+      toast.error("Selecione um dispositivo.");
+      return;
+    }
+
+    setLinkingClientDevice(true);
+
+    const config = getAuthConfig();
+
+    if (!config) {
+      return;
+    }
+
+    await axios.post(
+      `http://localhost:3333/admin/clients/${selectedClientUser.id}/devices/${selectedClientDeviceId}`,
+      {},
+      config
+    );
+
+    toast.success("Dispositivo vinculado ao cliente.");
+
+    await openClientDevicesModal(selectedClientUser);
+    await loadDashboardData();
+  } catch (error) {
+    console.log(error);
+    toast.error("Erro ao vincular dispositivo ao cliente.");
+  } finally {
+    setLinkingClientDevice(false);
+  }
+}
+
+async function handleUnlinkDeviceFromClient(deviceId: number) {
+  try {
+    if (!selectedClientUser) {
+      return;
+    }
+
+    setUnlinkingClientDeviceId(deviceId);
+
+    const config = getAuthConfig();
+
+    if (!config) {
+      return;
+    }
+
+    await axios.delete(
+      `http://localhost:3333/admin/clients/${selectedClientUser.id}/devices/${deviceId}`,
+      config
+    );
+
+    toast.success("Dispositivo removido do cliente.");
+
+    await openClientDevicesModal(selectedClientUser);
+    await loadDashboardData();
+  } catch (error) {
+    console.log(error);
+    toast.error("Erro ao remover dispositivo do cliente.");
+  } finally {
+    setUnlinkingClientDeviceId(null);
+  }
+}
+
   async function confirmDeleteCourse() {
   if (!deleteCourseTarget) {
     return;
@@ -579,6 +746,10 @@ setAiPrompts(aiPromptsResponse.data);
 }
 
   const header = getHeaderInfo();
+
+  const availableDevicesForClient = devices.filter((device) => {
+  return !clientDevices.some((clientDevice) => clientDevice.id === device.id);
+});
 
   const totalStudents = users.filter(
     (user) => user.role === "student"
@@ -857,6 +1028,8 @@ async function handleSaveAiPrompt() {
     setSavingAiPrompt(false);
   }
 }
+
+
   return (
     <div className="space-y-6 sm:space-y-8">
       {/* Header */}
@@ -1031,12 +1204,15 @@ async function handleSaveAiPrompt() {
 
           {currentTab === "users" && (
             <UsersTab
-              users={users}
-              search={search}
-              totalStudents={totalStudents}
-              totalClients={totalClients}
-              totalAdmins={totalAdmins}
-            />
+            users={users}
+            search={search}
+            totalStudents={totalStudents}
+            totalClients={totalClients}
+            totalAdmins={totalAdmins}
+            updateUserRole={handleUpdateUserRole}
+            updatingUserRoleId={updatingUserRoleId}
+            openClientDevicesModal={openClientDevicesModal}
+          />
           )}
 
           {currentTab === "devices" && (
@@ -1412,6 +1588,134 @@ async function handleSaveAiPrompt() {
               : "Criar prompt"}
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+)}
+
+{selectedClientUser && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+    <div className="w-full max-w-3xl rounded-3xl bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-[#080E2F] dark:text-white">
+            Dispositivos do Cliente
+          </h2>
+
+          <p className="text-gray-500 dark:text-gray-400 mt-1">
+            Gerencie os dispositivos vinculados a{" "}
+            <strong>{selectedClientUser.name}</strong>
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedClientUser(null);
+            setClientDevices([]);
+            setSelectedClientDeviceId("");
+          }}
+          className="text-gray-500 hover:text-red-500 transition-all"
+        >
+          <X size={26} />
+        </button>
+      </div>
+
+      <div className="mt-6 rounded-2xl border border-gray-200 dark:border-white/10 p-4">
+        <h3 className="font-bold text-[#080E2F] dark:text-white mb-3">
+          Vincular novo dispositivo
+        </h3>
+
+        <div className="flex flex-col sm:flex-row gap-3">
+          <select
+            value={selectedClientDeviceId}
+            onChange={(event) => setSelectedClientDeviceId(event.target.value)}
+            className="flex-1 rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#0d2238] px-4 py-3 text-[#080E2F] dark:text-white outline-none focus:border-blue-500"
+          >
+            <option value="">Selecione um dispositivo</option>
+
+            {availableDevicesForClient.map((device) => (
+              <option key={device.id} value={device.id}>
+                {device.nome}
+              </option>
+            ))}
+          </select>
+
+          <button
+            type="button"
+            onClick={handleLinkDeviceToClient}
+            disabled={linkingClientDevice || !selectedClientDeviceId}
+            className="rounded-2xl bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {linkingClientDevice ? "Vinculando..." : "Vincular"}
+          </button>
+        </div>
+
+        {availableDevicesForClient.length === 0 && (
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-3">
+            Todos os dispositivos cadastrados já estão vinculados a este cliente.
+          </p>
+        )}
+      </div>
+
+      <div className="mt-6">
+        <h3 className="font-bold text-[#080E2F] dark:text-white mb-4">
+          Dispositivos vinculados
+        </h3>
+
+        {loadingClientDevices ? (
+          <div className="py-8 text-center text-gray-500 dark:text-gray-400">
+            Carregando dispositivos...
+          </div>
+        ) : clientDevices.length > 0 ? (
+          <div className="space-y-3">
+            {clientDevices.map((device) => (
+              <div
+                key={device.id}
+                className="rounded-2xl border border-gray-200 dark:border-white/10 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-[#0d2238] overflow-hidden flex items-center justify-center shrink-0">
+                    {device.imagem_url ? (
+                      <img
+                        src={device.imagem_url}
+                        alt={device.nome}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <Cpu className="text-blue-600 dark:text-blue-400" />
+                    )}
+                  </div>
+
+                  <div className="min-w-0">
+                    <h4 className="font-bold text-[#080E2F] dark:text-white truncate">
+                      {device.nome}
+                    </h4>
+
+                    <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                      {device.tipo || "Sem categoria"}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleUnlinkDeviceFromClient(device.id)}
+                  disabled={unlinkingClientDeviceId === device.id}
+                  className="rounded-xl bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-500 hover:bg-red-500/20 transition-all disabled:opacity-60"
+                >
+                  {unlinkingClientDeviceId === device.id
+                    ? "Removendo..."
+                    : "Remover"}
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="py-8 text-center text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-white/10 rounded-2xl">
+            Nenhum dispositivo vinculado a este cliente.
+          </div>
+        )}
       </div>
     </div>
   </div>
@@ -1833,12 +2137,18 @@ function UsersTab({
   totalStudents,
   totalClients,
   totalAdmins,
+  updateUserRole,
+  updatingUserRoleId,
+  openClientDevicesModal,
 }: {
   users: UserType[];
   search: string;
   totalStudents: number;
   totalClients: number;
   totalAdmins: number;
+  updateUserRole: (userId: number, role: UserType["role"]) => void;
+  updatingUserRoleId: number | null;
+  openClientDevicesModal: (user: UserType) => void;
 }) {
   const filteredUsers = useMemo(() => {
     const term = search.toLowerCase();
@@ -1906,45 +2216,102 @@ function UsersTab({
 
       <div className="grid grid-cols-1 2xl:grid-cols-[minmax(0,1.4fr)_minmax(360px,0.8fr)] gap-5 sm:gap-6">
         <TableCard title="Lista de Usuários">
-          <div className="min-w-[760px]">
-            <div className="grid grid-cols-[1.2fr_1.4fr_1fr_80px] text-sm text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-white/10 pb-3">
-              <span>Usuário</span>
-              <span>Email</span>
-              <span>Perfil</span>
-              <span className="text-right">Ações</span>
-            </div>
-
-            {filteredUsers.map((user) => (
-              <div
-                key={user.id}
-                className="grid grid-cols-[1.2fr_1.4fr_1fr_80px] gap-4 items-center py-4 border-b border-gray-200 dark:border-white/10 last:border-b-0"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <Avatar name={user.name} />
-
-                  <div className="min-w-0">
-                    <h3 className="font-semibold text-[#080E2F] dark:text-white truncate">
-                      {user.name}
-                    </h3>
-
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      ID: {user.id}
-                    </p>
-                  </div>
-                </div>
-
-                <p className="text-gray-600 dark:text-gray-400 truncate">
-                  {user.email}
-                </p>
-
-                <RoleBadge role={user.role} />
-
-                <button className="ml-auto text-gray-500 hover:text-blue-600 dark:hover:text-blue-400">
-                  <MoreVertical size={22} />
-                </button>
-              </div>
-            ))}
+          <div className="min-w-[920px]">
+          <div className="grid grid-cols-[1.2fr_1.4fr_1fr_220px] text-sm text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-white/10 pb-3">
+            <span>Usuário</span>
+            <span>Email</span>
+            <span>Perfil</span>
+            <span className="text-right">Cliente / Dispositivos</span>
           </div>
+
+          {filteredUsers.map((user) => (
+            <div
+              key={user.id}
+              className="grid grid-cols-[1.2fr_1.4fr_1fr_220px] gap-4 items-center py-4 border-b border-gray-200 dark:border-white/10 last:border-b-0"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <Avatar name={user.name} />
+
+                <div className="min-w-0">
+                  <h3 className="font-semibold text-[#080E2F] dark:text-white truncate">
+                    {user.name}
+                  </h3>
+
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    ID: {user.id}
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-gray-600 dark:text-gray-400 truncate">
+                {user.email}
+              </p>
+
+              <select
+                value={user.role}
+                disabled={updatingUserRoleId === user.id}
+                onChange={(event) =>
+                  updateUserRole(user.id, event.target.value as UserType["role"])
+                }
+                className="
+                  w-full
+                  max-w-[180px]
+                  rounded-xl
+                  border
+                  border-gray-200
+                  dark:border-white/10
+                  bg-white
+                  dark:bg-[#0d2238]
+                  px-3
+                  py-2
+                  text-sm
+                  font-semibold
+                  text-[#080E2F]
+                  dark:text-white
+                  outline-none
+                  focus:border-blue-500
+                  disabled:opacity-60
+                "
+              >
+                <option value="student">Aluno</option>
+                <option value="client">Cliente</option>
+                <option value="admin">Administrador</option>
+              </select>
+
+              <div className="flex justify-end">
+                {user.role === "client" ? (
+                  <button
+                    type="button"
+                    onClick={() => openClientDevicesModal(user)}
+                    className="
+                      inline-flex
+                      items-center
+                      justify-center
+                      gap-2
+                      rounded-xl
+                      bg-blue-500/10
+                      px-3
+                      py-2
+                      text-sm
+                      font-semibold
+                      text-blue-600
+                      dark:text-blue-400
+                      hover:bg-blue-500/20
+                      transition-all
+                    "
+                  >
+                    <Cpu size={18} />
+                    Dispositivos
+                  </button>
+                ) : (
+                  <span className="text-sm text-gray-400 dark:text-gray-500">
+                    -
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
         </TableCard>
 
         <SidePanel

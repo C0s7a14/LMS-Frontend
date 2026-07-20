@@ -1,8 +1,20 @@
-node_modules
-dist
+# Dependências
+node_modules/
+
+# Build
+dist/
+build/
+
+# Env
 .env
-venv
-__pycache__
-*.pyc
-coverage
-.vscode
+.env.local
+.env.development.local
+.env.production.local
+
+# Vercel, se usar
+.vercel/
+
+# Sistema / editor
+.vscode/
+.DS_Store
+Thumbs.db

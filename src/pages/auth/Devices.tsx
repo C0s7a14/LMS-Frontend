@@ -39,21 +39,30 @@ export default function Device() {
 
   const navigate = useNavigate();
 
+  const storedUser = localStorage.getItem("user");
+  const user = storedUser ? JSON.parse(storedUser) : null;
 
-  async function getDevices() {
-    try {
-      setLoading(true);
+  const userRole = user?.role;
+  const isAdmin = userRole === "admin";
+  const isClient = userRole === "client";
 
-      const response = await api.get<DeviceType[]>("/devices");
 
-      setDevices(response.data);
-    } catch (error) {
-      console.log(error);
-      toast.error("Erro ao buscar dispositivos");
-    } finally {
-      setLoading(false);
-    }
+ async function getDevices() {
+  try {
+    setLoading(true);
+
+    const endpoint = isClient ? "/client/devices" : "/devices";
+
+    const response = await api.get<DeviceType[]>(endpoint);
+
+    setDevices(response.data);
+  } catch (error) {
+    console.log(error);
+    toast.error("Erro ao buscar dispositivos");
+  } finally {
+    setLoading(false);
   }
+}
 
   useEffect(() => {
     getDevices();
@@ -76,13 +85,15 @@ export default function Device() {
         {/* Header */}
         <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between mb-10">
           <div>
-            <h1 className="text-3xl lg:text-4xl font-bold text-[#080E2F] dark:text-white">
-              Dispositivos SIRROS
-            </h1>
+           <h1 className="text-3xl lg:text-4xl font-bold text-[#080E2F] dark:text-white">
+            {isClient ? "Meus Dispositivos SIRROS" : "Dispositivos SIRROS"}
+          </h1>
 
-            <p className="text-gray-500 dark:text-gray-400 mt-2 text-base lg:text-lg">
-              Selecione um dispositivo para acessar os cursos
-            </p>
+          <p className="text-gray-500 dark:text-gray-400 mt-2 text-base lg:text-lg">
+            {isClient
+              ? "Acesse os dispositivos vinculados à sua empresa."
+              : "Selecione um dispositivo para acessar os cursos"}
+          </p>
           </div>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
@@ -124,6 +135,7 @@ export default function Device() {
             </div>
 
             {/* Botão Novo Dispositivo */}
+           {isAdmin && (
             <button
               onClick={() => setModalOpen(true)}
               className="
@@ -148,7 +160,7 @@ export default function Device() {
               <Plus size={20} />
               Novo Dispositivo
             </button>
-
+          )}
             {/* View buttons */}
             <div className="hidden sm:flex bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-2xl p-1 shadow-2xl  dark:shadow-sm dark:shadow-blue-500">
               <button
@@ -214,9 +226,9 @@ export default function Device() {
               Nenhum dispositivo encontrado
             </h2>
 
-            <p className="text-gray-500 dark:text-gray-400 mt-2">
-              Cadastre dispositivos para eles aparecerem aqui.
-            </p>
+            {isClient
+              ? "Nenhum dispositivo foi vinculado à sua conta ainda."
+              : "Cadastre dispositivos para eles aparecerem aqui."}
           </div>
         )}
 
@@ -318,15 +330,20 @@ export default function Device() {
                       <BookOpen size={24} />
 
                       <span className="text-gray-500 dark:text-gray-400 font-medium">
-                        Ver cursos
+                        {isClient ? "Abrir suporte IA" : "Ver cursos"}
                       </span>
                     </div>
 
                     <button
-                      onClick={() =>
-                        navigate(`/devices/${device.id}/courses`)
+                     onClick={() => {
+                      if (isClient) {
+                        navigate("/support");
+                        return;
                       }
-                      className="
+
+                      navigate(`/devices/${device.id}/courses`);
+                    }}
+                        className="
                         w-12
                         h-12
                         rounded-xl
@@ -351,12 +368,13 @@ export default function Device() {
           </div>
         )}
 
+        {isAdmin && (
         <DeviceModal
           isOpen={modalOpen}
           onClose={() => setModalOpen(false)}
           onSuccess={getDevices}
         />
-
+      )}
       </div>
     </main>
   );

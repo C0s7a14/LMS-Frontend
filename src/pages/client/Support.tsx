@@ -133,7 +133,7 @@ async function loadInitialData() {
     };
 
     const [devicesResponse, conversationsResponse] = await Promise.all([
-      axios.get<DeviceType[]>("http://localhost:3333/devices", config),
+      axios.get<DeviceType[]>("http://localhost:3333/client/devices", config),
       axios.get<AiConversation[]>(
         "http://localhost:3333/client/ai/conversations",
         config
