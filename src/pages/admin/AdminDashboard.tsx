@@ -65,9 +65,10 @@ type AdminTab =
   | "ai"
   | "reports";
 
-  type MetricKey =
+ type MetricKey =
   | "users"
   | "courses"
+  | "enrollments"
   | "devices"
   | "certificates"
   | "completion"
@@ -206,6 +207,50 @@ interface AdminDashboardData {
   ultimosCertificados: AdminDashboardCertificate[];
 }
 
+interface AdminReportSummary {
+  total_alunos: number;
+  total_clientes: number;
+  total_cursos: number;
+  cursos_publicados: number;
+  total_matriculas: number;
+  certificados_emitidos: number;
+}
+
+interface AdminReportCourse {
+  curso_id: number;
+  titulo: string;
+  status: string;
+  total_matriculas: number | string;
+  certificados_emitidos: number | string;
+  total_aulas: number | string;
+  aulas_concluidas: number | string;
+  progresso_medio: number | string;
+}
+
+interface AdminReportQuiz {
+  quiz_id: number;
+  titulo: string;
+  tipo: string;
+  status: string;
+  curso_titulo: string;
+  total_tentativas: number | string;
+  aprovados: number | string | null;
+  reprovados: number | string | null;
+  media_nota: number | string | null;
+}
+
+interface AdminMonthlyCertificate {
+  mes: string;
+  total: number | string;
+}
+
+interface AdminReportsData {
+  summary: AdminReportSummary;
+  courses: AdminReportCourse[];
+  quizzes: AdminReportQuiz[];
+  monthlyCertificates: AdminMonthlyCertificate[];
+}
+
 
 
 interface TabItem {
@@ -286,6 +331,8 @@ const [dashboardData, setDashboardData] = useState<AdminDashboardData | null>(
   null
 );
 
+const [adminReports, setAdminReports] = useState<AdminReportsData | null>(null);
+
 const [aiSummary, setAiSummary] = useState<AiKnowledgeSummary | null>(null);
 const [selectedAiDevice, setSelectedAiDevice] = useState<DeviceType | null>(
   null
@@ -319,6 +366,19 @@ const [aiDevices, setAiDevices] = useState<AiDeviceType[]>([]);
 
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [deviceModalOpen, setDeviceModalOpen] = useState(false);
+  const [editingDevice, setEditingDevice] = useState<DeviceType | null>(null);
+  const [deleteDeviceTarget, setDeleteDeviceTarget] = useState<DeviceType | null>(null);
+  const [savingDeviceEdit, setSavingDeviceEdit] = useState(false);
+  const [deletingDeviceId, setDeletingDeviceId] = useState<number | null>(null);
+
+  const [editDeviceForm, setEditDeviceForm] = useState({
+    nome: "",
+    modelo: "",
+    tipo: "",
+    descricao: "",
+    imagem_url: "",
+  });
+
   const [selectedClientUser, setSelectedClientUser] = useState<UserType | null>(
   null
 );
@@ -389,7 +449,7 @@ async function loadDashboardData() {
       },
     };
 
-  const [
+const [
   dashboardResponse,
   usersResponse,
   coursesResponse,
@@ -397,6 +457,7 @@ async function loadDashboardData() {
   aiSummaryResponse,
   aiDevicesResponse,
   aiPromptsResponse,
+  reportsResponse,
 ] = await Promise.all([
   axios.get<AdminDashboardData>(
     "http://localhost:3333/admin/dashboard",
@@ -432,6 +493,11 @@ async function loadDashboardData() {
     "http://localhost:3333/admin/ai/prompts",
     config
   ),
+
+  axios.get<AdminReportsData>(
+  "http://localhost:3333/admin/reports",
+  config
+),
 ]);
 
 setDashboardData(dashboardResponse.data);
@@ -441,6 +507,7 @@ setDevices(devicesResponse.data);
 setAiSummary(aiSummaryResponse.data);
 setAiDevices(aiDevicesResponse.data);
 setAiPrompts(aiPromptsResponse.data);
+setAdminReports(reportsResponse.data);
   } catch (error) {
     console.log(error);
 
@@ -705,6 +772,116 @@ async function handleUnlinkDeviceFromClient(deviceId: number) {
     toast.error("Erro ao remover dispositivo do cliente.");
   } finally {
     setUnlinkingClientDeviceId(null);
+  }
+}
+
+function openEditDeviceModal(device: DeviceType) {
+  setEditingDevice(device);
+
+  setEditDeviceForm({
+    nome: device.nome || "",
+    modelo: device.modelo || "",
+    tipo: device.tipo || "",
+    descricao: device.descricao || "",
+    imagem_url: device.imagem_url || "",
+  });
+}
+
+async function handleSaveDeviceEdit() {
+  try {
+    if (!editingDevice) {
+      return;
+    }
+
+    if (!editDeviceForm.nome.trim()) {
+      toast.error("Informe o nome do dispositivo.");
+      return;
+    }
+
+    setSavingDeviceEdit(true);
+
+    const config = getAuthConfig();
+
+    if (!config) {
+      return;
+    }
+
+    await axios.patch(
+      `http://localhost:3333/admin/devices/${editingDevice.id}`,
+      {
+        nome: editDeviceForm.nome,
+        modelo: editDeviceForm.modelo,
+        tipo: editDeviceForm.tipo,
+        descricao: editDeviceForm.descricao,
+        imagem_url: editDeviceForm.imagem_url,
+      },
+      config
+    );
+
+    toast.success("Dispositivo atualizado com sucesso.");
+
+    setEditingDevice(null);
+
+    await loadDashboardData();
+  } catch (error) {
+    console.log(error);
+
+    if (axios.isAxiosError(error)) {
+      toast.error(
+        error.response?.data?.error ||
+          error.response?.data?.message ||
+          "Erro ao atualizar dispositivo."
+      );
+
+      return;
+    }
+
+    toast.error("Erro inesperado ao atualizar dispositivo.");
+  } finally {
+    setSavingDeviceEdit(false);
+  }
+}
+
+async function confirmDeleteDevice() {
+  try {
+    if (!deleteDeviceTarget) {
+      return;
+    }
+
+    setDeletingDeviceId(deleteDeviceTarget.id);
+
+    const config = getAuthConfig();
+
+    if (!config) {
+      return;
+    }
+
+    await axios.delete(
+      `http://localhost:3333/admin/devices/${deleteDeviceTarget.id}`,
+      config
+    );
+
+    toast.success("Dispositivo excluído com sucesso.");
+
+    setDeleteDeviceTarget(null);
+
+    await loadDashboardData();
+  } catch (error) {
+    console.log(error);
+
+    if (axios.isAxiosError(error)) {
+      toast.error(
+        error.response?.data?.error ||
+          error.response?.data?.message ||
+          "Erro ao excluir dispositivo."
+      );
+
+      return;
+    }
+
+    toast.error("Erro inesperado ao excluir dispositivo.");
+  } finally {
+    setDeletingDeviceId(null);
   }
 }
 
@@ -1341,9 +1518,12 @@ async function handleSaveAiPrompt() {
 
           {currentTab === "devices" && (
             <DevicesTab
-              devices={devices}
-              search={search}
-            />
+            devices={devices}
+            search={search}
+            editDevice={openEditDeviceModal}
+            deleteDevice={(device) => setDeleteDeviceTarget(device)}
+            openDocumentsModal={openAiDocumentsModal}
+          />
           )}
 
           {currentTab === "courses" && (
@@ -1379,13 +1559,216 @@ async function handleSaveAiPrompt() {
 
           {currentTab === "reports" && (
             <ReportsTab
-              users={users}
-              courses={courses}
-              devices={devices}
-            />
+            reports={adminReports}
+            devices={devices}
+          />
           )}
         </>
       )}
+
+      {editingDevice && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+    <div className="w-full max-w-2xl rounded-3xl bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-[#080E2F] dark:text-white">
+            Editar dispositivo
+          </h2>
+
+          <p className="text-gray-500 dark:text-gray-400 mt-1">
+            Atualize as informações do dispositivo cadastrado.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setEditingDevice(null)}
+          disabled={savingDeviceEdit}
+          className="text-gray-500 hover:text-red-500 transition-all disabled:opacity-60"
+        >
+          <X size={26} />
+        </button>
+      </div>
+
+      <div className="mt-6 space-y-5">
+        <div>
+          <label className="block text-sm font-semibold text-[#080E2F] dark:text-white mb-2">
+            Nome do dispositivo
+          </label>
+
+          <input
+            value={editDeviceForm.nome}
+            onChange={(event) =>
+              setEditDeviceForm((prev) => ({
+                ...prev,
+                nome: event.target.value,
+              }))
+            }
+            className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#0d2238] px-4 py-3 text-[#080E2F] dark:text-white outline-none focus:border-blue-500"
+            placeholder="Ex: Sirros S1"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-semibold text-[#080E2F] dark:text-white mb-2">
+              Modelo
+            </label>
+
+            <input
+              value={editDeviceForm.modelo}
+              onChange={(event) =>
+                setEditDeviceForm((prev) => ({
+                  ...prev,
+                  modelo: event.target.value,
+                }))
+              }
+              className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#0d2238] px-4 py-3 text-[#080E2F] dark:text-white outline-none focus:border-blue-500"
+              placeholder="Ex: S1"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-[#080E2F] dark:text-white mb-2">
+              Categoria
+            </label>
+
+            <input
+              value={editDeviceForm.tipo}
+              onChange={(event) =>
+                setEditDeviceForm((prev) => ({
+                  ...prev,
+                  tipo: event.target.value,
+                }))
+              }
+              className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#0d2238] px-4 py-3 text-[#080E2F] dark:text-white outline-none focus:border-blue-500"
+              placeholder="Ex: Sensor IoT"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-[#080E2F] dark:text-white mb-2">
+            Descrição
+          </label>
+
+          <textarea
+            value={editDeviceForm.descricao}
+            onChange={(event) =>
+              setEditDeviceForm((prev) => ({
+                ...prev,
+                descricao: event.target.value,
+              }))
+            }
+            rows={4}
+            className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#0d2238] px-4 py-3 text-[#080E2F] dark:text-white outline-none focus:border-blue-500 resize-none"
+            placeholder="Descreva o dispositivo..."
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-[#080E2F] dark:text-white mb-2">
+            URL da imagem
+          </label>
+
+          <input
+            value={editDeviceForm.imagem_url}
+            onChange={(event) =>
+              setEditDeviceForm((prev) => ({
+                ...prev,
+                imagem_url: event.target.value,
+              }))
+            }
+            className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#0d2238] px-4 py-3 text-[#080E2F] dark:text-white outline-none focus:border-blue-500"
+            placeholder="https://..."
+          />
+        </div>
+
+        {editDeviceForm.imagem_url && (
+          <div className="rounded-2xl border border-gray-200 dark:border-white/10 p-4">
+            <p className="text-sm font-semibold text-[#080E2F] dark:text-white mb-3">
+              Prévia da imagem
+            </p>
+
+            <img
+              src={editDeviceForm.imagem_url}
+              alt="Prévia do dispositivo"
+              className="w-full max-h-56 object-cover rounded-2xl"
+            />
+          </div>
+        )}
+
+        <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2">
+          <button
+            type="button"
+            onClick={() => setEditingDevice(null)}
+            disabled={savingDeviceEdit}
+            className="rounded-2xl border border-gray-200 dark:border-white/10 px-5 py-3 font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-all disabled:opacity-60"
+          >
+            Cancelar
+          </button>
+
+          <button
+            type="button"
+            onClick={handleSaveDeviceEdit}
+            disabled={savingDeviceEdit}
+            className="rounded-2xl bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {savingDeviceEdit ? "Salvando..." : "Salvar alterações"}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
+{deleteDeviceTarget && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+    <div className="w-full max-w-md rounded-3xl bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 p-6 shadow-2xl">
+      <div className="w-16 h-16 rounded-2xl bg-red-500/10 text-red-500 flex items-center justify-center mx-auto">
+        <Trash2 size={36} />
+      </div>
+
+      <h2 className="text-2xl font-bold text-[#080E2F] dark:text-white text-center mt-5">
+        Excluir dispositivo
+      </h2>
+
+      <p className="text-gray-500 dark:text-gray-400 text-center mt-3 leading-relaxed">
+        Tem certeza que deseja excluir o dispositivo{" "}
+        <strong className="text-[#080E2F] dark:text-white">
+          “{deleteDeviceTarget.nome}”
+        </strong>
+        ?
+      </p>
+
+      <div className="mt-5 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-red-500 text-sm font-medium">
+        Essa ação removerá vínculos com clientes, cursos e documentos da base da IA relacionados a este dispositivo.
+      </div>
+
+      <div className="mt-6 flex flex-col sm:flex-row gap-3">
+        <button
+          type="button"
+          onClick={() => setDeleteDeviceTarget(null)}
+          disabled={deletingDeviceId === deleteDeviceTarget.id}
+          className="flex-1 rounded-2xl border border-gray-200 dark:border-white/10 px-5 py-3 font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-all disabled:opacity-60"
+        >
+          Cancelar
+        </button>
+
+        <button
+          type="button"
+          onClick={confirmDeleteDevice}
+          disabled={deletingDeviceId === deleteDeviceTarget.id}
+          className="flex-1 rounded-2xl bg-red-500 px-5 py-3 font-semibold text-white hover:bg-red-600 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          {deletingDeviceId === deleteDeviceTarget.id
+            ? "Excluindo..."
+            : "Excluir"}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
       {editingCourse && (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
@@ -2593,9 +2976,15 @@ function UsersTab({
 function DevicesTab({
   devices,
   search,
+  editDevice,
+  deleteDevice,
+  openDocumentsModal,
 }: {
   devices: DeviceType[];
   search: string;
+  editDevice: (device: DeviceType) => void;
+  deleteDevice: (device: DeviceType) => void;
+  openDocumentsModal: (device: DeviceType) => void;
 }) {
   const filteredDevices = devices.filter((device) => {
     const term = search.toLowerCase();
@@ -2661,7 +3050,7 @@ function DevicesTab({
 
       <TableCard title="Lista de Dispositivos">
         <div className="min-w-[850px]">
-          <div className="grid grid-cols-[1.3fr_1fr_1fr_1.4fr_80px] text-sm text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-white/10 pb-3">
+          <div className="grid grid-cols-[1.3fr_1fr_1fr_1.4fr_210px] text-sm text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-white/10 pb-3">
             <span>Dispositivo</span>
             <span>Modelo</span>
             <span>Categoria</span>
@@ -2672,7 +3061,7 @@ function DevicesTab({
           {filteredDevices.map((device) => (
             <div
               key={device.id}
-              className="grid grid-cols-[1.3fr_1fr_1fr_1.4fr_80px] gap-4 items-center py-4 border-b border-gray-200 dark:border-white/10 last:border-b-0"
+             className="grid grid-cols-[1.3fr_1fr_1fr_1.4fr_210px] gap-4 items-center py-4 border-b border-gray-200 dark:border-white/10 last:border-b-0"
             >
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-[#0d2238] overflow-hidden flex items-center justify-center shrink-0">
@@ -2704,9 +3093,31 @@ function DevicesTab({
                 {device.descricao || "Sem descrição"}
               </p>
 
-              <button className="ml-auto text-gray-500 hover:text-blue-600 dark:hover:text-blue-400">
-                <MoreVertical size={22} />
+              <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => openDocumentsModal(device)}
+                className="rounded-xl bg-purple-500/10 px-3 py-2 text-xs font-semibold text-purple-600 dark:text-purple-400 hover:bg-purple-500/20 transition-all"
+              >
+                PDFs
               </button>
+
+              <button
+                type="button"
+                onClick={() => editDevice(device)}
+                className="rounded-xl bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 transition-all"
+              >
+                Editar
+              </button>
+
+              <button
+                type="button"
+                onClick={() => deleteDevice(device)}
+                className="rounded-xl bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-500 hover:bg-red-500/20 transition-all"
+              >
+                Excluir
+              </button>
+            </div>
             </div>
           ))}
         </div>
@@ -3523,100 +3934,149 @@ function CertificatesTab({
 
 
 function ReportsTab({
-  users,
-  courses,
+  reports,
   devices,
 }: {
-  users: UserType[];
-  courses: CourseType[];
+  reports: AdminReportsData | null;
   devices: DeviceType[];
 }) {
   const [selectedMetric, setSelectedMetric] =
-    useState<MetricKey>("users");
+    useState<MetricKey>("certificates");
+
+  function formatMonth(month: string) {
+    if (!month) {
+      return "Sem mês";
+    }
+
+    const [year, monthNumber] = month.split("-");
+
+    if (!year || !monthNumber) {
+      return month;
+    }
+
+    return `${monthNumber}/${year}`;
+  }
+
+  function toNumber(value: number | string | null | undefined) {
+    return Number(value || 0);
+  }
+
+  if (!reports) {
+    return (
+      <div className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-8 text-center text-gray-500 dark:text-gray-400">
+        Carregando relatórios...
+      </div>
+    );
+  }
+
+  const summary = reports.summary;
+
+  const averageCompletion =
+    reports.courses.length > 0
+      ? Math.round(
+          reports.courses.reduce(
+            (total, course) => total + toNumber(course.progresso_medio),
+            0
+          ) / reports.courses.length
+        )
+      : 0;
+
+  const averageQuizScore =
+    reports.quizzes.length > 0
+      ? (
+          reports.quizzes.reduce(
+            (total, quiz) => total + toNumber(quiz.media_nota),
+            0
+          ) / reports.quizzes.length
+        ).toFixed(1)
+      : "0";
+
+  const bestCourse = [...reports.courses].sort(
+    (a, b) => toNumber(b.total_matriculas) - toNumber(a.total_matriculas)
+  )[0];
+
+  const bestQuiz = [...reports.quizzes].sort(
+    (a, b) => toNumber(b.total_tentativas) - toNumber(a.total_tentativas)
+  )[0];
 
   const chartData = {
     users: {
-      title: "Crescimento de Usuários",
-      subtitle: "Quantidade de usuários ativos nos últimos meses.",
+      title: "Alunos e Clientes",
+      subtitle: "Distribuição atual de usuários principais da plataforma.",
       suffix: "",
       data: [
-        { label: "Jan", value: 12 },
-        { label: "Fev", value: 18 },
-        { label: "Mar", value: 25 },
-        { label: "Abr", value: 34 },
-        { label: "Mai", value: 48 },
-        { label: "Jun", value: users.length },
+        { label: "Alunos", value: summary.total_alunos },
+        { label: "Clientes", value: summary.total_clientes },
       ],
     },
 
-    courses: {
-      title: "Cursos Publicados",
-      subtitle: "Evolução de cursos disponíveis na plataforma.",
-      suffix: "",
-      data: [
-        { label: "Jan", value: 1 },
-        { label: "Fev", value: 2 },
-        { label: "Mar", value: 4 },
-        { label: "Abr", value: 6 },
-        { label: "Mai", value: 9 },
-        { label: "Jun", value: courses.length },
-      ],
-    },
+        courses: {
+          title: "Cursos da Plataforma",
+          subtitle: "Total de cursos e cursos publicados.",
+          suffix: "",
+          data: [
+            { label: "Total", value: summary.total_cursos },
+            { label: "Publicados", value: summary.cursos_publicados },
+          ],
+        },
+
+        enrollments: {
+          title: "Matrículas por Curso",
+          subtitle: "Cursos com maior número de matrículas.",
+          suffix: "",
+          data:
+            reports.courses.length > 0
+              ? reports.courses.slice(0, 8).map((course) => ({
+                  label: course.titulo,
+                  value: toNumber(course.total_matriculas),
+                }))
+              : [{ label: "Sem dados", value: 0 }],
+        },
 
     devices: {
       title: "Dispositivos Cadastrados",
-      subtitle: "Crescimento da base de dispositivos registrados.",
+      subtitle: "Quantidade total de dispositivos registrados.",
       suffix: "",
-      data: [
-        { label: "Jan", value: 2 },
-        { label: "Fev", value: 4 },
-        { label: "Mar", value: 6 },
-        { label: "Abr", value: 10 },
-        { label: "Mai", value: 14 },
-        { label: "Jun", value: devices.length },
-      ],
+      data: [{ label: "Dispositivos", value: devices.length }],
     },
 
     certificates: {
       title: "Certificados Emitidos",
-      subtitle: "Quantidade de certificados emitidos por mês.",
+      subtitle: "Certificados gerados por mês.",
       suffix: "",
-      data: [
-        { label: "Jan", value: 8 },
-        { label: "Fev", value: 14 },
-        { label: "Mar", value: 22 },
-        { label: "Abr", value: 31 },
-        { label: "Mai", value: 44 },
-        { label: "Jun", value: 56 },
-      ],
+      data:
+        reports.monthlyCertificates.length > 0
+          ? reports.monthlyCertificates.map((item) => ({
+              label: formatMonth(item.mes),
+              value: toNumber(item.total),
+            }))
+          : [{ label: "Sem certificados", value: 0 }],
     },
 
     completion: {
-      title: "Taxa de Conclusão",
-      subtitle: "Percentual médio de conclusão dos cursos.",
+      title: "Conclusão Média por Curso",
+      subtitle: "Percentual médio de progresso dos alunos por curso.",
       suffix: "%",
-      data: [
-        { label: "Jan", value: 42 },
-        { label: "Fev", value: 50 },
-        { label: "Mar", value: 58 },
-        { label: "Abr", value: 64 },
-        { label: "Mai", value: 70 },
-        { label: "Jun", value: 76 },
-      ],
+      data:
+        reports.courses.length > 0
+          ? reports.courses.slice(0, 8).map((course) => ({
+              label: course.titulo,
+              value: toNumber(course.progresso_medio),
+            }))
+          : [{ label: "Sem dados", value: 0 }],
     },
 
     satisfaction: {
-      title: "Satisfação Média",
-      subtitle: "Avaliação média dos usuários na plataforma.",
+      title: "Nota Média dos Quizzes",
+      subtitle: "Média de desempenho nas avaliações.",
       suffix: "",
-      data: [
-        { label: "Jan", value: 3.8 },
-        { label: "Fev", value: 4.0 },
-        { label: "Mar", value: 4.2 },
-        { label: "Abr", value: 4.3 },
-        { label: "Mai", value: 4.5 },
-        { label: "Jun", value: 4.6 },
-      ],
+      data:
+        reports.quizzes.length > 0
+          ? reports.quizzes.slice(0, 8).map((quiz) => ({
+              label: quiz.titulo,
+              value: toNumber(quiz.media_nota),
+            }))
+          : [{ label: "Sem tentativas", value: 0 }],
     },
   };
 
@@ -3626,9 +4086,9 @@ function ReportsTab({
     <div className="space-y-6 sm:space-y-8">
       <StatsGrid>
         <StatCard
-          title="Usuários Ativos"
-          value={users.length}
-          subtitle="Total atual"
+          title="Alunos"
+          value={summary.total_alunos}
+          subtitle="Cadastrados"
           icon={Users}
           color="bg-purple-500/15 text-purple-600 dark:text-purple-400"
           active={selectedMetric === "users"}
@@ -3637,8 +4097,8 @@ function ReportsTab({
 
         <StatCard
           title="Cursos"
-          value={courses.length}
-          subtitle="Publicados"
+          value={summary.total_cursos}
+          subtitle={`${summary.cursos_publicados} publicados`}
           icon={BookOpen}
           color="bg-orange-500/15 text-orange-600 dark:text-orange-400"
           active={selectedMetric === "courses"}
@@ -3646,18 +4106,18 @@ function ReportsTab({
         />
 
         <StatCard
-          title="Dispositivos"
-          value={devices.length}
-          subtitle="Online"
-          icon={Cpu}
+          title="Matrículas"
+          value={summary.total_matriculas}
+          subtitle="Total registradas"
+          icon={UserPlus}
           color="bg-blue-500/15 text-blue-600 dark:text-blue-400"
-          active={selectedMetric === "devices"}
-          onClick={() => setSelectedMetric("devices")}
+         active={selectedMetric === "enrollments"}
+          onClick={() => setSelectedMetric("enrollments")}
         />
 
         <StatCard
           title="Certificados"
-          value="56"
+          value={summary.certificados_emitidos}
           subtitle="Emitidos"
           icon={Award}
           color="bg-purple-500/15 text-purple-600 dark:text-purple-400"
@@ -3667,8 +4127,8 @@ function ReportsTab({
 
         <StatCard
           title="Conclusão"
-          value="76%"
-          subtitle="Taxa média"
+          value={`${averageCompletion}%`}
+          subtitle="Média dos cursos"
           icon={BarChart3}
           color="bg-green-500/15 text-green-600 dark:text-green-400"
           active={selectedMetric === "completion"}
@@ -3676,9 +4136,9 @@ function ReportsTab({
         />
 
         <StatCard
-          title="Satisfação"
-          value="4,6"
-          subtitle="De 5"
+          title="Média quizzes"
+          value={averageQuizScore}
+          subtitle="Nota média"
           icon={Star}
           color="bg-orange-500/15 text-orange-600 dark:text-orange-400"
           active={selectedMetric === "satisfaction"}
@@ -3694,60 +4154,175 @@ function ReportsTab({
       />
 
       <div className="grid grid-cols-1 2xl:grid-cols-2 gap-5 sm:gap-6">
-        <TableCard title="Indicadores por Módulo">
+        <TableCard title="Indicadores Gerais">
           <ReportLine
-            label="Usuários"
-            value={`${users.length} ativos`}
+            label="Alunos cadastrados"
+            value={`${summary.total_alunos}`}
           />
 
           <ReportLine
-            label="Dispositivos"
-            value={`${devices.length} cadastrados`}
+            label="Clientes cadastrados"
+            value={`${summary.total_clientes}`}
           />
 
           <ReportLine
-            label="Cursos"
-            value={`${courses.length} disponíveis`}
+            label="Cursos totais"
+            value={`${summary.total_cursos}`}
           />
 
           <ReportLine
-            label="Certificados"
-            value="56 emitidos"
+            label="Cursos publicados"
+            value={`${summary.cursos_publicados}`}
+          />
+
+          <ReportLine
+            label="Matrículas"
+            value={`${summary.total_matriculas}`}
+          />
+
+          <ReportLine
+            label="Certificados emitidos"
+            value={`${summary.certificados_emitidos}`}
           />
         </TableCard>
 
         <TableCard title="Insights Rápidos">
           <div className="space-y-5">
             <ActivityItem
-              icon={BarChart3}
-              title="A taxa de conclusão aumentou"
-              subtitle="Mais usuários estão concluindo os cursos."
-              time="Positivo"
-              color="bg-green-500/15 text-green-600 dark:text-green-400"
-            />
-
-            <ActivityItem
               icon={BookOpen}
-              title="Curso mais acessado"
-              subtitle="Instalação e Configuração SIRROS."
+              title="Curso com mais matrículas"
+              subtitle={
+                bestCourse
+                  ? `${bestCourse.titulo} — ${bestCourse.total_matriculas} matrícula(s)`
+                  : "Ainda não há matrículas registradas."
+              }
               time="Destaque"
               color="bg-orange-500/15 text-orange-600 dark:text-orange-400"
             />
 
             <ActivityItem
-              icon={Cpu}
-              title="Dispositivos cadastrados"
-              subtitle="Monitoramento ativo dos dispositivos."
-              time="Estável"
+              icon={BarChart3}
+              title="Média geral de conclusão"
+              subtitle={`${averageCompletion}% de progresso médio entre os cursos.`}
+              time="Cursos"
+              color="bg-green-500/15 text-green-600 dark:text-green-400"
+            />
+
+            <ActivityItem
+              icon={FileText}
+              title="Quiz mais acessado"
+              subtitle={
+                bestQuiz
+                  ? `${bestQuiz.titulo} — ${bestQuiz.total_tentativas} tentativa(s)`
+                  : "Ainda não há tentativas registradas."
+              }
+              time="Avaliações"
               color="bg-blue-500/15 text-blue-600 dark:text-blue-400"
             />
+          </div>
+        </TableCard>
+      </div>
+
+      <div className="grid grid-cols-1 2xl:grid-cols-2 gap-5 sm:gap-6">
+        <TableCard title="Desempenho por Curso">
+          <div className="min-w-[760px]">
+            <div className="grid grid-cols-[2fr_110px_110px_110px_120px] gap-3 px-3 py-2 text-xs font-bold uppercase text-gray-400">
+              <span>Curso</span>
+              <span>Status</span>
+              <span>Matrículas</span>
+              <span>Certificados</span>
+              <span>Progresso</span>
+            </div>
+
+            {reports.courses.length === 0 ? (
+              <div className="px-3 py-6 text-center text-gray-500 dark:text-gray-400">
+                Nenhum curso encontrado nos relatórios.
+              </div>
+            ) : (
+              reports.courses.map((course) => (
+                <div
+                  key={course.curso_id}
+                  className="grid grid-cols-[2fr_110px_110px_110px_120px] gap-3 px-3 py-4 border-t border-gray-100 dark:border-white/10 text-sm items-center"
+                >
+                  <strong className="text-[#080E2F] dark:text-white truncate">
+                    {course.titulo}
+                  </strong>
+
+                  <span className="text-gray-500 dark:text-gray-400">
+                    {course.status}
+                  </span>
+
+                  <span className="text-gray-500 dark:text-gray-400">
+                    {course.total_matriculas}
+                  </span>
+
+                  <span className="text-gray-500 dark:text-gray-400">
+                    {course.certificados_emitidos}
+                  </span>
+
+                  <span className="font-bold text-blue-600 dark:text-blue-400">
+                    {toNumber(course.progresso_medio)}%
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        </TableCard>
+
+        <TableCard title="Desempenho das Avaliações">
+          <div className="min-w-[760px]">
+            <div className="grid grid-cols-[2fr_110px_110px_110px_110px] gap-3 px-3 py-2 text-xs font-bold uppercase text-gray-400">
+              <span>Avaliação</span>
+              <span>Tipo</span>
+              <span>Tentativas</span>
+              <span>Aprovados</span>
+              <span>Média</span>
+            </div>
+
+            {reports.quizzes.length === 0 ? (
+              <div className="px-3 py-6 text-center text-gray-500 dark:text-gray-400">
+                Nenhuma tentativa de quiz encontrada.
+              </div>
+            ) : (
+              reports.quizzes.map((quiz) => (
+                <div
+                  key={quiz.quiz_id}
+                  className="grid grid-cols-[2fr_110px_110px_110px_110px] gap-3 px-3 py-4 border-t border-gray-100 dark:border-white/10 text-sm items-center"
+                >
+                  <div className="min-w-0">
+                    <strong className="text-[#080E2F] dark:text-white truncate block">
+                      {quiz.titulo}
+                    </strong>
+
+                    <span className="text-xs text-gray-500 dark:text-gray-400 truncate block">
+                      {quiz.curso_titulo}
+                    </span>
+                  </div>
+
+                  <span className="text-gray-500 dark:text-gray-400">
+                    {quiz.tipo}
+                  </span>
+
+                  <span className="text-gray-500 dark:text-gray-400">
+                    {quiz.total_tentativas}
+                  </span>
+
+                  <span className="text-green-600 dark:text-green-400 font-semibold">
+                    {quiz.aprovados || 0}
+                  </span>
+
+                  <span className="font-bold text-blue-600 dark:text-blue-400">
+                    {quiz.media_nota || 0}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
         </TableCard>
       </div>
     </div>
   );
 }
-
 
 function StatsGrid({
   children,
