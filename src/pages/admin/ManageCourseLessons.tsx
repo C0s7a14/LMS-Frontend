@@ -280,15 +280,21 @@ async function handleApplyGeneratedCourse() {
     }));
   }
 
-  function handleNewAula(moduloId: number) {
-    setEditingAulaId(null);
+ function handleNewAula(moduloId: number) {
+  setEditingAulaId(null);
 
-    setForm({
-      ...emptyForm,
-      moduloId,
-      ordem: "1",
-    });
-  }
+  const modulo = course?.modulos.find((item) => item.id === moduloId);
+
+  const nextOrder = modulo?.aulas.length
+    ? modulo.aulas.length + 1
+    : 1;
+
+  setForm({
+    ...emptyForm,
+    moduloId,
+    ordem: String(nextOrder),
+  });
+}
 
   function handleEditAula(aula: AulaType) {
     setEditingAulaId(aula.id);
@@ -562,7 +568,7 @@ function handleDeleteModulo(modulo: ModuloType) {
 </header>
 
         <div className="grid grid-cols-1 xl:grid-cols-[1fr_480px] gap-6">
-          {/* Lista de módulos e aulas */}
+         
           {/* Lista de módulos e aulas */}
 <section className="space-y-5">
   {/* Gerenciar módulos */}
