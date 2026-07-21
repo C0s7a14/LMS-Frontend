@@ -18,6 +18,7 @@ import AdminDashboard from "../pages/admin/AdminDashboard";
 import CourseStudy from "../pages/student/CourseStudy";
 import ManageCourseLessons from "../pages/admin/ManageCourseLessons";
 import QuizAttempt from "../pages/student/QuizAttempt";
+import ClientDeviceDetails from "../pages/client/ClientDeviceDetails";
 
 import Users from "../pages/admin/user";
 
@@ -51,6 +52,7 @@ export default function AppRoutes() {
         <Route path="/courses/:courseId" element={<CourseStudy/>} />
         <Route path="/admin/courses/:courseId/aulas" element={<ManageCourseLessons />}/>
         <Route path="/Dashboard" element={<AdminDashboard/>}/>
+        <Route path="/devices/:deviceId" element={<ClientDeviceDetails />} />
         
         </Route>
 

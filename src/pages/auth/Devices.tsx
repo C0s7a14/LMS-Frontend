@@ -326,42 +326,42 @@ export default function Device() {
                   )}
 
                   <div className="border-t border-gray-200 dark:border-white/10 mt-5 pt-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3 text-blue-500 dark:text-blue-400">
-                      <BookOpen size={24} />
+                  <div className="flex items-center gap-3 text-blue-500 dark:text-blue-400">
+                    <BookOpen size={24} />
 
-                      <span className="text-gray-500 dark:text-gray-400 font-medium">
-                        {isClient ? "Abrir suporte IA" : "Ver cursos"}
-                      </span>
-                    </div>
+                    <span className="text-gray-500 dark:text-gray-400 font-medium">
+                      {isClient ? "Acessar dispositivo" : "Ver cursos"}
+                    </span>
+                  </div>
 
-                    <button
-                     onClick={() => {
+                  <button
+                    onClick={() => {
                       if (isClient) {
-                        navigate("/support");
+                        navigate(`/devices/${device.id}`);
                         return;
                       }
 
                       navigate(`/devices/${device.id}/courses`);
                     }}
-                        className="
-                        w-12
-                        h-12
-                        rounded-xl
-                        bg-blue-500/20
-                        text-blue-500
-                        dark:text-blue-400
-                        flex
-                        items-center
-                        justify-center
-                        hover:bg-blue-500
-                        hover:text-white
-                        transition-all
-                        cursor-pointer
-                      "
-                    >
-                      <ArrowRight size={24} />
-                    </button>
-                  </div>
+                    className="
+                      w-12
+                      h-12
+                      rounded-xl
+                      bg-blue-500/20
+                      text-blue-500
+                      dark:text-blue-400
+                      flex
+                      items-center
+                      justify-center
+                      hover:bg-blue-500
+                      hover:text-white
+                      transition-all
+                      cursor-pointer
+                    "
+                  >
+                    <ArrowRight size={24} />
+                  </button>
+                </div>
                 </div>
               </div>
             ))}
