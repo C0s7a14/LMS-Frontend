@@ -117,6 +117,91 @@ interface GeneratedCourseType {
   modulos: GeneratedModuloType[];
 }
 
+type AdminQuizTipo = "aula" | "modulo" | "prova_final";
+type AdminQuizStatus = "rascunho" | "publicado";
+
+interface AdminQuizType {
+  id: number;
+  curso_id: number;
+  modulo_id: number | null;
+  aula_id: number | null;
+  titulo: string;
+  tipo: AdminQuizTipo;
+  nota_minima: number | string;
+  max_tentativas: number | string;
+  questoes_por_tentativa?: number | string;
+  sorteio_ativo?: boolean | number;
+  status: AdminQuizStatus;
+  criado_em: string;
+  total_questoes: number | string;
+}
+
+interface QuizOptionFormType {
+  texto_opcao: string;
+  correta: boolean;
+}
+
+interface QuizQuestionFormType {
+  pergunta: string;
+  explicacao: string;
+  ordem: string;
+  opcoes: QuizOptionFormType[];
+}
+
+interface QuizFormType {
+  titulo: string;
+  tipo: AdminQuizTipo;
+  modulo_id: number | "";
+  aula_id: number | "";
+  nota_minima: string;
+  max_tentativas: string;
+  questoes_por_tentativa: string;
+  sorteio_ativo: boolean;
+  status: AdminQuizStatus;
+  questoes: QuizQuestionFormType[];
+}
+
+function createEmptyQuizQuestion(ordem = 1): QuizQuestionFormType {
+  return {
+    pergunta: "",
+    explicacao: "",
+    ordem: String(ordem),
+    opcoes: [
+      {
+        texto_opcao: "",
+        correta: true,
+      },
+      {
+        texto_opcao: "",
+        correta: false,
+      },
+      {
+        texto_opcao: "",
+        correta: false,
+      },
+      {
+        texto_opcao: "",
+        correta: false,
+      },
+    ],
+  };
+}
+
+const emptyQuizForm: QuizFormType = {
+  titulo: "",
+  tipo: "modulo",
+  modulo_id: "",
+  aula_id: "",
+  nota_minima: "70",
+  max_tentativas: "3",
+  questoes_por_tentativa: "5",
+  sorteio_ativo: true,
+  status: "rascunho",
+  questoes: [createEmptyQuizQuestion(1)],
+};
+
+
+
 export default function ManageCourseLessons() {
   const { courseId } = useParams();
   const navigate = useNavigate();
@@ -146,6 +231,17 @@ export default function ManageCourseLessons() {
   const [generatingWithAi, setGeneratingWithAi] = useState(false);
   const [applyingGeneratedCourse, setApplyingGeneratedCourse] =
     useState(false);
+
+
+  const [quizzes, setQuizzes] = useState<AdminQuizType[]>([]);
+  const [loadingQuizzes, setLoadingQuizzes] = useState(false);
+  const [quizModalOpen, setQuizModalOpen] = useState(false);
+  const [selectedQuiz, setSelectedQuiz] = useState<AdminQuizType | null>(null);
+  const [quizForm, setQuizForm] = useState<QuizFormType>(emptyQuizForm);
+  const [loadingQuizDetails, setLoadingQuizDetails] = useState(false);
+  const [savingQuiz, setSavingQuiz] = useState(false);
+  const [deletingQuizId, setDeletingQuizId] = useState<number | null>(null);
+
 
   const [replaceExistingContent, setReplaceExistingContent] =
     useState(false);
@@ -270,9 +366,9 @@ async function handleApplyGeneratedCourse() {
   }
 
   useEffect(() => {
-    loadCourseContent();
-  }, [courseId]);
-
+  loadCourseContent();
+  loadCourseQuizzes();
+}, [courseId]);
   function updateForm(field: keyof AulaFormType, value: string) {
     setForm((prev) => ({
       ...prev,
@@ -294,6 +390,355 @@ async function handleApplyGeneratedCourse() {
     moduloId,
     ordem: String(nextOrder),
   });
+}
+
+async function loadCourseQuizzes() {
+  if (!courseId) {
+    return;
+  }
+
+  try {
+    setLoadingQuizzes(true);
+
+    const response = await api.get<AdminQuizType[]>(
+      `/courses/${courseId}/quizzes`
+    );
+
+    setQuizzes(response.data);
+  } catch (error) {
+    console.log(error);
+    toast.error("Erro ao carregar avaliações do curso");
+  } finally {
+    setLoadingQuizzes(false);
+  }
+}
+
+function normalizeBoolean(value: unknown) {
+  return value === true || value === 1 || value === "1";
+}
+
+function handleCloseQuizModal() {
+  if (savingQuiz || loadingQuizDetails) {
+    return;
+  }
+
+  setQuizModalOpen(false);
+  setSelectedQuiz(null);
+  setQuizForm(emptyQuizForm);
+}
+
+function openCreateFinalExamModal() {
+  setSelectedQuiz(null);
+
+  setQuizForm({
+    ...emptyQuizForm,
+    titulo: `Prova Final - ${course?.titulo || "Curso"}`,
+    tipo: "prova_final",
+    modulo_id: "",
+    aula_id: "",
+    status: "rascunho",
+  });
+
+  setQuizModalOpen(true);
+}
+
+function openCreateModuleQuizModal(modulo: ModuloType) {
+  setSelectedQuiz(null);
+
+  setQuizForm({
+    ...emptyQuizForm,
+    titulo: `Quiz do módulo - ${modulo.titulo}`,
+    tipo: "modulo",
+    modulo_id: modulo.id,
+    aula_id: "",
+    status: "rascunho",
+  });
+
+  setQuizModalOpen(true);
+}
+
+async function openEditQuizModal(quiz: AdminQuizType) {
+  try {
+    setSelectedQuiz(quiz);
+    setQuizModalOpen(true);
+    setLoadingQuizDetails(true);
+
+    const response = await api.get(`/quizzes/${quiz.id}`);
+
+    const quizDetails = response.data;
+
+    setQuizForm({
+      titulo: quizDetails.titulo || "",
+      tipo: quizDetails.tipo || "modulo",
+      modulo_id: quizDetails.modulo_id || "",
+      aula_id: quizDetails.aula_id || "",
+      nota_minima: String(quizDetails.nota_minima || 70),
+      max_tentativas: String(quizDetails.max_tentativas || 3),
+      questoes_por_tentativa: String(
+        quizDetails.questoes_por_tentativa ||
+          quizDetails.questoes?.length ||
+          5
+      ),
+      sorteio_ativo: normalizeBoolean(quizDetails.sorteio_ativo),
+      status: quizDetails.status || "rascunho",
+      questoes:
+        quizDetails.questoes?.length > 0
+          ? quizDetails.questoes.map((questao: any, index: number) => ({
+              pergunta: questao.pergunta || "",
+              explicacao: questao.explicacao || "",
+              ordem: String(questao.ordem || index + 1),
+              opcoes:
+                questao.opcoes?.length > 0
+                  ? questao.opcoes.map((opcao: any) => ({
+                      texto_opcao: opcao.texto_opcao || "",
+                      correta: normalizeBoolean(opcao.correta),
+                    }))
+                  : createEmptyQuizQuestion(index + 1).opcoes,
+            }))
+          : [createEmptyQuizQuestion(1)],
+    });
+  } catch (error: any) {
+    console.log(error);
+
+    toast.error(
+      error.response?.data?.error ||
+        error.response?.data?.message ||
+        "Erro ao carregar quiz"
+    );
+
+    setQuizModalOpen(false);
+    setSelectedQuiz(null);
+  } finally {
+    setLoadingQuizDetails(false);
+  }
+}
+
+function updateQuizForm(field: keyof QuizFormType, value: any) {
+  setQuizForm((prev) => ({
+    ...prev,
+    [field]: value,
+  }));
+}
+
+function updateQuizQuestion(
+  questionIndex: number,
+  field: keyof QuizQuestionFormType,
+  value: string
+) {
+  setQuizForm((prev) => ({
+    ...prev,
+    questoes: prev.questoes.map((questao, index) =>
+      index === questionIndex
+        ? {
+            ...questao,
+            [field]: value,
+          }
+        : questao
+    ),
+  }));
+}
+
+function updateQuizOption(
+  questionIndex: number,
+  optionIndex: number,
+  value: string
+) {
+  setQuizForm((prev) => ({
+    ...prev,
+    questoes: prev.questoes.map((questao, qIndex) =>
+      qIndex === questionIndex
+        ? {
+            ...questao,
+            opcoes: questao.opcoes.map((opcao, oIndex) =>
+              oIndex === optionIndex
+                ? {
+                    ...opcao,
+                    texto_opcao: value,
+                  }
+                : opcao
+            ),
+          }
+        : questao
+    ),
+  }));
+}
+
+function markCorrectOption(questionIndex: number, optionIndex: number) {
+  setQuizForm((prev) => ({
+    ...prev,
+    questoes: prev.questoes.map((questao, qIndex) =>
+      qIndex === questionIndex
+        ? {
+            ...questao,
+            opcoes: questao.opcoes.map((opcao, oIndex) => ({
+              ...opcao,
+              correta: oIndex === optionIndex,
+            })),
+          }
+        : questao
+    ),
+  }));
+}
+
+function addQuizQuestion() {
+  setQuizForm((prev) => ({
+    ...prev,
+    questoes: [
+      ...prev.questoes,
+      createEmptyQuizQuestion(prev.questoes.length + 1),
+    ],
+  }));
+}
+
+function removeQuizQuestion(questionIndex: number) {
+  setQuizForm((prev) => {
+    if (prev.questoes.length <= 1) {
+      toast.error("O quiz precisa ter pelo menos uma questão.");
+      return prev;
+    }
+
+    return {
+      ...prev,
+      questoes: prev.questoes
+        .filter((_, index) => index !== questionIndex)
+        .map((questao, index) => ({
+          ...questao,
+          ordem: String(index + 1),
+        })),
+    };
+  });
+}
+
+async function handleSaveQuiz() {
+  if (!courseId) {
+    toast.error("Curso não encontrado.");
+    return;
+  }
+
+  if (!quizForm.titulo.trim()) {
+    toast.error("Informe o título do quiz.");
+    return;
+  }
+
+  if (quizForm.tipo === "modulo" && !quizForm.modulo_id) {
+    toast.error("Selecione o módulo do quiz.");
+    return;
+  }
+
+  if (quizForm.questoes.length === 0) {
+    toast.error("O quiz precisa ter pelo menos uma questão.");
+    return;
+  }
+
+  for (const questao of quizForm.questoes) {
+    if (!questao.pergunta.trim()) {
+      toast.error("Todas as questões precisam ter pergunta.");
+      return;
+    }
+
+    const filledOptions = questao.opcoes.filter((opcao) =>
+      opcao.texto_opcao.trim()
+    );
+
+    if (filledOptions.length < 2) {
+      toast.error("Cada questão precisa ter pelo menos duas alternativas.");
+      return;
+    }
+
+    const correctOptions = questao.opcoes.filter(
+      (opcao) => opcao.correta && opcao.texto_opcao.trim()
+    );
+
+    if (correctOptions.length !== 1) {
+      toast.error("Cada questão precisa ter exatamente uma alternativa correta.");
+      return;
+    }
+  }
+
+  try {
+    setSavingQuiz(true);
+
+    const payload = {
+      curso_id: Number(courseId),
+      modulo_id:
+        quizForm.tipo === "modulo" ? Number(quizForm.modulo_id) : null,
+      aula_id: quizForm.tipo === "aula" ? Number(quizForm.aula_id) : null,
+      titulo: quizForm.titulo,
+      tipo: quizForm.tipo,
+      nota_minima: Number(quizForm.nota_minima || 70),
+      max_tentativas: Number(quizForm.max_tentativas || 3),
+      questoes_por_tentativa: Number(
+        quizForm.questoes_por_tentativa || quizForm.questoes.length
+      ),
+      sorteio_ativo: quizForm.sorteio_ativo,
+      status: quizForm.status,
+      questoes: quizForm.questoes.map((questao, index) => ({
+        pergunta: questao.pergunta,
+        explicacao: questao.explicacao,
+        ordem: Number(questao.ordem || index + 1),
+        opcoes: questao.opcoes
+          .filter((opcao) => opcao.texto_opcao.trim())
+          .map((opcao) => ({
+            texto_opcao: opcao.texto_opcao,
+            correta: opcao.correta,
+          })),
+      })),
+    };
+
+    if (selectedQuiz) {
+      await api.put(`/quizzes/${selectedQuiz.id}`, payload);
+      toast.success("Quiz atualizado com sucesso.");
+    } else {
+      await api.post("/quizzes", payload);
+      toast.success("Quiz criado com sucesso.");
+    }
+
+    setQuizModalOpen(false);
+    setSelectedQuiz(null);
+    setQuizForm(emptyQuizForm);
+
+    await loadCourseQuizzes();
+  } catch (error: any) {
+    console.log(error);
+
+    toast.error(
+      error.response?.data?.error ||
+        error.response?.data?.message ||
+        "Erro ao salvar quiz."
+    );
+  } finally {
+    setSavingQuiz(false);
+  }
+}
+
+async function handleDeleteQuiz(quiz: AdminQuizType) {
+  const confirmDelete = window.confirm(
+    `Tem certeza que deseja excluir o quiz "${quiz.titulo}"?`
+  );
+
+  if (!confirmDelete) {
+    return;
+  }
+
+  try {
+    setDeletingQuizId(quiz.id);
+
+    await api.delete(`/quizzes/${quiz.id}`);
+
+    toast.success("Quiz excluído com sucesso.");
+
+    await loadCourseQuizzes();
+  } catch (error: any) {
+    console.log(error);
+
+    toast.error(
+      error.response?.data?.error ||
+        error.response?.data?.message ||
+        "Erro ao excluir quiz."
+    );
+  } finally {
+    setDeletingQuizId(null);
+  }
 }
 
   function handleEditAula(aula: AulaType) {
@@ -567,6 +1012,134 @@ function handleDeleteModulo(modulo: ModuloType) {
   </div>
 </header>
 
+    <section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl dark:shadow-sm dark:shadow-blue-500/30">
+  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-5">
+    <div>
+      <h2 className="text-xl font-bold text-[#080E2F] dark:text-white">
+        Avaliações do curso
+      </h2>
+
+      <p className="text-gray-500 dark:text-gray-400 mt-1">
+        Quizzes de módulo e prova final vinculados a este curso.
+      </p>
+    </div>
+
+    <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+  <button
+    type="button"
+    onClick={openCreateFinalExamModal}
+    className="rounded-2xl bg-blue-500 px-5 py-3 font-semibold text-white hover:bg-blue-600 transition-all flex items-center justify-center gap-2"
+  >
+    <Plus size={18} />
+    Nova prova final
+  </button>
+
+  <span className="w-fit rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 px-4 py-2 text-sm font-bold">
+    {quizzes.length} avaliação(ões)
+  </span>
+</div>
+  </div>
+
+  {loadingQuizzes ? (
+    <div className="rounded-2xl bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 p-5 text-gray-500 dark:text-gray-400">
+      Carregando avaliações...
+    </div>
+  ) : quizzes.length === 0 ? (
+    <div className="rounded-2xl bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 p-5 text-gray-500 dark:text-gray-400">
+      Nenhuma avaliação cadastrada para este curso.
+    </div>
+  ) : (
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      {quizzes.map((quiz) => (
+        <div
+          key={quiz.id}
+          className="rounded-2xl bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 p-5"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="font-bold text-[#080E2F] dark:text-white">
+                {quiz.titulo}
+              </h3>
+
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                {quiz.tipo === "prova_final"
+                  ? "Prova final"
+                  : quiz.tipo === "modulo"
+                  ? "Quiz de módulo"
+                  : "Quiz de aula"}
+              </p>
+            </div>
+
+            <span
+              className={`
+                rounded-full px-3 py-1 text-xs font-bold
+                ${
+                  quiz.status === "publicado"
+                    ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                    : "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400"
+                }
+              `}
+            >
+              {quiz.status}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 mt-4 text-sm">
+            <div className="rounded-xl bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 p-3">
+              <p className="text-gray-500 dark:text-gray-400">Questões</p>
+              <strong className="text-[#080E2F] dark:text-white">
+                {quiz.total_questoes}
+              </strong>
+            </div>
+
+            <div className="rounded-xl bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 p-3">
+              <p className="text-gray-500 dark:text-gray-400">Nota mínima</p>
+              <strong className="text-[#080E2F] dark:text-white">
+                {quiz.nota_minima}%
+              </strong>
+            </div>
+
+            <div className="rounded-xl bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 p-3">
+              <p className="text-gray-500 dark:text-gray-400">Tentativas</p>
+              <strong className="text-[#080E2F] dark:text-white">
+                {quiz.max_tentativas}
+              </strong>
+            </div>
+
+            <div className="rounded-xl bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 p-3">
+              <p className="text-gray-500 dark:text-gray-400">Sorteio</p>
+              <strong className="text-[#080E2F] dark:text-white">
+                {Number(quiz.sorteio_ativo) === 1 ? "Sim" : "Não"}
+              </strong>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-2 mt-4">
+            <button
+              type="button"
+              onClick={() => openEditQuizModal(quiz)}
+              className="flex-1 rounded-2xl bg-blue-500/10 px-4 py-3 font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 transition-all flex items-center justify-center gap-2"
+            >
+              <Edit size={18} />
+              Editar
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleDeleteQuiz(quiz)}
+              disabled={deletingQuizId === quiz.id}
+              className="flex-1 rounded-2xl bg-red-500/10 px-4 py-3 font-semibold text-red-500 hover:bg-red-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <Trash2 size={18} />
+              {deletingQuizId === quiz.id ? "Excluindo..." : "Excluir"}
+            </button>
+          </div>
+                    </div>
+                ))}
+              </div>
+            )}
+          </section>
+
         <div className="grid grid-cols-1 xl:grid-cols-[1fr_480px] gap-6">
          
           {/* Lista de módulos e aulas */}
@@ -695,37 +1268,44 @@ function handleDeleteModulo(modulo: ModuloType) {
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => handleNewAula(modulo.id)}
-              className="bg-blue-500 hover:bg-blue-600 text-white rounded-2xl px-4 py-3 font-semibold flex items-center justify-center gap-2 transition-all"
-            >
-              <Plus size={18} />
-              Aula
-            </button>
+         <div className="flex flex-wrap gap-2">
+  <button
+    type="button"
+    onClick={() => handleNewAula(modulo.id)}
+    className="bg-blue-500 hover:bg-blue-600 text-white rounded-2xl px-4 py-3 font-semibold flex items-center justify-center gap-2 transition-all"
+  >
+    <Plus size={18} />
+    Aula
+  </button>
 
-            <button
-              type="button"
-              onClick={() => handleEditModulo(modulo)}
-              className="bg-blue-500/10 text-blue-500 dark:text-blue-400 rounded-2xl px-4 py-3 font-semibold flex items-center justify-center gap-2 hover:bg-blue-500/20 transition-all"
-            >
-              <Edit size={18} />
-              Editar
-            </button>
+  <button
+    type="button"
+    onClick={() => openCreateModuleQuizModal(modulo)}
+    className="bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-2xl px-4 py-3 font-semibold flex items-center justify-center gap-2 hover:bg-purple-500/20 transition-all"
+  >
+    <Brain size={18} />
+    Quiz
+  </button>
 
-            <button
-              type="button"
-              onClick={() => handleDeleteModulo(modulo)}
-              disabled={deletingModuloId === modulo.id}
-              className="bg-red-500/10 text-red-500 rounded-2xl px-4 py-3 font-semibold flex items-center justify-center gap-2 hover:bg-red-500/20 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              <Trash2 size={18} />
-              {deletingModuloId === modulo.id
-                ? "Excluindo..."
-                : "Excluir"}
-            </button>
-          </div>
+  <button
+    type="button"
+    onClick={() => handleEditModulo(modulo)}
+    className="bg-blue-500/10 text-blue-500 dark:text-blue-400 rounded-2xl px-4 py-3 font-semibold flex items-center justify-center gap-2 hover:bg-blue-500/20 transition-all"
+  >
+    <Edit size={18} />
+    Editar
+  </button>
+
+  <button
+    type="button"
+    onClick={() => handleDeleteModulo(modulo)}
+    disabled={deletingModuloId === modulo.id}
+    className="bg-red-500/10 text-red-500 rounded-2xl px-4 py-3 font-semibold flex items-center justify-center gap-2 hover:bg-red-500/20 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+  >
+    <Trash2 size={18} />
+    {deletingModuloId === modulo.id ? "Excluindo..." : "Excluir"}
+  </button>
+</div>
         </div>
 
         {modulo.aulas.length === 0 ? (
@@ -1021,6 +1601,328 @@ function handleDeleteModulo(modulo: ModuloType) {
         </div>
       </div>
       
+
+
+      {quizModalOpen && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
+    <div className="w-full max-w-5xl max-h-[92vh] overflow-y-auto rounded-3xl bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 shadow-2xl">
+      <div className="sticky top-0 z-10 bg-white/95 dark:bg-[#091a2c]/95 backdrop-blur-xl border-b border-gray-200 dark:border-white/10 p-6 rounded-t-3xl">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-[#080E2F] dark:text-white">
+              {selectedQuiz ? "Editar avaliação" : "Nova avaliação"}
+            </h2>
+
+            <p className="text-gray-500 dark:text-gray-400 mt-1">
+              Configure o quiz, as perguntas e as alternativas corretas.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleCloseQuizModal}
+            disabled={savingQuiz || loadingQuizDetails}
+            className="w-11 h-11 rounded-2xl border border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-300 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-white/5 transition-all disabled:opacity-60"
+          >
+            <X size={24} />
+          </button>
+        </div>
+      </div>
+
+      {loadingQuizDetails ? (
+        <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+          Carregando dados do quiz...
+        </div>
+      ) : (
+        <div className="p-6 space-y-6">
+          <section className="rounded-3xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#0d2238] p-5">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="lg:col-span-2">
+                <label className="block text-sm font-semibold text-[#080E2F] dark:text-white mb-2">
+                  Título
+                </label>
+
+                <input
+                  value={quizForm.titulo}
+                  onChange={(event) =>
+                    updateQuizForm("titulo", event.target.value)
+                  }
+                  className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#091a2c] px-4 py-3 text-[#080E2F] dark:text-white outline-none focus:border-blue-500"
+                  placeholder="Ex: Quiz do módulo - Introdução"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-[#080E2F] dark:text-white mb-2">
+                  Tipo
+                </label>
+
+                <select
+                  value={quizForm.tipo}
+                  onChange={(event) =>
+                    updateQuizForm(
+                      "tipo",
+                      event.target.value as AdminQuizTipo
+                    )
+                  }
+                  disabled={!!selectedQuiz}
+                  className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#091a2c] px-4 py-3 text-[#080E2F] dark:text-white outline-none focus:border-blue-500 disabled:opacity-70"
+                >
+                  <option value="modulo">Quiz de módulo</option>
+                  <option value="prova_final">Prova final</option>
+                </select>
+              </div>
+
+              {quizForm.tipo === "modulo" && (
+                <div>
+                  <label className="block text-sm font-semibold text-[#080E2F] dark:text-white mb-2">
+                    Módulo
+                  </label>
+
+                  <select
+                    value={quizForm.modulo_id}
+                    onChange={(event) =>
+                      updateQuizForm("modulo_id", Number(event.target.value))
+                    }
+                    disabled={!!selectedQuiz}
+                    className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#091a2c] px-4 py-3 text-[#080E2F] dark:text-white outline-none focus:border-blue-500 disabled:opacity-70"
+                  >
+                    <option value="">Selecione um módulo</option>
+
+                    {course.modulos.map((modulo) => (
+                      <option key={modulo.id} value={modulo.id}>
+                        {modulo.ordem}. {modulo.titulo}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-semibold text-[#080E2F] dark:text-white mb-2">
+                  Nota mínima (%)
+                </label>
+
+                <input
+                  type="number"
+                  value={quizForm.nota_minima}
+                  onChange={(event) =>
+                    updateQuizForm("nota_minima", event.target.value)
+                  }
+                  className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#091a2c] px-4 py-3 text-[#080E2F] dark:text-white outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-[#080E2F] dark:text-white mb-2">
+                  Máximo de tentativas
+                </label>
+
+                <input
+                  type="number"
+                  value={quizForm.max_tentativas}
+                  onChange={(event) =>
+                    updateQuizForm("max_tentativas", event.target.value)
+                  }
+                  className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#091a2c] px-4 py-3 text-[#080E2F] dark:text-white outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-[#080E2F] dark:text-white mb-2">
+                  Questões por tentativa
+                </label>
+
+                <input
+                  type="number"
+                  value={quizForm.questoes_por_tentativa}
+                  onChange={(event) =>
+                    updateQuizForm(
+                      "questoes_por_tentativa",
+                      event.target.value
+                    )
+                  }
+                  className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#091a2c] px-4 py-3 text-[#080E2F] dark:text-white outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-[#080E2F] dark:text-white mb-2">
+                  Status
+                </label>
+
+                <select
+                  value={quizForm.status}
+                  onChange={(event) =>
+                    updateQuizForm(
+                      "status",
+                      event.target.value as AdminQuizStatus
+                    )
+                  }
+                  className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#091a2c] px-4 py-3 text-[#080E2F] dark:text-white outline-none focus:border-blue-500"
+                >
+                  <option value="rascunho">Rascunho</option>
+                  <option value="publicado">Publicado</option>
+                </select>
+              </div>
+
+              <label className="lg:col-span-2 flex items-center gap-3 rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#091a2c] p-4 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={quizForm.sorteio_ativo}
+                  onChange={(event) =>
+                    updateQuizForm("sorteio_ativo", event.target.checked)
+                  }
+                  className="w-5 h-5 accent-blue-600"
+                />
+
+                <div>
+                  <p className="font-semibold text-[#080E2F] dark:text-white">
+                    Sortear questões por tentativa
+                  </p>
+
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Quando ativo, o aluno recebe questões aleatórias da base do
+                    quiz.
+                  </p>
+                </div>
+              </label>
+            </div>
+          </section>
+
+          <section className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <h3 className="text-xl font-bold text-[#080E2F] dark:text-white">
+                  Questões
+                </h3>
+
+                <p className="text-gray-500 dark:text-gray-400">
+                  Cada questão precisa ter uma alternativa correta.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={addQuizQuestion}
+                className="rounded-2xl bg-blue-500 px-5 py-3 font-semibold text-white hover:bg-blue-600 transition-all flex items-center justify-center gap-2"
+              >
+                <Plus size={18} />
+                Nova questão
+              </button>
+            </div>
+
+            {quizForm.questoes.map((questao, questionIndex) => (
+              <div
+                key={questionIndex}
+                className="rounded-3xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#0d2238] p-5"
+              >
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <h4 className="font-bold text-[#080E2F] dark:text-white">
+                    Questão {questionIndex + 1}
+                  </h4>
+
+                  <button
+                    type="button"
+                    onClick={() => removeQuizQuestion(questionIndex)}
+                    className="text-red-500 font-semibold hover:underline"
+                  >
+                    Remover
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <input
+                    value={questao.pergunta}
+                    onChange={(event) =>
+                      updateQuizQuestion(
+                        questionIndex,
+                        "pergunta",
+                        event.target.value
+                      )
+                    }
+                    className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#091a2c] px-4 py-3 text-[#080E2F] dark:text-white outline-none focus:border-blue-500"
+                    placeholder="Pergunta"
+                  />
+
+                  <textarea
+                    value={questao.explicacao}
+                    onChange={(event) =>
+                      updateQuizQuestion(
+                        questionIndex,
+                        "explicacao",
+                        event.target.value
+                      )
+                    }
+                    rows={2}
+                    className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#091a2c] px-4 py-3 text-[#080E2F] dark:text-white outline-none focus:border-blue-500 resize-none"
+                    placeholder="Explicação da resposta correta"
+                  />
+
+                  <div className="space-y-3">
+                    {questao.opcoes.map((opcao, optionIndex) => (
+                      <div
+                        key={optionIndex}
+                        className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-3 md:items-center"
+                      >
+                        <label className="flex items-center gap-2 text-sm font-semibold text-[#080E2F] dark:text-white">
+                          <input
+                            type="radio"
+                            checked={opcao.correta}
+                            onChange={() =>
+                              markCorrectOption(questionIndex, optionIndex)
+                            }
+                            className="w-5 h-5 accent-blue-600"
+                          />
+                          Correta
+                        </label>
+
+                        <input
+                          value={opcao.texto_opcao}
+                          onChange={(event) =>
+                            updateQuizOption(
+                              questionIndex,
+                              optionIndex,
+                              event.target.value
+                            )
+                          }
+                          className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#091a2c] px-4 py-3 text-[#080E2F] dark:text-white outline-none focus:border-blue-500"
+                          placeholder={`Alternativa ${optionIndex + 1}`}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </section>
+
+          <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={handleCloseQuizModal}
+              disabled={savingQuiz}
+              className="rounded-2xl border border-gray-200 dark:border-white/10 px-5 py-3 font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-all disabled:opacity-60"
+            >
+              Cancelar
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSaveQuiz}
+              disabled={savingQuiz}
+              className="rounded-2xl bg-blue-500 px-5 py-3 font-semibold text-white hover:bg-blue-600 transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              <Save size={20} />
+              {savingQuiz ? "Salvando..." : "Salvar avaliação"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  </div>
+)}
+
       {deleteTarget && (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
     <div className="w-full max-w-md rounded-3xl bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 p-6 shadow-2xl">
