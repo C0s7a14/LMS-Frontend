@@ -80,22 +80,20 @@ export default function Login() {
 
     navigate("/login");
     } catch (error) {
-      console.log(error);
+  if (axios.isAxiosError(error)) {
+    toast.error(
+      error.response?.data?.error ||
+        error.response?.data?.message ||
+        "Erro ao fazer login"
+    );
 
-      if (axios.isAxiosError(error)) {
-        toast.error(
-          error.response?.data?.error ||
-            error.response?.data?.message ||
-            "Erro ao fazer login"
-        );
+    return;
+  }
 
-        return;
-      }
-
-      toast.error("Erro inesperado ao fazer login");
-    } finally {
-      setLoading(false);
-    }
+  toast.error("Erro inesperado ao fazer login");
+} finally {
+  setLoading(false);
+}
   }
 
   return (
