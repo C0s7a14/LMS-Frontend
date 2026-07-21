@@ -28,6 +28,8 @@ interface DeviceType {
   descricao?: string;
   imagem_url?: string;
   criado_em?: string;
+  course_id?: number | null;
+  course_title?: string | null;
 }
 
 export default function Device() {
@@ -341,7 +343,12 @@ export default function Device() {
                         return;
                       }
 
-                      navigate(`/devices/${device.id}/courses`);
+                      if (device.course_id) {
+                        navigate(`/courses/${device.course_id}`);
+                        return;
+                      }
+
+                      navigate("/courses");
                     }}
                     className="
                       w-12
