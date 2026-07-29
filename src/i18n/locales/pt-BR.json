@@ -1,0 +1,50 @@
+{
+  "common": {
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "loading": "Carregando...",
+    "success": "Alterações salvas com sucesso.",
+    "error": "Ocorreu um erro."
+  },
+  "sidebar": {
+    "home": "Home",
+    "courses": "Cursos",
+    "myCourses": "Meus Cursos",
+    "certificates": "Certificados",
+    "settings": "Configurações",
+    "dashboard": "Dashboard",
+    "devices": "Dispositivos",
+    "support": "Suporte IA",
+    "logout": "Sair da Conta",
+    "darkMode": "Modo Escuro"
+  },
+  "settings": {
+    "title": "Configurações",
+    "subtitle": "Gerencie seus dados, preferências, segurança e notificações.",
+    "profile": "Perfil",
+    "profileData": "Dados do perfil",
+    "profileDescription": "Atualize suas informações pessoais.",
+    "security": "Segurança",
+    "preferences": "Preferências",
+    "language": "Idioma preferido",
+    "languageDescription": "Escolha o idioma principal da plataforma.",
+    "portuguese": "Português",
+    "english": "Inglês",
+    "spanish": "Espanhol",
+    "city": "Cidade",
+    "state": "Estado",
+    "country": "País",
+    "phone": "Telefone",
+    "company": "Empresa",
+    "saveChanges": "Salvar alterações"
+  },
+  "dashboard": {
+    "enrollments": "Matrículas",
+    "enrollmentRequests": "Solicitações de Matrícula",
+    "approve": "Aprovar",
+    "reject": "Rejeitar",
+    "pending": "Pendente",
+    "approved": "Aprovada",
+    "rejected": "Rejeitada"
+  }
+}

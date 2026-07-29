@@ -63,6 +63,7 @@ type AdminTab =
   | "courses"
   | "certificates"
   | "ai"
+  | "enrollments"
   | "reports";
 
  type MetricKey =
@@ -251,7 +252,30 @@ interface AdminReportsData {
   monthlyCertificates: AdminMonthlyCertificate[];
 }
 
+interface EnrollmentRequestType {
+  id: number;
+  user_id: number;
+  curso_id: number;
+  status: "pendente" | "aprovada" | "rejeitada" | "cancelada";
+  mensagem?: string | null;
+  motivo_resposta?: string | null;
+  respondido_por?: number | null;
+  respondido_em?: string | null;
+  criado_em?: string;
+  atualizado_em?: string;
 
+  aluno_nome: string;
+  aluno_email: string;
+
+  curso_titulo: string;
+  curso_descricao?: string | null;
+
+  dispositivo_nome?: string | null;
+  dispositivo_modelo?: string | null;
+  dispositivo_imagem_url?: string | null;
+
+  admin_nome?: string | null;
+}
 
 interface TabItem {
   id: AdminTab;
@@ -291,6 +315,11 @@ const tabs: TabItem[] = [
     icon: BotMessageSquare,
   },
   {
+  id: "enrollments",
+  label: "Matrículas",
+  icon: UserPlus,
+},
+  {
     id: "reports",
     label: "Relatórios",
     icon: BarChart3,
@@ -305,6 +334,7 @@ function isValidTab(tab: string | null): tab is AdminTab {
     tab === "courses" ||
     tab === "certificates" ||
     tab === "ai" ||
+    tab === "enrollments" ||
     tab === "reports"
   );
 }
@@ -327,6 +357,14 @@ export default function AdminDashboard() {
 const [users, setUsers] = useState<UserType[]>([]);
 const [courses, setCourses] = useState<CourseType[]>([]);
 const [devices, setDevices] = useState<DeviceType[]>([]);
+const [enrollmentRequests, setEnrollmentRequests] = useState<
+  EnrollmentRequestType[]
+>([]);
+
+const [updatingEnrollmentRequestId, setUpdatingEnrollmentRequestId] =
+  useState<number | null>(null);
+
+
 const [dashboardData, setDashboardData] = useState<AdminDashboardData | null>(
   null
 );
@@ -458,6 +496,7 @@ const [
   aiDevicesResponse,
   aiPromptsResponse,
   reportsResponse,
+  enrollmentRequestsResponse,
 ] = await Promise.all([
   axios.get<AdminDashboardData>(
     "http://localhost:3333/admin/dashboard",
@@ -498,6 +537,12 @@ const [
   "http://localhost:3333/admin/reports",
   config
 ),
+
+axios.get<EnrollmentRequestType[]>(
+  "http://localhost:3333/admin/enrollment-requests",
+  config
+),
+
 ]);
 
 setDashboardData(dashboardResponse.data);
@@ -508,6 +553,7 @@ setAiSummary(aiSummaryResponse.data);
 setAiDevices(aiDevicesResponse.data);
 setAiPrompts(aiPromptsResponse.data);
 setAdminReports(reportsResponse.data);
+setEnrollmentRequests(enrollmentRequestsResponse.data);
   } catch (error) {
     console.log(error);
 
@@ -579,14 +625,24 @@ setAdminReports(reportsResponse.data);
     }
 
      if (currentTab === "ai") {
-  return {
-    title: "IA Técnica",
-    subtitle:
-      "Configure a base de conhecimento do agente IA para responder dúvidas dos clientes sobre dispositivos Sirros.",
-    placeholder: "Buscar prompts, documentos ou dispositivos...",
-    button: "Novo Prompt",
-  };
-}
+      return {
+        title: "IA Técnica",
+        subtitle:
+          "Configure a base de conhecimento do agente IA para responder dúvidas dos clientes sobre dispositivos Sirros.",
+        placeholder: "Buscar prompts, documentos ou dispositivos...",
+        button: "Novo Prompt",
+      };
+    }
+
+        if (currentTab === "enrollments") {
+      return {
+        title: "Solicitações de Matrícula",
+        subtitle:
+          "Aprove ou rejeite pedidos de matrícula enviados pelos alunos.",
+        placeholder: "Buscar por aluno, curso ou dispositivo...",
+        button: "Atualizar lista",
+      };
+    }
 
     if (currentTab === "reports") {
       return {
@@ -632,6 +688,11 @@ setAdminReports(reportsResponse.data);
       openAiPromptModal(null);
       return;
     }
+
+    if (currentTab === "enrollments") {
+  loadDashboardData();
+  return;
+}
 
     if (currentTab === "reports") {
       toast.error("Exportação de relatório será conectada depois.");
@@ -839,6 +900,96 @@ async function handleSaveDeviceEdit() {
     toast.error("Erro inesperado ao atualizar dispositivo.");
   } finally {
     setSavingDeviceEdit(false);
+  }
+}
+
+async function handleApproveEnrollmentRequest(requestId: number) {
+  try {
+    setUpdatingEnrollmentRequestId(requestId);
+
+    const config = getAuthConfig();
+
+    if (!config) {
+      return;
+    }
+
+    const response = await axios.patch(
+      `http://localhost:3333/admin/enrollment-requests/${requestId}/approve`,
+      {},
+      config
+    );
+
+    toast.success(
+      response.data?.message || "Solicitação aprovada com sucesso."
+    );
+
+    await loadDashboardData();
+  } catch (error) {
+    console.log(error);
+
+    if (axios.isAxiosError(error)) {
+      toast.error(
+        error.response?.data?.error ||
+          error.response?.data?.message ||
+          "Erro ao aprovar solicitação."
+      );
+
+      return;
+    }
+
+    toast.error("Erro inesperado ao aprovar solicitação.");
+  } finally {
+    setUpdatingEnrollmentRequestId(null);
+  }
+}
+
+async function handleRejectEnrollmentRequest(requestId: number) {
+  const motivoResposta = window.prompt(
+    "Informe o motivo da rejeição. Você pode deixar em branco."
+  );
+
+  if (motivoResposta === null) {
+    return;
+  }
+
+  try {
+    setUpdatingEnrollmentRequestId(requestId);
+
+    const config = getAuthConfig();
+
+    if (!config) {
+      return;
+    }
+
+    const response = await axios.patch(
+      `http://localhost:3333/admin/enrollment-requests/${requestId}/reject`,
+      {
+        motivo_resposta: motivoResposta.trim() || null,
+      },
+      config
+    );
+
+    toast.success(
+      response.data?.message || "Solicitação rejeitada com sucesso."
+    );
+
+    await loadDashboardData();
+  } catch (error) {
+    console.log(error);
+
+    if (axios.isAxiosError(error)) {
+      toast.error(
+        error.response?.data?.error ||
+          error.response?.data?.message ||
+          "Erro ao rejeitar solicitação."
+      );
+
+      return;
+    }
+
+    toast.error("Erro inesperado ao rejeitar solicitação.");
+  } finally {
+    setUpdatingEnrollmentRequestId(null);
   }
 }
 
@@ -1446,8 +1597,8 @@ async function handleSaveAiPrompt() {
       </div>
 
       {/* Tabs internas */}
-      <div className="border-b border-gray-200 dark:border-white/10 overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
-        <div className="grid grid-cols-3 gap-2 sm:gap-6 min-w-max md:grid md:grid-cols-7">
+      <div className="border-b border-gray-200 dark:border-white/10 overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0 cursor-pointer">
+        <div className="grid grid-cols-3 gap-2 sm:gap-6 min-w-max md:grid md:grid-cols-8 cursor-pointer ">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = currentTab === tab.id;
@@ -1468,6 +1619,7 @@ async function handleSaveAiPrompt() {
                   text-sm
                   sm:text-base
                   whitespace-nowrap
+                  cursor-pointer
                   transition
                   ${
                     isActive
@@ -1485,7 +1637,7 @@ async function handleSaveAiPrompt() {
       </div>
 
       {loading ? (
-        <div className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-8 sm:p-10 text-center text-gray-500 dark:text-gray-400">
+        <div className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-8 sm:p-10 text-center text-gray-500 dark:text-gray-400 cursor-pointer">
           Carregando dashboard...
         </div>
       ) : (
@@ -1554,6 +1706,16 @@ async function handleSaveAiPrompt() {
             changeTab={changeTab}
             openDocumentsModal={openAiDocumentsModal}
             openPromptModal={openAiPromptModal}
+          />
+        )}
+
+        {currentTab === "enrollments" && (
+          <EnrollmentRequestsTab
+            requests={enrollmentRequests}
+            search={search}
+            updatingRequestId={updatingEnrollmentRequestId}
+            approveRequest={handleApproveEnrollmentRequest}
+            rejectRequest={handleRejectEnrollmentRequest}
           />
         )}
 
@@ -3933,6 +4095,261 @@ function CertificatesTab({
 }
 
 
+
+function EnrollmentRequestsTab({
+  requests,
+  search,
+  updatingRequestId,
+  approveRequest,
+  rejectRequest,
+}: {
+  requests: EnrollmentRequestType[];
+  search: string;
+  updatingRequestId: number | null;
+  approveRequest: (requestId: number) => void;
+  rejectRequest: (requestId: number) => void;
+}) {
+  const searchLower = search.toLowerCase();
+
+  const filteredRequests = requests.filter((request) => {
+    return (
+      request.aluno_nome?.toLowerCase().includes(searchLower) ||
+      request.aluno_email?.toLowerCase().includes(searchLower) ||
+      request.curso_titulo?.toLowerCase().includes(searchLower) ||
+      request.dispositivo_nome?.toLowerCase().includes(searchLower) ||
+      request.status?.toLowerCase().includes(searchLower)
+    );
+  });
+
+  const totalPendentes = requests.filter(
+    (request) => request.status === "pendente"
+  ).length;
+
+  const totalAprovadas = requests.filter(
+    (request) => request.status === "aprovada"
+  ).length;
+
+  const totalRejeitadas = requests.filter(
+    (request) => request.status === "rejeitada"
+  ).length;
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        <TableCard title="Pendentes" className="!shadow-XL hover:!shadow-2XL dark:!shadow-blue-500 dark:!shadow-sm">
+          <p className="text-3xl font-bold text-[#080E2F] dark:text-white ">
+            {totalPendentes}
+          </p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
+            Aguardando análise
+          </p>
+        </TableCard>
+
+        <TableCard title="Aprovadas" className="!shadow-XL hover:!shadow-2XL dark:!shadow-blue-500 dark:!shadow-sm">
+          <p className="text-3xl font-bold text-[#080E2F] dark:text-white ">
+            {totalAprovadas}
+          </p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
+            Matrículas liberadas
+          </p>
+        </TableCard>
+
+        <TableCard title="Rejeitadas"  className="!shadow-XL hover:!shadow-2XL dark:!shadow-blue-500 dark:!shadow-sm">
+          <p className="text-3xl font-bold text-[#080E2F] dark:text-white">
+            {totalRejeitadas}
+          </p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
+            Solicitações recusadas
+          </p>
+        </TableCard>
+      </div>
+
+      <TableCard title="Solicitações recebidas" className="!shadow-xl hover:!shadow-2xl dark:!shadow-sm dark:!shadow-blue-500" 
+  contentClassName="!overflow-visible">
+        {filteredRequests.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-gray-200 dark:border-white/10 p-8 text-center">
+            <h3 className="text-lg font-bold text-[#080E2F] dark:text-white">
+              Nenhuma solicitação encontrada
+            </h3>
+
+            <p className="text-gray-500 dark:text-gray-400 mt-2">
+              Quando um aluno solicitar matrícula, o pedido aparecerá aqui.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-6 py-2">
+            {filteredRequests.map((request) => {
+              const isUpdating = updatingRequestId === request.id;
+              const isPending = request.status === "pendente";
+
+              return (
+                <div
+                        key={request.id}
+                        className="
+                          relative
+                          rounded-3xl
+                          border
+                          border-gray-200
+                          dark:border-white/10
+                          bg-white
+                          dark:bg-[#0d2238]
+                          p-5
+                          shadow-2xl
+                          dark:shadow-blue-500
+                          dark:shadow-sm
+                          
+                        "
+                      >
+                  <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-5 ">
+                    <div className="flex gap-4">
+                      <div className="w-16 h-16 rounded-2xl bg-blue-500/10 flex items-center justify-center shrink-0 overflow-hidden">
+                        {request.dispositivo_imagem_url ? (
+                          <img
+                            src={request.dispositivo_imagem_url}
+                            alt={request.dispositivo_nome || "Dispositivo"}
+                            className="w-full h-full object-contain p-2"
+                          />
+                        ) : (
+                          <Cpu className="text-blue-500" size={30} />
+                        )}
+                      </div>
+
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="text-lg font-bold text-[#080E2F] dark:text-white">
+                            {request.curso_titulo}
+                          </h3>
+
+                          <EnrollmentStatusBadge status={request.status} />
+                        </div>
+
+                        <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
+                          Aluno:{" "}
+                          <strong className="text-[#080E2F] dark:text-white">
+                            {request.aluno_nome}
+                          </strong>{" "}
+                          • {request.aluno_email}
+                        </p>
+
+                        <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
+                          Dispositivo:{" "}
+                          {request.dispositivo_nome || "Não informado"}
+                        </p>
+
+                        {request.mensagem && (
+                          <p className="text-gray-600 dark:text-gray-300 text-sm mt-3">
+                            Mensagem: “{request.mensagem}”
+                          </p>
+                        )}
+
+                        {request.motivo_resposta && (
+                          <p className="text-red-500 text-sm mt-3">
+                            Motivo da rejeição: {request.motivo_resposta}
+                          </p>
+                        )}
+
+                        <p className="text-gray-400 dark:text-gray-500 text-xs mt-3">
+                          Solicitado em: {formatAdminDate(request.criado_em)}
+                          {request.respondido_em
+                            ? ` • Respondido em: ${formatAdminDate(
+                                request.respondido_em
+                              )}`
+                            : ""}
+                        </p>
+
+                        {request.admin_nome && (
+                          <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">
+                            Respondido por: {request.admin_nome}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row xl:flex-col gap-3 xl:min-w-[180px]">
+                      <button
+                        type="button"
+                        onClick={() => approveRequest(request.id)}
+                        disabled={!isPending || isUpdating}
+                        className="rounded-2xl bg-green-500 px-5 py-3 font-semibold text-white hover:bg-green-600 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer "
+                      >
+                        {isUpdating ? "Processando..." : "Aprovar"}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => rejectRequest(request.id)}
+                        disabled={!isPending || isUpdating}
+                        className="rounded-2xl bg-red-500 px-5 py-3 font-semibold text-white hover:bg-red-600 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                      >
+                        Rejeitar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </TableCard>
+    </div>
+  );
+}
+
+function EnrollmentStatusBadge({
+  status,
+}: {
+  status: EnrollmentRequestType["status"];
+}) {
+  const label =
+    status === "pendente"
+      ? "Pendente"
+      : status === "aprovada"
+      ? "Aprovada"
+      : status === "rejeitada"
+      ? "Rejeitada"
+      : "Cancelada";
+
+  const style =
+    status === "pendente"
+      ? "bg-yellow-500/15 text-yellow-600 dark:text-yellow-400"
+      : status === "aprovada"
+      ? "bg-green-500/15 text-green-600 dark:text-green-400"
+      : status === "rejeitada"
+      ? "bg-red-500/15 text-red-600 dark:text-red-400"
+      : "bg-gray-500/15 text-gray-600 dark:text-gray-400";
+
+  return (
+    <span
+      className={`
+        inline-flex
+        items-center
+        rounded-full
+        px-3
+        py-1
+        text-xs
+        font-bold
+        ${style}
+      `}
+    >
+      {label}
+    </span>
+  );
+}
+
+function formatAdminDate(date?: string | null) {
+  if (!date) {
+    return "Não informado";
+  }
+
+  return new Date(date).toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 function ReportsTab({
   reports,
   devices,
@@ -4350,10 +4767,12 @@ function TableCard({
   title,
   children,
   className = "",
+  contentClassName = "",
 }: {
   title: string;
   children: ReactNode;
   className?: string;
+  contentClassName?: string;
 }) {
   return (
     <div
@@ -4378,7 +4797,7 @@ function TableCard({
         {title}
       </h2>
 
-      <div className="overflow-x-auto scrollbar-hide ">
+      <div className={`overflow-x-auto scrollbar-hide ${contentClassName}`}>
         {children}
       </div>
     </div>

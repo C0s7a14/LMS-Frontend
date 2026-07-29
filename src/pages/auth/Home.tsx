@@ -16,10 +16,13 @@ import {
 } from "lucide-react";
 
 interface UserData {
-  id?: string;
+  id?: string | number;
   name?: string;
   email?: string;
   role?: "student" | "admin" | "client" | "aluno" | "adm" | "cliente";
+  conta_verificada?: boolean | number;
+  foto_url?: string | null;
+  idioma_preferido?: string | null;
 }
 
 interface StudentHomeResumo {
@@ -33,13 +36,14 @@ interface StudentHomeResumo {
 interface CursoEmAndamento {
   id: number;
   titulo: string;
-  descricao: string;
-  thumbnail?: string;
-  dispositivo_nome?: string;
+  descricao?: string;
+  thumbnail?: string | null;
+  dispositivo_nome?: string | null;
+  dispositivo_imagem_url?: string | null;
   total_aulas: number;
   aulas_concluidas: number;
   progresso: number;
-  curso_status: string;
+  curso_status?: string;
 }
 
 interface ProximaAula {
@@ -62,6 +66,8 @@ interface RevisaoPendente {
   status: string;
 }
 
+
+
 interface StudentHomeData {
   resumo: StudentHomeResumo;
   cursosEmAndamento: CursoEmAndamento[];
@@ -75,11 +81,12 @@ function getUserFromStorage(): UserData {
 
 export default function Home() {
   const navigate = useNavigate();
-  const user = getUserFromStorage();
+  const [user, setUser] = useState<UserData>(getUserFromStorage());
 
   const [homeData, setHomeData] = useState<StudentHomeData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+ const [myCourses, setMyCourses] = useState<CursoEmAndamento[]>([]);
 
   async function loadStudentHome() {
     try {
@@ -97,9 +104,65 @@ export default function Home() {
     }
   }
 
+  async function loadMyCourses() {
+  try {
+    const response = await api.get<CursoEmAndamento[]>("/student/my-courses");
+
+    setMyCourses(response.data);
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+  async function loadUserProfile() {
+  try {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      return;
+    }
+
+    const response = await api.get("/users/me/profile");
+
+    const profile = response.data;
+
+    const updatedUser = {
+      ...getUserFromStorage(),
+      name: profile.name,
+      email: profile.email,
+      role: profile.role,
+      foto_url: profile.foto_url,
+      conta_verificada: Boolean(profile.conta_verificada),
+      idioma_preferido: profile.idioma_preferido,
+    };
+
+    localStorage.setItem("user", JSON.stringify(updatedUser));
+    setUser(updatedUser);
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+
+
   useEffect(() => {
-    loadStudentHome();
-  }, []);
+  function syncUser() {
+    setUser(getUserFromStorage());
+  }
+
+  loadUserProfile();
+  loadStudentHome();
+  loadMyCourses();
+
+  window.addEventListener("user-profile-updated", syncUser);
+  window.addEventListener("storage", syncUser);
+
+  return () => {
+    window.removeEventListener("user-profile-updated", syncUser);
+    window.removeEventListener("storage", syncUser);
+  };
+}, []);
+
 
   if (loading) {
     return (
@@ -135,8 +198,16 @@ export default function Home() {
     );
   }
 
-  const { resumo, cursosEmAndamento, proximasAulas, revisoesPendentes } =
-    homeData;
+  const { resumo, proximasAulas, revisoesPendentes } = homeData;
+
+  const isVerified = Boolean(user?.conta_verificada);
+
+  const cursosMatriculados = myCourses;
+
+  const hasCoursesInProgress = cursosMatriculados.length > 0;
+
+  const visibleProximasAulas =
+    isVerified && hasCoursesInProgress ? proximasAulas : [];
 
   return (
     <div className="space-y-6">
@@ -157,7 +228,41 @@ export default function Home() {
         </div>
       </div>
 
+      {/*Usuario não verificado*/}
+
+      {!isVerified && (
+  <div className="bg-yellow-50 dark:bg-yellow-500/10 border border-yellow-200 dark:border-yellow-500/20 rounded-3xl p-5 md:p-6">
+    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex items-start gap-4">
+        <div className="w-12 h-12 rounded-2xl bg-yellow-500 flex items-center justify-center shrink-0">
+          <AlertTriangle className="text-white w-6 h-6" />
+        </div>
+
+        <div>
+          <h2 className="text-black dark:text-white text-lg md:text-xl font-bold">
+            Verifique sua conta para continuar
+          </h2>
+
+          <p className="text-gray-600 dark:text-gray-300 text-sm mt-1 max-w-3xl">
+            Complete seus dados de perfil em Configurações para liberar o acesso aos cursos,
+            matrículas, meus cursos e certificados.
+          </p>
+        </div>
+      </div>
+
+      <button
+        onClick={() => navigate("/settings")}
+        className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold px-5 py-3 rounded-xl transition cursor-pointer"
+      >
+        Verificar conta
+      </button>
+    </div>
+  </div>
+)}
+
       {/* Cards */}
+      {isVerified && (
+        <>
       <div
         className="
           grid
@@ -169,7 +274,7 @@ export default function Home() {
       >
         <StatsCard
           title="Cursos Disponíveis"
-          value={String(resumo.totalCursosMatriculados)}
+          value={String(resumo.totalCursosDisponiveis)}
           subtitle="Disponíveis"
           icon={BookOpen}
           iconColor="text-white"
@@ -203,9 +308,43 @@ export default function Home() {
           iconBg="bg-orange-500"
         />
       </div>
+       </>
+)}
+
+
+         {isVerified && !hasCoursesInProgress && (
+        <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-3xl p-5 md:p-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-blue-500 flex items-center justify-center shrink-0">
+                <BookOpen className="text-white w-6 h-6" />
+              </div>
+
+              <div>
+                <h2 className="text-black dark:text-white text-lg md:text-xl font-bold">
+                  Sua conta está verificada
+                </h2>
+
+                <p className="text-gray-600 dark:text-gray-300 text-sm mt-1 max-w-3xl">
+                  Agora você já pode visualizar os cursos disponíveis e solicitar matrícula.
+                  Suas aulas aparecerão aqui quando uma matrícula for aprovada.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => navigate("/devices")}
+              className="bg-blue-500 hover:bg-blue-600 text-white font-bold px-5 py-3 rounded-xl transition cursor-pointer"
+            >
+              Ver cursos disponíveis
+            </button>
+          </div>
+        </div>
+      )}
+
 
       {/* Revisões pendentes */}
-      {revisoesPendentes.length > 0 && (
+      {isVerified && revisoesPendentes.length > 0 && (
         <div className="bg-yellow-50 dark:bg-yellow-500/10 border border-yellow-200 dark:border-yellow-500/20 rounded-3xl p-4 md:p-5">
           <div className="flex items-start gap-3">
             <div className="w-11 h-11 rounded-2xl bg-yellow-500 flex items-center justify-center shrink-0">
@@ -253,6 +392,9 @@ export default function Home() {
         </div>
       )}
 
+
+      {isVerified && (
+      <>
       {/* Conteúdo */}
       <div
         className="
@@ -284,7 +426,7 @@ export default function Home() {
             </h2>
 
             <button
-              onClick={() => navigate("/courses")}
+              onClick={() => navigate("/my-courses")}
               className="text-blue-500 dark:text-blue-400 text-sm font-bold cursor-pointer hover:text-blue-300"
             >
               Ver todos
@@ -292,8 +434,8 @@ export default function Home() {
           </div>
 
           <div className="space-y-4">
-            {cursosEmAndamento.length > 0 ? (
-              cursosEmAndamento.map((course) => (
+            {cursosMatriculados.length > 0 ? (
+             cursosMatriculados.map((course) => (
                 <div
                   key={course.id}
                   onClick={() => navigate(`/courses/${course.id}`)}
@@ -320,7 +462,7 @@ export default function Home() {
                 </p>
 
                 <button
-                  onClick={() => navigate("/courses")}
+                  onClick={() => navigate("/devices")}
                   className="mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold px-5 py-2 rounded-xl transition cursor-pointer"
                 >
                   Ver cursos disponíveis
@@ -351,8 +493,8 @@ export default function Home() {
           </h2>
 
           <div className="space-y-4">
-            {proximasAulas.length > 0 ? (
-              proximasAulas.map((lesson) => (
+            {visibleProximasAulas.length > 0 ? (
+            visibleProximasAulas.map((lesson) => (
                 <div
                   key={lesson.aula_id}
                   onClick={() => navigate(`/courses/${lesson.curso_id}`)}
@@ -398,17 +540,21 @@ export default function Home() {
             ) : (
               <div className="bg-white dark:bg-[#0d2238] rounded-2xl p-6 border border-gray-200 dark:border-white/5 text-center">
                 <h3 className="text-black dark:text-white font-semibold">
-                  Nenhuma aula pendente
-                </h3>
+                {hasCoursesInProgress ? "Nenhuma aula pendente" : "Nenhuma aula disponível"}
+              </h3>
 
-                <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">
-                  Você não possui próximas aulas pendentes no momento.
-                </p>
+              <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">
+                {hasCoursesInProgress
+                  ? "Você não possui próximas aulas pendentes no momento."
+                  : "As próximas aulas aparecerão aqui quando sua matrícula for aprovada e você iniciar um curso."}
+              </p>
               </div>
             )}
           </div>
         </div>
       </div>
-    </div>
-  );
+    </>
+  )}
+</div>
+);
 }

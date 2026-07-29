@@ -1,4 +1,7 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
+import axios from "axios";
+import { api } from "../../services/api";
+import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 
 import {
@@ -30,7 +33,31 @@ interface UserData {
   role?: "student" | "client" | "admin";
 }
 
+interface UserProfile {
+  id: number;
+  user_id: number;
+  foto_url: string | null;
+  telefone: string | null;
+  cidade: string | null;
+  estado: string | null;
+  pais: string | null;
+  idioma_preferido: string | null;
+  empresa: string | null;
+  aceita_contato_profissional: number | boolean;
+  interesse_freelancer: number | boolean;
+  interesse_contratacao: number | boolean;
+  interesse_parceria: number | boolean;
+  conta_verificada: number | boolean;
+  verificado_em: string | null;
+  name: string;
+  email: string;
+  role: "student" | "client" | "admin";
+}
+
 export default function Settings() {
+
+  const { t, i18n } = useTranslation();
+
   const user: UserData = JSON.parse(
     localStorage.getItem("user") || "{}"
   );
@@ -39,6 +66,25 @@ export default function Settings() {
   const [email, setEmail] = useState(user?.email || "");
   const [phone, setPhone] = useState("");
   const [company, setCompany] = useState("Sirros Academy");
+  const [cidade, setCidade] = useState("");
+  const [estado, setEstado] = useState("");
+  const [pais, setPais] = useState("Brasil");
+  const [idiomaPreferido, setIdiomaPreferido] = useState("pt-BR");
+
+  const [aceitaContatoProfissional, setAceitaContatoProfissional] =
+    useState(false);
+
+  const [interesseFreelancer, setInteresseFreelancer] =
+    useState(false);
+
+  const [interesseContratacao, setInteresseContratacao] =
+    useState(false);
+
+  const [interesseParceria, setInteresseParceria] =
+    useState(false);
+
+  const [contaVerificada, setContaVerificada] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(true);
 
   const [appearance, setAppearance] =
     useState<AppearanceType>("system");
@@ -59,6 +105,7 @@ export default function Settings() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
 
+  
   function getRoleLabel(role?: UserData["role"]) {
     if (role === "admin") {
       return "Administrador";
@@ -84,38 +131,140 @@ export default function Settings() {
       .toUpperCase();
   }
 
-  async function handleSaveProfile(e: FormEvent) {
-    e.preventDefault();
-
-    if (!name.trim()) {
-      toast.error("O nome é obrigatório");
-      return;
-    }
-
-    if (!email.trim()) {
-      toast.error("O e-mail é obrigatório");
-      return;
-    }
-
+  useEffect(() => {
+  async function loadProfile() {
     try {
-      setSavingProfile(true);
+      setLoadingProfile(true);
+
+      const response = await api.get<UserProfile>("/users/me/profile");
+
+      const profile = response.data;
+
+      setName(profile.name || "");
+      setEmail(profile.email || "");
+      setPhone(profile.telefone || "");
+      setCompany(profile.empresa || "");
+      setCidade(profile.cidade || "");
+      setEstado(profile.estado || "");
+      setPais(profile.pais || "Brasil");
+
+      const profileLanguage = profile.idioma_preferido || "pt-BR";
+
+      setIdiomaPreferido(profileLanguage);
+      i18n.changeLanguage(profileLanguage);
+
+      setAceitaContatoProfissional(
+        Boolean(profile.aceita_contato_profissional)
+      );
+
+      setInteresseFreelancer(Boolean(profile.interesse_freelancer));
+      setInteresseContratacao(Boolean(profile.interesse_contratacao));
+      setInteresseParceria(Boolean(profile.interesse_parceria));
+      setContaVerificada(Boolean(profile.conta_verificada));
 
       const updatedUser = {
         ...user,
-        name,
-        email,
+        name: profile.name,
+        email: profile.email,
+        role: profile.role,
+        foto_url: profile.foto_url,
+        conta_verificada: Boolean(profile.conta_verificada),
+        idioma_preferido: profile.idioma_preferido,
       };
 
       localStorage.setItem("user", JSON.stringify(updatedUser));
-
-      toast.success("Configurações salvas com sucesso");
     } catch (error) {
       console.log(error);
-      toast.error("Erro ao salvar configurações");
+      toast.error("Erro ao carregar perfil");
     } finally {
-      setSavingProfile(false);
+      setLoadingProfile(false);
     }
   }
+
+  loadProfile();
+}, []);
+
+async function handleSaveProfile(e: FormEvent) {
+  e.preventDefault();
+
+  if (!phone.trim()) {
+    toast.error("O telefone é obrigatório para verificar a conta");
+    return;
+  }
+
+  if (!cidade.trim()) {
+    toast.error("A cidade é obrigatória para verificar a conta");
+    return;
+  }
+
+  if (!estado.trim()) {
+    toast.error("O estado é obrigatório para verificar a conta");
+    return;
+  }
+
+  if (!pais.trim()) {
+    toast.error("O país é obrigatório para verificar a conta");
+    return;
+  }
+
+  if (!idiomaPreferido.trim()) {
+    toast.error("O idioma preferido é obrigatório");
+    return;
+  }
+
+  try {
+    setSavingProfile(true);
+
+    const response = await api.patch("/users/me/profile", {
+      telefone: phone,
+      cidade,
+      estado,
+      pais,
+      idioma_preferido: idiomaPreferido,
+      empresa: company,
+      aceita_contato_profissional: aceitaContatoProfissional,
+      interesse_freelancer: interesseFreelancer,
+      interesse_contratacao: interesseContratacao,
+      interesse_parceria: interesseParceria,
+    });
+
+    const profile: UserProfile = response.data.profile;
+
+    setContaVerificada(Boolean(profile.conta_verificada));
+
+    const updatedUser = {
+      ...user,
+      name: profile.name,
+      email: profile.email,
+      role: profile.role,
+      foto_url: profile.foto_url,
+      conta_verificada: Boolean(profile.conta_verificada),
+      idioma_preferido: profile.idioma_preferido,
+    };
+
+   localStorage.setItem("user", JSON.stringify(updatedUser));
+
+    i18n.changeLanguage(profile.idioma_preferido || idiomaPreferido);
+
+    window.dispatchEvent(new Event("user-profile-updated"));
+
+    toast.success(response.data.message || "Perfil atualizado com sucesso");
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      toast.error(
+        error.response?.data?.error ||
+          error.response?.data?.message ||
+          "Erro ao salvar perfil"
+      );
+
+      return;
+    }
+
+    toast.error("Erro inesperado ao salvar perfil");
+  } finally {
+    setSavingProfile(false);
+  }
+}
 
   async function handleChangePassword(e: FormEvent) {
     e.preventDefault();
@@ -168,11 +317,11 @@ export default function Settings() {
             </div>
 
             <h1 className="text-3xl lg:text-4xl font-bold text-[#080E2F] dark:text-white">
-              Configurações
+             {t("settings.title")}
             </h1>
 
             <p className="text-gray-500 dark:text-gray-400 mt-2 text-base lg:text-lg">
-              Gerencie seus dados, preferências, segurança e notificações.
+              {t("settings.subtitle")}
             </p>
           </div>
 
@@ -206,11 +355,11 @@ export default function Settings() {
 
               <div>
                 <h2 className="text-xl font-bold text-[#080E2F] dark:text-white">
-                  Dados do perfil
+                  {t("settings.profileData")}
                 </h2>
 
                 <p className="text-gray-500 dark:text-gray-400 text-sm">
-                  Atualize suas informações pessoais.
+                  {t("settings.profileDescription")}
                 </p>
               </div>
             </div>
@@ -275,7 +424,102 @@ export default function Settings() {
                   onChange={setCompany}
                   placeholder="Digite a organização"
                 />
+
+                <InputField
+                label="Cidade"
+                icon={Building2}
+                type="text"
+                value={cidade}
+                onChange={setCidade}
+                placeholder="Digite sua cidade"
+              />
+
+              <InputField
+                label="Estado"
+                icon={Building2}
+                type="text"
+                value={estado}
+                onChange={setEstado}
+                placeholder="Ex: RS"
+              />
+
+              <InputField
+                label="País"
+                icon={Building2}
+                type="text"
+                value={pais}
+                onChange={setPais}
+                placeholder="Digite seu país"
+              />
+
+              <div className="flex flex-col gap-2">
+          <label className="text-sm font-semibold text-[#080E2F] dark:text-gray-300">
+            {t("settings.language")}
+          </label>
+
+          <div className="relative">
+            <UserRound
+              size={20}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500"
+            />
+
+          <div className="flex flex-col gap-2">
+          <label className="text-sm font-semibold text-[#080E2F] dark:text-gray-300">
+            {t("settings.language")}
+          </label>
+
+          <div className="relative">
+            <UserRound
+              size={20}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500"
+            />
+
+            <select
+              value={idiomaPreferido}
+              onChange={(event) => setIdiomaPreferido(event.target.value)}
+              className="w-full bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white rounded-2xl pl-12 pr-4 py-4 outline-none focus:border-blue-500 shadow-md shadow-slate-300/40 dark:shadow-sm dark:shadow-blue-500/30 transition-all"
+            >
+              <option value="pt-BR">{t("settings.portuguese")}</option>
+              <option value="en-US">{t("settings.english")}</option>
+              <option value="es-ES">{t("settings.spanish")}</option>
+            </select>
+          </div>
+        </div>
+        </div>
+      </div>
               </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <ToggleRow
+                title="Aceito contato profissional"
+                subtitle="Permitir que a Sirros entre em contato para oportunidades"
+                checked={aceitaContatoProfissional}
+                onChange={() =>
+                  setAceitaContatoProfissional(!aceitaContatoProfissional)
+                }
+              />
+
+              <ToggleRow
+                title="Interesse em freelancer"
+                subtitle="Tenho interesse em atuar como freelancer"
+                checked={interesseFreelancer}
+                onChange={() => setInteresseFreelancer(!interesseFreelancer)}
+              />
+
+              <ToggleRow
+                title="Interesse em contratação"
+                subtitle="Tenho interesse em oportunidades de contratação"
+                checked={interesseContratacao}
+                onChange={() => setInteresseContratacao(!interesseContratacao)}
+              />
+
+              <ToggleRow
+                title="Interesse em parceria"
+                subtitle="Tenho interesse em parcerias técnicas"
+                checked={interesseParceria}
+                onChange={() => setInteresseParceria(!interesseParceria)}
+              />
+            </div>
 
               <button
                 type="submit"
@@ -462,7 +706,9 @@ export default function Settings() {
                 </h2>
 
                 <p className="text-gray-500 dark:text-gray-400 text-sm">
-                  Sua conta está ativa.
+                  {contaVerificada
+                  ? "Sua conta está verificada."
+                  : "Complete seu perfil para liberar todos os recursos."}
                 </p>
               </div>
             </div>
@@ -483,9 +729,13 @@ export default function Settings() {
                   Segurança
                 </span>
 
-                <span className="text-green-500 font-semibold">
-                  Protegida
-                </span>
+                <span
+                className={`font-semibold ${
+                  contaVerificada ? "text-green-500" : "text-yellow-500"
+                }`}
+              >
+                {contaVerificada ? "Conta verificada" : "Pendente"}
+              </span>
               </div>
             </div>
 

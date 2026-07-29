@@ -1,0 +1,48 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "loading": "Loading...",
+    "success": "Changes saved successfully.",
+    "error": "An error occurred."
+  },
+  "sidebar": {
+    "home": "Home",
+    "courses": "Courses",
+    "myCourses": "My Courses",
+    "certificates": "Certificates",
+    "settings": "Settings",
+    "dashboard": "Dashboard",
+    "devices": "Devices",
+    "support": "AI Support",
+    "logout": "Log Out",
+    "darkMode": "Dark Mode"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Manage your personal information, preferences and account security.",
+    "profile": "Profile",
+    "security": "Security",
+    "preferences": "Preferences",
+    "language": "Preferred language",
+    "languageDescription": "Choose the main language of the platform.",
+    "portuguese": "Portuguese",
+    "english": "English",
+    "spanish": "Spanish",
+    "city": "City",
+    "state": "State",
+    "country": "Country",
+    "phone": "Phone",
+    "company": "Company",
+    "saveChanges": "Save changes"
+  },
+  "dashboard": {
+    "enrollments": "Enrollments",
+    "enrollmentRequests": "Enrollment Requests",
+    "approve": "Approve",
+    "reject": "Reject",
+    "pending": "Pending",
+    "approved": "Approved",
+    "rejected": "Rejected"
+  }
+}

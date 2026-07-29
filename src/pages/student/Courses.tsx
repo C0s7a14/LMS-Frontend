@@ -25,6 +25,11 @@ interface CourseType {
   criado_em?: string;
   criador?: string;
 
+  dispositivo_id?: number;
+  dispositivo_nome?: string;
+  dispositivo_modelo?: string | null;
+  dispositivo_imagem_url?: string | null;
+
   progresso?: number;
   aulas_concluidas?: number;
   total_aulas?: number;
@@ -52,7 +57,7 @@ export default function MyCourses() {
   try {
     setLoading(true);
 
-    const response = await api.get<CourseType[]>("/courses");
+    const response = await api.get<CourseType[]>("/student/my-courses");
 
     setCourses(response.data);
   } catch (error) {
@@ -84,6 +89,10 @@ export default function MyCourses() {
   function getCourseTag(course: CourseType) {
     return course.categoria || "Treinamento";
   }
+
+  function getCourseImage(course: CourseType) {
+  return course.thumbnail || course.dispositivo_imagem_url || "";
+}
 
   function getCourseStatusLabel(course: CourseType) {
   const progress = getCourseProgress(course);
@@ -142,7 +151,7 @@ function getCourseButtonLabel(course: CourseType) {
 
             <div className="mt-5 inline-flex items-center gap-2 bg-blue-500/10 text-blue-500 dark:text-blue-400 border border-blue-500/20 rounded-2xl px-5 py-2 font-medium">
               <Users size={20} />
-              {filteredCourses.length} cursos disponíveis
+              {filteredCourses.length} cursos matriculados
             </div>
           </div>
 
@@ -247,7 +256,7 @@ function getCourseButtonLabel(course: CourseType) {
             </h2>
 
             <p className="text-gray-500 dark:text-gray-400 mt-2">
-              Crie ou matricule-se em cursos para eles aparecerem aqui.
+              Quando sua matrícula for aprovada, seus cursos aparecerão aqui.
             </p>
           </div>
         )}
@@ -263,6 +272,7 @@ function getCourseButtonLabel(course: CourseType) {
           >
             {filteredCourses.map((course) => {
               const progress = getCourseProgress(course);
+              const courseImage = getCourseImage(course);
 
               return (
                 <div
@@ -303,13 +313,13 @@ function getCourseButtonLabel(course: CourseType) {
                       }
                     `}
                   >
-                    {course.thumbnail ? (
-                      <img
-                        src={course.thumbnail}
-                        alt={course.titulo}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
+                  {courseImage ? (
+                        <img
+                          src={courseImage}
+                          alt={course.titulo}
+                          className="w-full h-full object-contain p-6"
+                        />
+                      ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-transparent" />
 

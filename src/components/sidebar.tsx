@@ -5,13 +5,13 @@ import {
   Award,
   Settings,
   LogOut,
+  Lock,
   Menu,
   X,
   Moon,
   Sun,
   BotMessageSquare,
   Brain,
-
 } from "lucide-react";
 
 import type { LucideIcon } from "lucide-react";
@@ -21,11 +21,13 @@ import {
   useNavigate,
 } from "react-router-dom";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 
 import { motion, AnimatePresence } from "framer-motion";
 
 import axios from "axios";
+import { api } from "../services/api";
 
 import logo from "../assets/logo-preto.png";
 
@@ -45,6 +47,9 @@ interface UserData {
   name?: string;
   email?: string;
   role?: string;
+  foto_url?: string | null;
+  conta_verificada?: boolean | number;
+  idioma_preferido?: string | null;
 }
 
 function getUserFromStorage(): UserData {
@@ -82,9 +87,55 @@ export default function Sidebar() {
 
   const navigate = useNavigate();
 
-  const user = getUserFromStorage();
+ const [user, setUser] = useState<UserData>(getUserFromStorage());
+
+useEffect(() => {
+  function syncUser() {
+    setUser(getUserFromStorage());
+  }
+
+  async function loadProfile() {
+    try {
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        return;
+      }
+
+      const response = await api.get("/users/me/profile");
+
+      const profile = response.data;
+
+      const updatedUser = {
+        ...getUserFromStorage(),
+        name: profile.name,
+        email: profile.email,
+        role: profile.role,
+        foto_url: profile.foto_url,
+        conta_verificada: Boolean(profile.conta_verificada),
+        idioma_preferido: profile.idioma_preferido,
+      };
+
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+      setUser(updatedUser);
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  loadProfile();
+
+    window.addEventListener("user-profile-updated", syncUser);
+    window.addEventListener("storage", syncUser);
+
+    return () => {
+      window.removeEventListener("user-profile-updated", syncUser);
+      window.removeEventListener("storage", syncUser);
+    };
+  }, []);
 
   const role = normalizeRole(user?.role);
+  const isVerified = Boolean(user?.conta_verificada);
 
   async function handleLogout() {
     try {
@@ -215,6 +266,7 @@ const menuItems: MenuItem[] = [
           handleLogout={handleLogout}
           user={user}
           role={role}
+          isVerified={isVerified}
         />
       </aside>
 
@@ -290,12 +342,13 @@ const menuItems: MenuItem[] = [
                 <X size={24} />
               </button>
 
-              <SidebarContent
-                menuItems={visibleMenuItems}
-                handleLogout={handleLogout}
-                user={user}
-                role={role}
-              />
+             <SidebarContent
+              menuItems={visibleMenuItems}
+              handleLogout={handleLogout}
+              user={user}
+              role={role}
+              isVerified={isVerified}
+            />
             </motion.aside>
           </>
         )}
@@ -309,6 +362,7 @@ interface SidebarContentProps {
   handleLogout: () => void;
   user: UserData;
   role: UserRole;
+  isVerified: boolean;
 }
 
 function SidebarContent({
@@ -316,10 +370,27 @@ function SidebarContent({
   handleLogout,
   user,
   role,
+  isVerified,
 }: SidebarContentProps) {
   const { theme, toggleTheme } = useTheme();
 
   const isDark = theme === "dark";
+
+  function isBlockedItem(item: MenuItem) {
+  if (role !== "student") {
+    return false;
+  }
+
+  if (isVerified) {
+    return false;
+  }
+
+  return (
+    item.path === "/devices" ||
+    item.path === "/courses" ||
+    item.path === "/certificate"
+  );
+}
 
   return (
     <>
@@ -360,41 +431,84 @@ function SidebarContent({
         </div>
 
         {/* Menu */}
-        <nav className="space-y-3">
-          {menuItems.map((item, index) => {
-            const Icon = item.icon;
+      <nav className="space-y-3">
+  {menuItems.map((item, index) => {
+    const Icon = item.icon;
+    const blocked = isBlockedItem(item);
 
-            return (
-              <NavLink
-                key={index}
-                to={item.path}
-                className={({ isActive }) =>
-                  `
-                  w-full
-                  flex
-                  items-center
-                  gap-4
-                  px-4
-                  py-4
-                  rounded-2xl
-                  transition-all
-                  ${
-                    isActive
-                      ? "bg-blue-500 text-white"
-                      : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5"
-                  }
-                  `
-                }
-              >
-                <Icon size={22} />
+    const itemName =
+      role === "student" && item.path === "/devices"
+        ? "Cursos"
+        : item.name;
 
-                <span className="font-medium">
-                  {item.name}
-                </span>
-              </NavLink>
-            );
-          })}
-        </nav>
+    if (blocked) {
+      return (
+        <button
+          key={index}
+          type="button"
+          onClick={() =>
+            toast.error(
+              "Complete a verificação da sua conta em Configurações para acessar esta área."
+            )
+          }
+          className="
+            w-full
+            flex
+            items-center
+            gap-4
+            px-4
+            py-4
+            rounded-2xl
+            transition-all
+            text-gray-400
+            dark:text-gray-500
+            bg-gray-100/70
+            dark:bg-white/5
+            cursor-not-allowed
+          "
+        >
+          <Icon size={22} />
+
+          <span className="font-medium">
+            {itemName}
+          </span>
+
+          <Lock size={18} className="ml-auto" />
+        </button>
+      );
+    }
+
+    return (
+      <NavLink
+        key={index}
+        to={item.path}
+        className={({ isActive }) =>
+          `
+          w-full
+          flex
+          items-center
+          gap-4
+          px-4
+          py-4
+          rounded-2xl
+          transition-all
+          ${
+            isActive
+              ? "bg-blue-500 text-white"
+              : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5"
+          }
+          `
+        }
+      >
+        <Icon size={22} />
+
+        <span className="font-medium">
+          {itemName}
+        </span>
+      </NavLink>
+    );
+  })}
+</nav>
       </div>
 
       {/* Bottom */}
@@ -434,7 +548,7 @@ function SidebarContent({
             dark:shadow-blue-500
             dark:shadow-sm
             cursor-pointer
-            v
+            
           "
         >
           {isDark ? (
