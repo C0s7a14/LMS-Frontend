@@ -1778,10 +1778,11 @@ async function handleRevokeCertificate(certificateId: number) {
           )}
 
           {currentTab === "courses" && (
-      <CoursesTab
+          <CoursesTab
           courses={courses}
           search={search}
           dashboardData={dashboardData}
+          devices={devices}
           createCourse={() => navigate("/create-courses")}
           manageCourseLessons={(courseId) =>
             navigate(`/admin/courses/${courseId}/aulas`)
@@ -3396,6 +3397,7 @@ function CoursesTab({
   courses,
   search,
   dashboardData,
+  devices,
   createCourse,
   manageCourseLessons,
   deleteCourse,
@@ -3406,6 +3408,7 @@ function CoursesTab({
   courses: CourseType[];
   search: string;
   dashboardData: AdminDashboardData | null;
+  devices: DeviceType[];
   createCourse: () => void;
   manageCourseLessons: (courseId: number) => void;
   deleteCourse: (course: CourseType) => void;
@@ -3420,16 +3423,77 @@ function CoursesTab({
   const [selectedCourseActions, setSelectedCourseActions] =
   useState<CourseType | null>(null);
 
-  const filteredCourses = courses.filter((course) => {
-    const term = search.toLowerCase();
+const [selectedCourseForDevice, setSelectedCourseForDevice] =
+  useState<CourseType | null>(null);
 
-    return (
-      course.titulo?.toLowerCase().includes(term) ||
-      course.descricao?.toLowerCase().includes(term) ||
-      course.status?.toLowerCase().includes(term) ||
-      course.curso_publicacao_status?.toLowerCase().includes(term)
+const [selectedCourseDeviceId, setSelectedCourseDeviceId] = useState("");
+const [linkingCourseDevice, setLinkingCourseDevice] = useState(false);
+
+async function handleLinkDeviceToCourse() {
+  try {
+    if (!selectedCourseForDevice) {
+      return;
+    }
+
+    if (!selectedCourseDeviceId) {
+      toast.error("Selecione um dispositivo.");
+      return;
+    }
+
+    setLinkingCourseDevice(true);
+
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      toast.error("Sessão expirada. Faça login novamente.");
+      return;
+    }
+
+    await axios.post(
+      `http://localhost:3333/devices/courses/${selectedCourseForDevice.id}/devices/${selectedCourseDeviceId}`,
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
     );
-  });
+
+    toast.success("Dispositivo vinculado ao curso.");
+
+    setSelectedCourseForDevice(null);
+    setSelectedCourseDeviceId("");
+
+    window.location.reload();
+  } catch (error) {
+    console.log(error);
+
+    if (axios.isAxiosError(error)) {
+      toast.error(
+        error.response?.data?.error ||
+          error.response?.data?.message ||
+          "Erro ao vincular dispositivo ao curso."
+      );
+
+      return;
+    }
+
+    toast.error("Erro inesperado ao vincular dispositivo ao curso.");
+  } finally {
+    setLinkingCourseDevice(false);
+  }
+}
+
+const filteredCourses = courses.filter((course) => {
+  const term = search.toLowerCase();
+
+  return (
+    course.titulo?.toLowerCase().includes(term) ||
+    course.descricao?.toLowerCase().includes(term) ||
+    course.status?.toLowerCase().includes(term) ||
+    course.curso_publicacao_status?.toLowerCase().includes(term)
+  );
+});
 
   function getCourseStatus(course: CourseType) {
     return course.status || course.curso_publicacao_status || "publicado";
@@ -3726,6 +3790,39 @@ function getStatusActionStyle(status: string) {
               <button
                 type="button"
                 onClick={() => {
+                  setSelectedCourseForDevice(selectedCourseActions);
+                  setSelectedCourseActions(null);
+                  setSelectedCourseDeviceId("");
+                }}
+                className="
+                  w-full
+                  inline-flex
+                  items-center
+                  justify-between
+                  gap-3
+                  rounded-2xl
+                  bg-cyan-500/10
+                  px-4
+                  py-3
+                  text-sm
+                  font-semibold
+                  text-cyan-600
+                  dark:text-cyan-400
+                  hover:bg-cyan-500/20
+                  transition-all
+                "
+              >
+                <span className="inline-flex items-center gap-2">
+                  <Cpu size={18} />
+                  Vincular dispositivo
+                </span>
+
+                <ArrowRight size={18} />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
                   const currentStatus = getCourseStatus(selectedCourseActions);
 
                   updateCourseStatus(
@@ -3830,6 +3927,89 @@ function getStatusActionStyle(status: string) {
           </div>
         </div>
       )}
+
+      {selectedCourseForDevice && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+    <div className="w-full max-w-lg rounded-3xl bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 p-6 shadow-2xl">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-[#080E2F] dark:text-white">
+            Vincular dispositivo
+          </h2>
+
+          <p className="text-gray-500 dark:text-gray-400 mt-1">
+            Curso: <strong>{selectedCourseForDevice.titulo}</strong>
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedCourseForDevice(null);
+            setSelectedCourseDeviceId("");
+          }}
+          disabled={linkingCourseDevice}
+          className="text-gray-500 hover:text-red-500 transition-all disabled:opacity-60"
+        >
+          <X size={26} />
+        </button>
+      </div>
+
+      <div className="mt-6 space-y-4">
+        <div>
+          <label className="block text-sm font-semibold text-[#080E2F] dark:text-white mb-2">
+            Dispositivo relacionado ao curso
+          </label>
+
+          <select
+            value={selectedCourseDeviceId}
+            onChange={(event) => setSelectedCourseDeviceId(event.target.value)}
+            disabled={linkingCourseDevice}
+            className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#0d2238] px-4 py-3 text-[#080E2F] dark:text-white outline-none focus:border-blue-500 disabled:opacity-60"
+          >
+            <option value="">Selecione um dispositivo</option>
+
+            {devices.map((device) => (
+              <option key={device.id} value={device.id}>
+                {device.nome}
+                {device.modelo ? ` - ${device.modelo}` : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {devices.length === 0 && (
+          <div className="rounded-2xl border border-orange-500/20 bg-orange-500/10 p-4 text-sm text-orange-700 dark:text-orange-300">
+            Nenhum dispositivo cadastrado. Cadastre um dispositivo antes de vincular ao curso.
+          </div>
+        )}
+
+        <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2">
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedCourseForDevice(null);
+              setSelectedCourseDeviceId("");
+            }}
+            disabled={linkingCourseDevice}
+            className="rounded-2xl border border-gray-200 dark:border-white/10 px-5 py-3 font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-all disabled:opacity-60"
+          >
+            Cancelar
+          </button>
+
+          <button
+            type="button"
+            onClick={handleLinkDeviceToCourse}
+            disabled={linkingCourseDevice || !selectedCourseDeviceId}
+            className="rounded-2xl bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {linkingCourseDevice ? "Vinculando..." : "Vincular dispositivo"}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
     </div>
       </div>
   );
@@ -4240,17 +4420,11 @@ function EnrollmentRequestsTab({
   approveRequest: (requestId: number) => void;
   rejectRequest: (requestId: number) => void;
 }) {
-  const searchLower = search.toLowerCase();
+  const [statusFilter, setStatusFilter] = useState<
+    "pendente" | "aprovada" | "rejeitada"
+  >("pendente");
 
-  const filteredRequests = requests.filter((request) => {
-    return (
-      request.aluno_nome?.toLowerCase().includes(searchLower) ||
-      request.aluno_email?.toLowerCase().includes(searchLower) ||
-      request.curso_titulo?.toLowerCase().includes(searchLower) ||
-      request.dispositivo_nome?.toLowerCase().includes(searchLower) ||
-      request.status?.toLowerCase().includes(searchLower)
-    );
-  });
+  const searchLower = search.toLowerCase();
 
   const totalPendentes = requests.filter(
     (request) => request.status === "pendente"
@@ -4264,74 +4438,148 @@ function EnrollmentRequestsTab({
     (request) => request.status === "rejeitada"
   ).length;
 
+ const filteredRequests = requests
+  .filter((request) => request.status === statusFilter)
+  .filter((request) => {
+    if (!searchLower.trim()) {
+      return true;
+    }
+
+    return (
+      request.aluno_nome?.toLowerCase().includes(searchLower) ||
+      request.aluno_email?.toLowerCase().includes(searchLower) ||
+      request.curso_titulo?.toLowerCase().includes(searchLower) ||
+      request.dispositivo_nome?.toLowerCase().includes(searchLower)
+    );
+  });
+
+  const filterCards = [
+    {
+      status: "pendente" as const,
+      title: "Pendentes",
+      total: totalPendentes,
+      description: "Aguardando análise",
+    },
+    {
+      status: "aprovada" as const,
+      title: "Aprovadas",
+      total: totalAprovadas,
+      description: "Matrículas liberadas",
+    },
+    {
+      status: "rejeitada" as const,
+      title: "Rejeitadas",
+      total: totalRejeitadas,
+      description: "Solicitações recusadas",
+    },
+  ];
+
+  const currentTitle =
+    statusFilter === "pendente"
+      ? "Solicitações pendentes"
+      : statusFilter === "aprovada"
+      ? "Solicitações aprovadas"
+      : "Solicitações rejeitadas";
+
+  const emptyMessage =
+    statusFilter === "pendente"
+      ? "Nenhuma solicitação pendente encontrada"
+      : statusFilter === "aprovada"
+      ? "Nenhuma solicitação aprovada encontrada"
+      : "Nenhuma solicitação rejeitada encontrada";
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        <TableCard title="Pendentes" className="!shadow-XL hover:!shadow-2XL dark:!shadow-blue-500 dark:!shadow-sm">
-          <p className="text-3xl font-bold text-[#080E2F] dark:text-white ">
-            {totalPendentes}
-          </p>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-            Aguardando análise
-          </p>
-        </TableCard>
+        {filterCards.map((card) => {
+          const active = statusFilter === card.status;
 
-        <TableCard title="Aprovadas" className="!shadow-XL hover:!shadow-2XL dark:!shadow-blue-500 dark:!shadow-sm">
-          <p className="text-3xl font-bold text-[#080E2F] dark:text-white ">
-            {totalAprovadas}
-          </p>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-            Matrículas liberadas
-          </p>
-        </TableCard>
+          return (
+            <button
+              key={card.status}
+              type="button"
+              onClick={() => setStatusFilter(card.status)}
+              className={`
+                text-left
+                rounded-3xl
+                border
+                p-6
+                transition-all
+                shadow-xl
+                hover:shadow-2xl
+                dark:shadow-sm
+                dark:shadow-blue-500
+                ${
+                  active
+                    ? "border-blue-500 bg-blue-500/10 ring-2 ring-blue-500/30"
+                    : "border-gray-200 dark:border-white/10 bg-white dark:bg-[#091a2c] hover:border-blue-500/60"
+                }
+              `}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-xl font-bold text-[#080E2F] dark:text-white">
+                  {card.title}
+                </h3>
 
-        <TableCard title="Rejeitadas"  className="!shadow-XL hover:!shadow-2XL dark:!shadow-blue-500 dark:!shadow-sm">
-          <p className="text-3xl font-bold text-[#080E2F] dark:text-white">
-            {totalRejeitadas}
-          </p>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-            Solicitações recusadas
-          </p>
-        </TableCard>
+                {active && (
+                  <span className="rounded-full bg-blue-500 px-3 py-1 text-xs font-bold text-white">
+                    Filtro ativo
+                  </span>
+                )}
+              </div>
+
+              <p className="text-3xl font-bold text-[#080E2F] dark:text-white mt-6">
+                {card.total}
+              </p>
+
+              <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
+                {card.description}
+              </p>
+            </button>
+          );
+        })}
       </div>
 
-      <TableCard title="Solicitações recebidas" className="!shadow-xl hover:!shadow-2xl dark:!shadow-sm dark:!shadow-blue-500" 
-  contentClassName="!overflow-visible">
+      <TableCard
+        title={currentTitle}
+        className="!shadow-xl hover:!shadow-2xl dark:!shadow-sm dark:!shadow-blue-500"
+        contentClassName="!overflow-visible"
+      >
         {filteredRequests.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-gray-200 dark:border-white/10 p-8 text-center">
             <h3 className="text-lg font-bold text-[#080E2F] dark:text-white">
-              Nenhuma solicitação encontrada
+              {emptyMessage}
             </h3>
 
             <p className="text-gray-500 dark:text-gray-400 mt-2">
-              Quando um aluno solicitar matrícula, o pedido aparecerá aqui.
+              Use os cards acima para alternar entre pendentes, aprovadas e
+              rejeitadas.
             </p>
           </div>
         ) : (
-          <div className="space-y-6 py-2">
-            {filteredRequests.map((request) => {
+          <div key={statusFilter} className="space-y-6 py-2">
+  {filteredRequests.map((request) => {
               const isUpdating = updatingRequestId === request.id;
               const isPending = request.status === "pendente";
 
               return (
                 <div
-                        key={request.id}
-                        className="
-                          relative
-                          rounded-3xl
-                          border
-                          border-gray-200
-                          dark:border-white/10
-                          bg-white
-                          dark:bg-[#0d2238]
-                          p-5
-                          shadow-2xl
-                          dark:shadow-blue-500
-                          dark:shadow-sm
-                          
-                        "
-                      >
-                  <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-5 ">
+                   key={`${statusFilter}-${request.id}`}
+                  className="
+                    relative
+                    rounded-3xl
+                    border
+                    border-gray-200
+                    dark:border-white/10
+                    bg-white
+                    dark:bg-[#0d2238]
+                    p-5
+                    shadow-2xl
+                    dark:shadow-blue-500
+                    dark:shadow-sm
+                  "
+                >
+                  <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-5">
                     <div className="flex gap-4">
                       <div className="w-16 h-16 rounded-2xl bg-blue-500/10 flex items-center justify-center shrink-0 overflow-hidden">
                         {request.dispositivo_imagem_url ? (
@@ -4396,25 +4644,33 @@ function EnrollmentRequestsTab({
                       </div>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row xl:flex-col gap-3 xl:min-w-[180px]">
-                      <button
-                        type="button"
-                        onClick={() => approveRequest(request.id)}
-                        disabled={!isPending || isUpdating}
-                        className="rounded-2xl bg-green-500 px-5 py-3 font-semibold text-white hover:bg-green-600 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer "
-                      >
-                        {isUpdating ? "Processando..." : "Aprovar"}
-                      </button>
+                    {isPending ? (
+                      <div className="flex flex-col sm:flex-row xl:flex-col gap-3 xl:min-w-[180px]">
+                        <button
+                          type="button"
+                          onClick={() => approveRequest(request.id)}
+                          disabled={isUpdating}
+                          className="rounded-2xl bg-green-500 px-5 py-3 font-semibold text-white hover:bg-green-600 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                        >
+                          {isUpdating ? "Processando..." : "Aprovar"}
+                        </button>
 
-                      <button
-                        type="button"
-                        onClick={() => rejectRequest(request.id)}
-                        disabled={!isPending || isUpdating}
-                        className="rounded-2xl bg-red-500 px-5 py-3 font-semibold text-white hover:bg-red-600 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                      >
-                        Rejeitar
-                      </button>
-                    </div>
+                        <button
+                          type="button"
+                          onClick={() => rejectRequest(request.id)}
+                          disabled={isUpdating}
+                          className="rounded-2xl bg-red-500 px-5 py-3 font-semibold text-white hover:bg-red-600 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                        >
+                          Rejeitar
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="xl:min-w-[180px]">
+                        <div className="rounded-2xl bg-gray-100 dark:bg-white/10 px-5 py-3 text-center text-sm font-semibold text-gray-500 dark:text-gray-400">
+                          Solicitação já respondida
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               );

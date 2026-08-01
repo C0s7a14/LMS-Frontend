@@ -17,6 +17,13 @@ import {
   Lock,
   PlayCircle,
   Trophy,
+  Brain,
+  Loader2,
+  AlertTriangle,
+  Image as ImageIcon,
+  Volume2,
+   X,
+  Maximize2,
 } from "lucide-react";
 
 import { api } from "../../services/api";
@@ -57,6 +64,52 @@ interface CourseContentType {
   modulos: ModuloType[];
 }
 
+interface LessonTechnicalContentType {
+  id?: number;
+  aula_id?: number;
+  objetivo: string;
+  contexto_operacional: string;
+  conteudo_tecnico: string;
+  componentes_envolvidos: string;
+  procedimento: string;
+  pontos_atencao: string;
+  resumo: string;
+}
+
+type LessonImageTechnicalSection =
+  | "geral"
+  | "contexto_operacional"
+  | "conteudo_tecnico"
+  | "componentes_envolvidos"
+  | "procedimento"
+  | "pontos_atencao"
+  | "resumo";
+
+interface LessonImageType {
+  id: number;
+  aula_id: number;
+  titulo: string | null;
+  descricao: string | null;
+  imagem_url: string;
+  origem: "manual" | "upload_admin" | "sistema";
+  pagina_pdf: number | null;
+  ordem: number;
+  criado_em?: string;
+  secao_tecnica: LessonImageTechnicalSection;
+}
+
+interface LessonAudioType {
+  id: number;
+  aula_id: number;
+  idioma: string;
+  roteiro: string | null;
+  audio_url: string | null;
+  duracao_segundos: number | null;
+  status: "pendente" | "gerando" | "gerado" | "erro";
+  criado_em?: string;
+  atualizado_em?: string;
+}
+
 export default function CourseStudy() {
   const { courseId } = useParams();
   const navigate = useNavigate();
@@ -70,6 +123,72 @@ export default function CourseStudy() {
   const [reviewStatus, setReviewStatus] = useState<string>("sem_tentativa");
   const [courseAttempt, setCourseAttempt] = useState<any>(null);
   const [completingReview, setCompletingReview] = useState(false);
+  const [technicalContent, setTechnicalContent] =
+  useState<LessonTechnicalContentType | null>(null);
+
+
+  const [selectedLessonImage, setSelectedLessonImage] =
+  useState<LessonImageType | null>(null);
+
+const [loadingTechnicalContent, setLoadingTechnicalContent] = useState(false);
+const [lessonImages, setLessonImages] = useState<LessonImageType[]>([]);
+const [loadingLessonImages, setLoadingLessonImages] = useState(false);
+const [lessonAudio, setLessonAudio] = useState<LessonAudioType | null>(null);
+const [loadingLessonAudio, setLoadingLessonAudio] = useState(false);
+
+
+
+async function loadLessonTechnicalContent(lessonId: number) {
+  try {
+    setLoadingTechnicalContent(true);
+
+    const response = await api.get<LessonTechnicalContentType>(
+      `/lessons/${lessonId}/technical-content`
+    );
+
+    setTechnicalContent(response.data);
+  } catch (error: any) {
+    console.log(error);
+
+    setTechnicalContent(null);
+  } finally {
+    setLoadingTechnicalContent(false);
+  }
+}
+
+async function loadLessonImages(lessonId: number) {
+  try {
+    setLoadingLessonImages(true);
+
+    const response = await api.get<LessonImageType[]>(
+      `/lessons/${lessonId}/images`
+    );
+
+    setLessonImages(response.data);
+  } catch (error) {
+    console.log(error);
+    setLessonImages([]);
+  } finally {
+    setLoadingLessonImages(false);
+  }
+}
+
+async function loadLessonAudio(lessonId: number) {
+  try {
+    setLoadingLessonAudio(true);
+
+    const response = await api.get<LessonAudioType | null>(
+      `/lessons/${lessonId}/audio`
+    );
+
+    setLessonAudio(response.data);
+  } catch (error) {
+    console.log(error);
+    setLessonAudio(null);
+  } finally {
+    setLoadingLessonAudio(false);
+  }
+}
 
   async function loadCourseContent() {
   try {
@@ -128,6 +247,31 @@ const aulas = useMemo(() => {
 const selectedAula =
   aulas.find((aula) => aula.id === selectedAulaId) || null;
 
+ useEffect(() => {
+  if (!selectedAulaId) {
+    setTechnicalContent(null);
+    setLessonImages([]);
+    setLessonAudio(null);
+    return;
+  }
+
+  loadLessonTechnicalContent(selectedAulaId);
+  loadLessonImages(selectedAulaId);
+  loadLessonAudio(selectedAulaId);
+}, [selectedAulaId]);
+
+  const hasTechnicalContent = technicalContent
+  ? Boolean(
+      technicalContent.objetivo?.trim() ||
+        technicalContent.contexto_operacional?.trim() ||
+        technicalContent.conteudo_tecnico?.trim() ||
+        technicalContent.componentes_envolvidos?.trim() ||
+        technicalContent.procedimento?.trim() ||
+        technicalContent.pontos_atencao?.trim() ||
+        technicalContent.resumo?.trim()
+    )
+  : false;
+
 const selectedAulaIndex = selectedAula
   ? aulas.findIndex((aula) => aula.id === selectedAula.id)
   : -1;
@@ -159,7 +303,63 @@ function formatDuration(minutes: number | null) {
   return `${hours}h ${remainingMinutes}min`;
 }
 
+function getImagesByTechnicalSection(section: LessonImageTechnicalSection) {
+  return lessonImages
+    .filter((image) => (image.secao_tecnica || "geral") === section)
+    .sort((a, b) => Number(a.ordem || 0) - Number(b.ordem || 0));
+}
 
+function renderTechnicalSectionImages(section: LessonImageTechnicalSection) {
+  const images = getImagesByTechnicalSection(section);
+
+  if (images.length === 0) {
+    return null;
+  }
+
+ return (
+  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+    {images.map((image) => (
+      <button
+        key={image.id}
+        type="button"
+        onClick={() => setSelectedLessonImage(image)}
+        className="w-full max-w-md overflow-hidden rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#091a2c] text-left transition-all hover:border-blue-500 hover:shadow-lg group"
+      >
+        <div className="relative bg-gray-50 dark:bg-[#0d2238] flex items-center justify-center">
+          <img
+            src={image.imagem_url}
+            alt={image.titulo || "Imagem da aula"}
+            className="w-full max-h-72 object-contain p-3"
+          />
+
+          <div className="absolute right-3 top-3 hidden items-center gap-2 rounded-xl bg-black/60 px-3 py-2 text-xs font-semibold text-white backdrop-blur group-hover:flex">
+            <Maximize2 size={14} />
+            Ampliar
+          </div>
+        </div>
+
+        <div className="p-4">
+          <h4 className="font-bold text-[#080E2F] dark:text-white">
+            {image.titulo || "Imagem do manual"}
+          </h4>
+
+          {image.descricao && (
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+              {image.descricao}
+            </p>
+          )}
+
+          {image.pagina_pdf && (
+            <span className="mt-3 inline-flex rounded-xl bg-gray-100 dark:bg-white/10 px-3 py-1 text-xs font-semibold text-gray-600 dark:text-gray-300">
+              Página {image.pagina_pdf}
+            </span>
+          )}
+        </div>
+      </button>
+    ))}
+  </div>
+);
+}
   function getModuleProgress(modulo: ModuloType) {
     const total = modulo.aulas.length;
 
@@ -542,34 +742,6 @@ if (!selectedAula) {
         {/* Conteúdo principal */}
         <div className="space-y-6">
           <section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl overflow-hidden transition-colors">
-            {/* Player */}
-            <div className="aspect-video bg-[#061229] relative">
-              {selectedAula.video_url ? (
-                <iframe
-                  src={selectedAula.video_url}
-                  title={selectedAula.titulo}
-                  className="w-full h-full"
-                  allowFullScreen
-                />
-              ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center text-white text-center px-6">
-                  <div className="w-24 h-24 rounded-full bg-white flex items-center justify-center shadow-xl mb-5">
-                    <PlayCircle
-                      size={56}
-                      className="text-blue-500"
-                    />
-                  </div>
-
-                  <h2 className="text-2xl font-bold">
-                    Aula sem vídeo cadastrado
-                  </h2>
-
-                  <p className="text-gray-300 mt-2 max-w-xl">
-                    Esta aula ainda não possui vídeo. O conteúdo textual está disponível abaixo.
-                  </p>
-                </div>
-              )}
-            </div>
 
             {/* Informações da aula */}
             <div className="p-6">
@@ -640,17 +812,196 @@ if (!selectedAula) {
                 </p>
               )}
 
-              {selectedAula.conteudo && (
-                <div className="mt-6 bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 rounded-2xl p-5 shadow-2xl ">
-                  <h3 className="text-lg font-bold text-[#080E2F] dark:text-white mb-3">
-                    Conteúdo da aula
-                  </h3>
-
-                  <p className="text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-line">
-                    {selectedAula.conteudo}
-                  </p>
+               {loadingLessonAudio && (
+                <div className="mt-6 bg-blue-500/10 border border-blue-500/20 rounded-2xl p-5 flex items-center gap-3 text-blue-600 dark:text-blue-400 font-semibold">
+                  <Loader2 size={22} className="animate-spin" />
+                  Carregando áudio da aula...
                 </div>
               )}
+
+              {lessonAudio?.audio_url && lessonAudio.status === "gerado" && (
+                <div className="mt-6 bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-2xl dark:shadow-sm dark:shadow-blue-500/30">
+                  <div className="flex items-start gap-4 mb-5">
+                    <div className="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center shrink-0">
+                      <Volume2 size={30} className="text-blue-500 dark:text-blue-400" />
+                    </div>
+
+                    <div>
+                      <h3 className="text-2xl font-bold text-[#080E2F] dark:text-white">
+                        Áudio da aula
+                      </h3>
+
+                      <p className="text-gray-500 dark:text-gray-400 mt-1">
+                        Ouça a explicação técnica complementar desta aula.
+                      </p>
+
+                      {lessonAudio.duracao_segundos && (
+                        <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+                          Duração aproximada: {Math.ceil(lessonAudio.duracao_segundos / 60)} min
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <audio
+                    controls
+                    src={lessonAudio.audio_url}
+                    className="w-full"
+                  >
+                    Seu navegador não suporta reprodução de áudio.
+                  </audio>
+
+                  {lessonAudio.roteiro && (
+                    <details className="mt-5 rounded-2xl bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 p-4">
+                      <summary className="cursor-pointer font-bold text-[#080E2F] dark:text-white">
+                        Ver roteiro do áudio
+                      </summary>
+
+                      <p className="text-gray-600 dark:text-gray-300 mt-3 leading-relaxed whitespace-pre-line">
+                        {lessonAudio.roteiro}
+                      </p>
+                    </details>
+                  )}
+                </div>
+              )}
+
+          
+
+              {loadingTechnicalContent && (
+              <div className="mt-6 bg-blue-500/10 border border-blue-500/20 rounded-2xl p-5 flex items-center gap-3 text-blue-600 dark:text-blue-400 font-semibold">
+                <Loader2 size={22} className="animate-spin" />
+                Carregando conteúdo técnico da aula...
+              </div>
+            )}
+
+            {hasTechnicalContent && technicalContent && (
+              <div className="mt-6 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-3xl p-6 shadow-2xl dark:shadow-sm dark:shadow-blue-500/30">
+                <div className="flex items-start gap-4 mb-6">
+                  <div className="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center shrink-0">
+                    <Brain size={30} className="text-blue-500 dark:text-blue-400" />
+                  </div>
+
+                  <div>
+                    <h3 className="text-2xl font-bold text-[#080E2F] dark:text-white">
+                      Conteúdo técnico da aula
+                    </h3>
+
+                    <p className="text-gray-500 dark:text-gray-400 mt-1">
+                      Material técnico complementar para aprofundar o entendimento da aula.
+                    </p>
+                  </div>
+                </div>
+
+                 {renderTechnicalSectionImages("geral")}
+
+                <div className="space-y-5">
+                  {technicalContent.objetivo && (
+                    <div className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-2xl p-5">
+                      <h4 className="font-bold text-[#080E2F] dark:text-white mb-2">
+                        Objetivo técnico
+                      </h4>
+
+                      <p className="text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-line">
+                        {technicalContent.objetivo}
+                      </p>
+                    </div>
+                  )}
+
+                  {technicalContent.contexto_operacional && (
+                    <div className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-2xl p-5">
+                      <h4 className="font-bold text-[#080E2F] dark:text-white mb-2">
+                        Contexto operacional
+                      </h4>
+
+                      <p className="text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-line">
+                        {technicalContent.contexto_operacional}
+                      </p>
+                      {renderTechnicalSectionImages("contexto_operacional")}
+                    </div>
+                  )}
+
+                  {technicalContent.conteudo_tecnico && (
+                    <div className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-2xl p-5">
+                      <h4 className="font-bold text-[#080E2F] dark:text-white mb-2">
+                        Explicação técnica
+                      </h4>
+
+                      <p className="text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-line">
+                        {technicalContent.conteudo_tecnico}
+                      </p>
+                      {renderTechnicalSectionImages("conteudo_tecnico")}
+                    </div>
+                  )}
+
+                  {technicalContent.componentes_envolvidos && (
+                    <div className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-2xl p-5">
+                      <h4 className="font-bold text-[#080E2F] dark:text-white mb-2">
+                        Componentes envolvidos
+                      </h4>
+
+                      <p className="text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-line">
+                        {technicalContent.componentes_envolvidos}
+                      </p>
+                      {renderTechnicalSectionImages("componentes_envolvidos")}
+                    </div>
+                  )}
+
+                  {technicalContent.procedimento && (
+                    <div className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-2xl p-5">
+                      <h4 className="font-bold text-[#080E2F] dark:text-white mb-2">
+                        Procedimento
+                      </h4>
+
+                      <p className="text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-line">
+                        {technicalContent.procedimento}
+                      </p>
+                      {renderTechnicalSectionImages("procedimento")}
+                    </div>
+                  )}
+
+                  {technicalContent.pontos_atencao && (
+                    <div className="bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-2xl p-5">
+                      <h4 className="font-bold text-[#080E2F] dark:text-white mb-2 flex items-center gap-2">
+                        <AlertTriangle size={20} className="text-yellow-600 dark:text-yellow-400" />
+                        Pontos de atenção
+                      </h4>
+
+                      <p className="text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-line">
+                        {technicalContent.pontos_atencao}
+                      </p>
+                      {renderTechnicalSectionImages("pontos_atencao")}
+                    </div>
+                  )}
+
+                  {technicalContent.resumo && (
+                <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-2xl p-5">
+                  <h4 className="font-bold text-[#080E2F] dark:text-white mb-2">
+                    Resumo técnico
+                  </h4>
+
+                  <p className="text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-line">
+                    {technicalContent.resumo}
+                  </p>
+
+                  {renderTechnicalSectionImages("resumo")}
+                </div>
+              )}
+                </div>
+              </div>
+            )}
+
+            {selectedAula.conteudo && (
+                    <div className="mt-6 bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 rounded-2xl p-5 shadow-2xl ">
+                      <h3 className="text-lg font-bold text-[#080E2F] dark:text-white mb-3">
+                        Resumo textual da aula
+                      </h3>
+
+                      <p className="text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-line">
+                        {selectedAula.conteudo}
+                      </p>
+
+                    </div>
+                  )}      
 
               {selectedAula.pdf_url && (
                 <a
@@ -678,6 +1029,7 @@ if (!selectedAula) {
                   Abrir material da aula
                 </a>
               )}
+
 
               {lessonQuiz && selectedAula.concluida && (
   <div className="mt-6 bg-blue-500/10 border border-blue-500/20 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -1111,8 +1463,52 @@ if (!selectedAula) {
               </p>
             </div>
           </section>
-        </aside>
+         </aside>
       </div>
+
+      {selectedLessonImage && (
+        <div
+          className="fixed inset-0 z-[999] flex items-center justify-center bg-black/80 px-4 py-6"
+          onClick={() => setSelectedLessonImage(null)}
+        >
+          <div
+            className="relative w-full max-w-6xl max-h-[92vh] overflow-hidden rounded-3xl bg-white dark:bg-[#091a2c] border border-white/10 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-gray-200 dark:border-white/10 p-5">
+              <div>
+                <h2 className="text-xl font-bold text-[#080E2F] dark:text-white">
+                  {selectedLessonImage.titulo || "Imagem do manual"}
+                </h2>
+
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  {selectedLessonImage.descricao ||
+                    "Imagem técnica vinculada à aula."}
+                  {selectedLessonImage.pagina_pdf
+                    ? ` Página ${selectedLessonImage.pagina_pdf} do manual.`
+                    : ""}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelectedLessonImage(null)}
+                className="rounded-2xl bg-gray-100 dark:bg-white/10 p-3 text-gray-600 dark:text-gray-300 hover:bg-red-500/10 hover:text-red-500 transition-all"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="max-h-[75vh] overflow-auto bg-gray-50 dark:bg-[#071827] p-4">
+              <img
+                src={selectedLessonImage.imagem_url}
+                alt={selectedLessonImage.titulo || "Imagem ampliada da aula"}
+                className="mx-auto max-h-[72vh] w-auto max-w-full object-contain rounded-2xl bg-white"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

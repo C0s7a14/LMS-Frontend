@@ -64,6 +64,9 @@ export default function CreateCourse() {
   const [generatedCourse, setGeneratedCourse] =
     useState<GeneratedCourseType | null>(null);
 
+    const [courseSavedAsDraft, setCourseSavedAsDraft] = useState(false);
+
+
   const [createdCourseId, setCreatedCourseId] =
     useState<number | null>(null);
 
@@ -204,9 +207,23 @@ export default function CreateCourse() {
         }
       );
 
-      setGeneratedCourse(response.data.generated_course);
+      const generatedCourseFromAi = response.data.generated_course;
 
-      toast.success("Curso gerado com IA");
+      if (!generatedCourseFromAi) {
+        toast.error("A IA gerou a resposta, mas não retornou a estrutura do curso.");
+        return;
+      }
+
+      setGeneratedCourse(generatedCourseFromAi);
+
+      await api.post(`/courses/${courseId}/ai/apply-generated-course`, {
+        replaceExisting: true,
+        generated_course: generatedCourseFromAi,
+      });
+
+      setCourseSavedAsDraft(true);
+
+      toast.success("Curso gerado e salvo como rascunho");
     } catch (error: any) {
       console.log(error);
 
@@ -237,13 +254,17 @@ async function handlePublishCourse() {
   try {
     setPublishing(true);
 
-    await api.post(
-      `/courses/${createdCourseId}/ai/apply-generated-course`,
-      {
-        replaceExisting: true,
-        generated_course: generatedCourse,
-      }
-    );
+    if (!courseSavedAsDraft) {
+  await api.post(
+    `/courses/${createdCourseId}/ai/apply-generated-course`,
+    {
+      replaceExisting: true,
+      generated_course: generatedCourse,
+    }
+  );
+
+  setCourseSavedAsDraft(true);
+}
 
     if (selectedDevices.length > 0) {
       await Promise.all(
@@ -296,6 +317,7 @@ async function handlePublishCourse() {
     setPdfName("");
     setGeneratedCourse(null);
     setCreatedCourseId(null);
+    setCourseSavedAsDraft(false);
 
     if (fileInputRef.current) {
       fileInputRef.current.value = "";

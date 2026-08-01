@@ -13,7 +13,6 @@ import {
   Plus,
   Save,
   Trash2,
-  Video,
   X,
   Brain,
 Loader2,
@@ -30,7 +29,6 @@ interface AulaType {
   titulo: string;
   descricao: string | null;
   conteudo: string | null;
-  video_url: string | null;
   pdf_url: string | null;
   duracao: number | null;
   ordem: number;
@@ -65,7 +63,6 @@ interface AulaFormType {
   titulo: string;
   descricao: string;
   conteudo: string;
-  video_url: string;
   pdf_url: string;
   duracao: string;
   ordem: string;
@@ -77,11 +74,101 @@ const emptyForm: AulaFormType = {
   titulo: "",
   descricao: "",
   conteudo: "",
-  video_url: "",
   pdf_url: "",
   duracao: "",
   ordem: "",
   status: "publicada",
+};
+
+interface LessonTechnicalContentFormType {
+  objetivo: string;
+  contexto_operacional: string;
+  conteudo_tecnico: string;
+  componentes_envolvidos: string;
+  procedimento: string;
+  pontos_atencao: string;
+  resumo: string;
+}
+
+const emptyTechnicalContentForm: LessonTechnicalContentFormType = {
+  objetivo: "",
+  contexto_operacional: "",
+  conteudo_tecnico: "",
+  componentes_envolvidos: "",
+  procedimento: "",
+  pontos_atencao: "",
+  resumo: "",
+};
+
+type LessonImageTechnicalSection =
+  | "geral"
+  | "contexto_operacional"
+  | "conteudo_tecnico"
+  | "componentes_envolvidos"
+  | "procedimento"
+  | "pontos_atencao"
+  | "resumo";
+
+
+interface LessonImageType {
+  id: number;
+  aula_id: number;
+  titulo: string | null;
+  descricao: string | null;
+  imagem_url: string;
+  origem: "manual" | "upload_admin" | "sistema";
+  pagina_pdf: number | null;
+  ordem: number;
+  criado_em?: string;
+  secao_tecnica: LessonImageTechnicalSection;
+}
+
+interface LessonImageFormType {
+  titulo: string;
+  descricao: string;
+  imagem_url: string;
+  origem: "manual" | "upload_admin" | "sistema";
+  pagina_pdf: string;
+  ordem: string;
+  secao_tecnica: LessonImageTechnicalSection;
+}
+
+const emptyLessonImageForm: LessonImageFormType = {
+  titulo: "",
+  descricao: "",
+  imagem_url: "",
+  origem: "manual",
+  pagina_pdf: "",
+  secao_tecnica: "geral",
+  ordem: "1",
+};
+
+interface LessonAudioType {
+  id: number;
+  aula_id: number;
+  idioma: string;
+  roteiro: string | null;
+  audio_url: string | null;
+  duracao_segundos: number | null;
+  status: "pendente" | "gerando" | "gerado" | "erro";
+  criado_em?: string;
+  atualizado_em?: string;
+}
+
+interface LessonAudioFormType {
+  idioma: string;
+  roteiro: string;
+  audio_url: string;
+  duracao_segundos: string;
+  status: "pendente" | "gerando" | "gerado" | "erro";
+}
+
+const emptyLessonAudioForm: LessonAudioFormType = {
+  idioma: "pt-BR",
+  roteiro: "",
+  audio_url: "",
+  duracao_segundos: "",
+  status: "pendente",
 };
 
 type DeleteTarget =
@@ -222,6 +309,31 @@ export default function ManageCourseLessons() {
   
 
   const [form, setForm] = useState<AulaFormType>(emptyForm);
+  const [technicalForm, setTechnicalForm] =
+  useState<LessonTechnicalContentFormType>(emptyTechnicalContentForm);
+
+
+const [lessonAudioId, setLessonAudioId] = useState<number | null>(null);
+
+const [lessonAudioForm, setLessonAudioForm] =
+  useState<LessonAudioFormType>(emptyLessonAudioForm);
+const [loadingLessonAudio, setLoadingLessonAudio] = useState(false);
+const [deletingLessonAudio, setDeletingLessonAudio] = useState(false);
+const [generatingLessonAudio, setGeneratingLessonAudio] = useState(false);
+
+
+
+const [loadingTechnicalContent, setLoadingTechnicalContent] = useState(false);
+const [lessonImages, setLessonImages] = useState<LessonImageType[]>([]);
+const [loadingLessonImages, setLoadingLessonImages] = useState(false);
+const [savingLessonImage, setSavingLessonImage] = useState(false);
+const [deletingLessonImageId, setDeletingLessonImageId] = useState<number | null>(
+  null
+);
+
+const [lessonImageForm, setLessonImageForm] =
+  useState<LessonImageFormType>(emptyLessonImageForm);
+
 
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [aiPdf, setAiPdf] = useState<File | null>(null);
@@ -376,8 +488,59 @@ async function handleApplyGeneratedCourse() {
     }));
   }
 
+  function updateTechnicalForm(
+  field: keyof LessonTechnicalContentFormType,
+  value: string
+) {
+  setTechnicalForm((prev) => ({
+    ...prev,
+    [field]: value,
+  }));
+}
+
+function hasTechnicalContentFilled() {
+  return Object.values(technicalForm).some((value) => value.trim().length > 0);
+}
+
+async function loadLessonTechnicalContent(lessonId: number) {
+  try {
+    setLoadingTechnicalContent(true);
+
+    const response = await api.get(
+      `/lessons/${lessonId}/technical-content`
+    );
+
+    setTechnicalForm({
+      objetivo: response.data?.objetivo || "",
+      contexto_operacional: response.data?.contexto_operacional || "",
+      conteudo_tecnico: response.data?.conteudo_tecnico || "",
+      componentes_envolvidos: response.data?.componentes_envolvidos || "",
+      procedimento: response.data?.procedimento || "",
+      pontos_atencao: response.data?.pontos_atencao || "",
+      resumo: response.data?.resumo || "",
+    });
+  } catch (error: any) {
+    console.log(error);
+
+    toast.error(
+      error.response?.data?.error ||
+        error.response?.data?.message ||
+        "Erro ao carregar conteúdo técnico da aula."
+    );
+
+    setTechnicalForm(emptyTechnicalContentForm);
+  } finally {
+    setLoadingTechnicalContent(false);
+  }
+}
+
  function handleNewAula(moduloId: number) {
   setEditingAulaId(null);
+  setTechnicalForm(emptyTechnicalContentForm);
+  setLessonAudioId(null);
+  setLessonAudioForm(emptyLessonAudioForm);
+  setLessonImages([]);
+  setLessonImageForm(emptyLessonImageForm);
 
   const modulo = course?.modulos.find((item) => item.id === moduloId);
 
@@ -741,78 +904,399 @@ async function handleDeleteQuiz(quiz: AdminQuizType) {
   }
 }
 
-  function handleEditAula(aula: AulaType) {
-    setEditingAulaId(aula.id);
+function updateLessonAudioForm(
+  field: keyof LessonAudioFormType,
+  value: string
+) {
+  setLessonAudioForm((prev) => ({
+    ...prev,
+    [field]: value,
+  }));
+}
 
-    setForm({
-      moduloId: aula.modulo_id,
-      titulo: aula.titulo || "",
-      descricao: aula.descricao || "",
-      conteudo: aula.conteudo || "",
-      video_url: aula.video_url || "",
-      pdf_url: aula.pdf_url || "",
-      duracao: aula.duracao ? String(aula.duracao) : "",
-      ordem: aula.ordem ? String(aula.ordem) : "",
-      status: aula.status || "publicada",
+function hasLessonAudioFilled() {
+  return Boolean(
+    lessonAudioForm.roteiro.trim() ||
+      lessonAudioForm.audio_url.trim() ||
+      lessonAudioForm.duracao_segundos.trim()
+  );
+}
+
+async function loadLessonAudio(lessonId: number) {
+  try {
+    setLoadingLessonAudio(true);
+
+    const response = await api.get<LessonAudioType | null>(
+      `/lessons/${lessonId}/audio`
+    );
+
+    if (!response.data) {
+      setLessonAudioId(null);
+      setLessonAudioForm(emptyLessonAudioForm);
+      return;
+    }
+
+    setLessonAudioId(response.data.id);
+
+    setLessonAudioForm({
+      idioma: response.data.idioma || "pt-BR",
+      roteiro: response.data.roteiro || "",
+      audio_url: response.data.audio_url || "",
+      duracao_segundos: response.data.duracao_segundos
+        ? String(response.data.duracao_segundos)
+        : "",
+      status: response.data.status || "pendente",
     });
+  } catch (error) {
+    console.log(error);
+    setLessonAudioId(null);
+    setLessonAudioForm(emptyLessonAudioForm);
+  } finally {
+    setLoadingLessonAudio(false);
+  }
+}
+
+async function handleGenerateLessonAudioWithAi() {
+  if (!editingAulaId) {
+    toast.error("Salve ou selecione uma aula antes de gerar o áudio.");
+    return;
   }
 
-  function handleCancelEdit() {
-    setEditingAulaId(null);
-    setForm(emptyForm);
+  if (!lessonAudioForm.roteiro.trim()) {
+    toast.error("Escreva o roteiro do áudio antes de gerar com IA.");
+    return;
   }
+
+  try {
+    setGeneratingLessonAudio(true);
+
+    // Primeiro salva o roteiro atual no banco
+    await api.put(`/admin/lessons/${editingAulaId}/audio`, {
+      idioma: lessonAudioForm.idioma || "pt-BR",
+      roteiro: lessonAudioForm.roteiro || null,
+      audio_url: lessonAudioForm.audio_url || null,
+      duracao_segundos: lessonAudioForm.duracao_segundos
+        ? Number(lessonAudioForm.duracao_segundos)
+        : null,
+      status: "pendente",
+    });
+
+    // Depois gera o arquivo de áudio com IA
+    const response = await api.post(
+      `/admin/lessons/${editingAulaId}/audio/generate`
+    );
+
+    const generatedAudio = response.data?.audio;
+
+    if (generatedAudio) {
+      setLessonAudioId(generatedAudio.id);
+
+      setLessonAudioForm({
+        idioma: generatedAudio.idioma || "pt-BR",
+        roteiro: generatedAudio.roteiro || "",
+        audio_url: generatedAudio.audio_url || "",
+        duracao_segundos: generatedAudio.duracao_segundos
+          ? String(generatedAudio.duracao_segundos)
+          : "",
+        status: generatedAudio.status || "gerado",
+      });
+    }
+
+    toast.success("Áudio gerado com IA com sucesso.");
+  } catch (error: any) {
+    console.log(error);
+
+    toast.error(
+      error.response?.data?.error ||
+        error.response?.data?.message ||
+        "Erro ao gerar áudio com IA."
+    );
+  } finally {
+    setGeneratingLessonAudio(false);
+  }
+}
+
+async function handleDeleteLessonAudio() {
+  if (!lessonAudioId) {
+    toast.error("Esta aula ainda não possui áudio salvo.");
+    return;
+  }
+
+  const confirmDelete = window.confirm(
+    "Tem certeza que deseja remover o áudio desta aula?"
+  );
+
+  if (!confirmDelete) {
+    return;
+  }
+
+  try {
+    setDeletingLessonAudio(true);
+
+    await api.delete(`/admin/lesson-audios/${lessonAudioId}`);
+
+    toast.success("Áudio removido da aula.");
+
+    setLessonAudioId(null);
+    setLessonAudioForm(emptyLessonAudioForm);
+  } catch (error: any) {
+    console.log(error);
+
+    toast.error(
+      error.response?.data?.error ||
+        error.response?.data?.message ||
+        "Erro ao remover áudio."
+    );
+  } finally {
+    setDeletingLessonAudio(false);
+  }
+}
+
+
+function updateLessonImageForm(
+  field: keyof LessonImageFormType,
+  value: string
+) {
+  setLessonImageForm((prev) => ({
+    ...prev,
+    [field]: value,
+  }));
+}
+
+function getTechnicalSectionLabel(section?: LessonImageTechnicalSection | null) {
+  const labels: Record<LessonImageTechnicalSection, string> = {
+    geral: "Geral",
+    contexto_operacional: "Contexto operacional",
+    conteudo_tecnico: "Explicação técnica",
+    componentes_envolvidos: "Componentes envolvidos",
+    procedimento: "Procedimento",
+    pontos_atencao: "Pontos de atenção",
+    resumo: "Resumo",
+  };
+
+  return labels[section || "geral"];
+}
+
+async function loadLessonImages(lessonId: number) {
+  try {
+    setLoadingLessonImages(true);
+
+    const response = await api.get<LessonImageType[]>(
+      `/lessons/${lessonId}/images`
+    );
+
+    setLessonImages(response.data);
+  } catch (error) {
+    console.log(error);
+    setLessonImages([]);
+  } finally {
+    setLoadingLessonImages(false);
+  }
+}
+
+async function handleAddLessonImage() {
+  if (!editingAulaId) {
+    toast.error("Salve ou selecione uma aula antes de adicionar imagens.");
+    return;
+  }
+
+  if (!lessonImageForm.imagem_url.trim()) {
+    toast.error("Informe a URL da imagem.");
+    return;
+  }
+
+  try {
+    setSavingLessonImage(true);
+
+    await api.post(`/admin/lessons/${editingAulaId}/images`, {
+      titulo: lessonImageForm.titulo || null,
+      descricao: lessonImageForm.descricao || null,
+      imagem_url: lessonImageForm.imagem_url,
+      origem: lessonImageForm.origem,
+      pagina_pdf: lessonImageForm.pagina_pdf
+        ? Number(lessonImageForm.pagina_pdf)
+        : null,
+        secao_tecnica: lessonImageForm.secao_tecnica,
+      ordem: lessonImageForm.ordem ? Number(lessonImageForm.ordem) : 1,
+    });
+
+    toast.success("Imagem adicionada à aula.");
+
+    setLessonImageForm(emptyLessonImageForm);
+
+    await loadLessonImages(editingAulaId);
+  } catch (error: any) {
+    console.log(error);
+
+    toast.error(
+      error.response?.data?.error ||
+        error.response?.data?.message ||
+        "Erro ao adicionar imagem."
+    );
+  } finally {
+    setSavingLessonImage(false);
+  }
+}
+
+async function handleDeleteLessonImage(imageId: number) {
+  const confirmDelete = window.confirm(
+    "Tem certeza que deseja remover esta imagem da aula?"
+  );
+
+  if (!confirmDelete) {
+    return;
+  }
+
+  try {
+    setDeletingLessonImageId(imageId);
+
+    await api.delete(`/admin/lesson-images/${imageId}`);
+
+    toast.success("Imagem removida da aula.");
+
+    if (editingAulaId) {
+      await loadLessonImages(editingAulaId);
+    }
+  } catch (error: any) {
+    console.log(error);
+
+    toast.error(
+      error.response?.data?.error ||
+        error.response?.data?.message ||
+        "Erro ao remover imagem."
+    );
+  } finally {
+    setDeletingLessonImageId(null);
+  }
+}
+
+ async function handleEditAula(aula: AulaType) {
+  setEditingAulaId(aula.id);
+
+  setForm({
+    moduloId: aula.modulo_id,
+    titulo: aula.titulo || "",
+    descricao: aula.descricao || "",
+    conteudo: aula.conteudo || "",
+    pdf_url: aula.pdf_url || "",
+    duracao: aula.duracao ? String(aula.duracao) : "",
+    ordem: aula.ordem ? String(aula.ordem) : "",
+    status: aula.status || "publicada",
+  });
+
+  setLessonImageForm(emptyLessonImageForm);
+
+  await loadLessonTechnicalContent(aula.id);
+  await loadLessonImages(aula.id);
+  await loadLessonAudio(aula.id);
+}
+
+ function handleCancelEdit() {
+  setEditingAulaId(null);
+  setForm(emptyForm);
+  setTechnicalForm(emptyTechnicalContentForm);
+  setLessonAudioId(null);
+  setLessonAudioForm(emptyLessonAudioForm);
+  setLessonImages([]);
+  setLessonImageForm(emptyLessonImageForm);
+}
 
   async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!form.moduloId) {
-      toast.error("Selecione um módulo");
-      return;
-    }
-
-    if (!form.titulo.trim()) {
-      toast.error("O título da aula é obrigatório");
-      return;
-    }
-
-    try {
-      setSaving(true);
-
-      const payload = {
-        titulo: form.titulo,
-        descricao: form.descricao,
-        conteudo: form.conteudo,
-        video_url: form.video_url,
-        pdf_url: form.pdf_url,
-        duracao: form.duracao ? Number(form.duracao) : null,
-        ordem: form.ordem ? Number(form.ordem) : 0,
-        status: form.status,
-      };
-
-      if (editingAulaId) {
-        await api.put(`/aulas/${editingAulaId}`, payload);
-        toast.success("Aula atualizada com sucesso");
-      } else {
-        await api.post(`/modulos/${form.moduloId}/aulas`, payload);
-        toast.success("Aula criada com sucesso");
-      }
-
-      setEditingAulaId(null);
-      setForm(emptyForm);
-
-      await loadCourseContent();
-    } catch (error: any) {
-      console.log(error);
-
-      toast.error(
-        error.response?.data?.error ||
-          error.response?.data?.message ||
-          "Erro ao salvar aula"
-      );
-    } finally {
-      setSaving(false);
-    }
+  if (!form.moduloId) {
+    toast.error("Selecione um módulo");
+    return;
   }
+
+  if (!form.titulo.trim()) {
+    toast.error("O título da aula é obrigatório");
+    return;
+  }
+
+  try {
+    setSaving(true);
+
+    const payload = {
+      titulo: form.titulo,
+      descricao: form.descricao,
+      conteudo: form.conteudo,
+      pdf_url: form.pdf_url,
+      duracao: form.duracao ? Number(form.duracao) : null,
+      ordem: form.ordem ? Number(form.ordem) : 0,
+      status: form.status,
+    };
+
+    let savedLessonId: number | null = editingAulaId;
+
+    if (editingAulaId) {
+      await api.put(`/aulas/${editingAulaId}`, payload);
+    } else {
+      const response = await api.post(`/modulos/${form.moduloId}/aulas`, payload);
+
+      savedLessonId =
+        Number(
+          response.data?.id ||
+            response.data?.aula?.id ||
+            response.data?.lesson?.id ||
+            response.data?.aula_id ||
+            0
+        ) || null;
+    }
+
+    if (savedLessonId && (editingAulaId || hasTechnicalContentFilled())) {
+      await api.put(
+        `/admin/lessons/${savedLessonId}/technical-content`,
+        technicalForm
+      );
+    }
+
+        if (savedLessonId && hasLessonAudioFilled()) {
+      await api.put(`/admin/lessons/${savedLessonId}/audio`, {
+        idioma: lessonAudioForm.idioma || "pt-BR",
+        roteiro: lessonAudioForm.roteiro || null,
+        audio_url: lessonAudioForm.audio_url || null,
+        duracao_segundos: lessonAudioForm.duracao_segundos
+          ? Number(lessonAudioForm.duracao_segundos)
+          : null,
+        status: lessonAudioForm.status || "pendente",
+      });
+    }
+
+    if (!savedLessonId && hasTechnicalContentFilled()) {
+      toast.error(
+        "A aula foi criada, mas não consegui identificar o ID para salvar o conteúdo técnico."
+      );
+    }
+
+    toast.success(
+      editingAulaId
+        ? "Aula atualizada com sucesso"
+        : "Aula criada com sucesso"
+    );
+
+    setEditingAulaId(null);
+    setForm(emptyForm);
+    setTechnicalForm(emptyTechnicalContentForm);
+    setLessonAudioId(null);
+    setLessonAudioForm(emptyLessonAudioForm);
+    setLessonImages([]);
+    setLessonImageForm(emptyLessonImageForm);
+    
+
+    await loadCourseContent();
+  } catch (error: any) {
+    console.log(error);
+
+    toast.error(
+      error.response?.data?.error ||
+        error.response?.data?.message ||
+        "Erro ao salvar aula"
+    );
+  } finally {
+    setSaving(false);
+  }
+}
 
 function handleDeleteAula(aula: AulaType) {
   setDeleteTarget({
@@ -1352,12 +1836,7 @@ function handleDeleteModulo(modulo: ModuloType) {
                         {aula.duracao || 0} min
                       </span>
 
-                      {aula.video_url && (
-                        <span className="flex items-center gap-2">
-                          <Video size={17} />
-                          Vídeo
-                        </span>
-                      )}
+                    
 
                       {aula.pdf_url && (
                         <span className="flex items-center gap-2">
@@ -1402,206 +1881,651 @@ function handleDeleteModulo(modulo: ModuloType) {
     ))
   )}
 </section>
-          {/* Formulário */}
-          <aside className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 h-fit shadow-xl dark:shadow-sm dark:shadow-blue-500/30">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-xl font-bold text-[#080E2F] dark:text-white">
-                  {editingAulaId ? "Editar Aula" : "Nova Aula"}
-                </h2>
+         {/* Formulário */}
+<aside className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 h-fit shadow-xl dark:shadow-sm dark:shadow-blue-500/30">
+  <div className="flex items-center justify-between mb-6">
+    <div>
+      <h2 className="text-xl font-bold text-[#080E2F] dark:text-white">
+        {editingAulaId ? "Editar Aula" : "Nova Aula"}
+      </h2>
 
-                <p className="text-gray-500 dark:text-gray-400 mt-1">
-                  Preencha os dados da aula
-                </p>
-              </div>
+      <p className="text-gray-500 dark:text-gray-400 mt-1">
+        Preencha os dados da aula
+      </p>
+    </div>
 
-              {editingAulaId && (
-                <button
-                  type="button"
-                  onClick={handleCancelEdit}
-                  className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-[#0d2238] text-gray-500 dark:text-gray-300 flex items-center justify-center"
-                >
-                  <X size={20} />
-                </button>
-              )}
+    {editingAulaId && (
+      <button
+        type="button"
+        onClick={handleCancelEdit}
+        className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-[#0d2238] text-gray-500 dark:text-gray-300 flex items-center justify-center"
+      >
+        <X size={20} />
+      </button>
+    )}
+  </div>
+
+  <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="flex flex-col gap-2">
+      <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
+        Módulo
+      </label>
+
+      <select
+        value={form.moduloId}
+        onChange={(e) => updateForm("moduloId", e.target.value)}
+        className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500 shadow-md shadow-slate-300/40 dark:shadow-sm dark:shadow-blue-500/30"
+      >
+        <option value="">Selecione um módulo</option>
+
+        {course.modulos.map((modulo) => (
+          <option key={modulo.id} value={modulo.id}>
+            {modulo.titulo}
+          </option>
+        ))}
+      </select>
+    </div>
+
+    <div className="flex flex-col gap-2">
+      <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
+        Título da aula
+      </label>
+
+      <input
+        type="text"
+        value={form.titulo}
+        onChange={(e) => updateForm("titulo", e.target.value)}
+        placeholder="Ex: Introdução ao dispositivo"
+        className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 shadow-md shadow-slate-300/40 dark:shadow-sm dark:shadow-blue-500/30"
+      />
+    </div>
+
+    <div className="flex flex-col gap-2">
+      <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
+        Descrição
+      </label>
+
+      <textarea
+        value={form.descricao}
+        onChange={(e) => updateForm("descricao", e.target.value)}
+        placeholder="Descrição breve da aula"
+        rows={3}
+        className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 resize-none shadow-md shadow-slate-300/40 dark:shadow-sm dark:shadow-blue-500/30"
+      />
+    </div>
+
+    <div className="flex flex-col gap-2">
+      <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
+        Conteúdo textual
+      </label>
+
+      <textarea
+        value={form.conteudo}
+        onChange={(e) => updateForm("conteudo", e.target.value)}
+        placeholder="Conteúdo da aula"
+        rows={5}
+        className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 resize-none shadow-md shadow-slate-300/40 dark:shadow-sm dark:shadow-blue-500/30"
+      />
+    </div>
+
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="flex flex-col gap-2">
+        <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
+          Duração
+        </label>
+
+        <input
+          type="number"
+          value={form.duracao}
+          onChange={(e) => updateForm("duracao", e.target.value)}
+          placeholder="Minutos"
+          className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 shadow-md shadow-slate-300/40 dark:shadow-sm dark:shadow-blue-500/30"
+        />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
+          Ordem
+        </label>
+
+        <input
+          type="number"
+          value={form.ordem}
+          onChange={(e) => updateForm("ordem", e.target.value)}
+          placeholder="1"
+          className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 shadow-md shadow-slate-300/40 dark:shadow-sm dark:shadow-blue-500/30"
+        />
+      </div>
+    </div>
+
+    <div className="rounded-3xl border border-blue-500/20 bg-blue-500/5 dark:bg-blue-500/10 p-4 space-y-4">
+      <div>
+        <h3 className="text-base font-bold text-[#080E2F] dark:text-white flex items-center gap-2">
+          <Brain size={18} />
+          Conteúdo técnico da aula
+        </h3>
+
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          Informações técnicas usadas na aula, no áudio e futuramente no quiz explicativo.
+        </p>
+      </div>
+
+      {loadingTechnicalContent && (
+        <div className="rounded-2xl bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 px-4 py-3 text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
+          <Loader2 size={17} className="animate-spin" />
+          Carregando conteúdo técnico...
+        </div>
+      )}
+
+      <div className="flex flex-col gap-2">
+        <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
+          Objetivo técnico
+        </label>
+
+        <textarea
+          value={technicalForm.objetivo}
+          onChange={(e) => updateTechnicalForm("objetivo", e.target.value)}
+          placeholder="Ex: Compreender o funcionamento técnico do dispositivo Sirros S1."
+          rows={3}
+          className="bg-white dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 resize-none shadow-md shadow-slate-300/40 dark:shadow-sm dark:shadow-blue-500/30"
+        />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
+          Contexto operacional
+        </label>
+
+        <textarea
+          value={technicalForm.contexto_operacional}
+          onChange={(e) =>
+            updateTechnicalForm("contexto_operacional", e.target.value)
+          }
+          placeholder="Explique onde e em que situação essa aula se aplica."
+          rows={3}
+          className="bg-white dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 resize-none shadow-md shadow-slate-300/40 dark:shadow-sm dark:shadow-blue-500/30"
+        />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
+          Conteúdo técnico completo
+        </label>
+
+        <textarea
+          value={technicalForm.conteudo_tecnico}
+          onChange={(e) =>
+            updateTechnicalForm("conteudo_tecnico", e.target.value)
+          }
+          placeholder="Descreva a explicação técnica completa da aula."
+          rows={6}
+          className="bg-white dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 resize-none shadow-md shadow-slate-300/40 dark:shadow-sm dark:shadow-blue-500/30"
+        />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
+          Componentes envolvidos
+        </label>
+
+        <textarea
+          value={technicalForm.componentes_envolvidos}
+          onChange={(e) =>
+            updateTechnicalForm("componentes_envolvidos", e.target.value)
+          }
+          placeholder="Ex: Entradas de sinal, conectividade Wi-Fi, alimentação, LEDs..."
+          rows={3}
+          className="bg-white dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 resize-none shadow-md shadow-slate-300/40 dark:shadow-sm dark:shadow-blue-500/30"
+        />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
+          Procedimento
+        </label>
+
+        <textarea
+          value={technicalForm.procedimento}
+          onChange={(e) => updateTechnicalForm("procedimento", e.target.value)}
+          placeholder="Descreva o passo a passo técnico ou comportamento esperado."
+          rows={4}
+          className="bg-white dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 resize-none shadow-md shadow-slate-300/40 dark:shadow-sm dark:shadow-blue-500/30"
+        />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
+          Pontos de atenção
+        </label>
+
+        <textarea
+          value={technicalForm.pontos_atencao}
+          onChange={(e) =>
+            updateTechnicalForm("pontos_atencao", e.target.value)
+          }
+          placeholder="Informe riscos, cuidados, falhas comuns ou observações importantes."
+          rows={4}
+          className="bg-white dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 resize-none shadow-md shadow-slate-300/40 dark:shadow-sm dark:shadow-blue-500/30"
+        />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
+          Resumo técnico
+        </label>
+
+        <textarea
+          value={technicalForm.resumo}
+          onChange={(e) => updateTechnicalForm("resumo", e.target.value)}
+          placeholder="Resumo final da aula para revisão do aluno."
+          rows={3}
+          className="bg-white dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 resize-none shadow-md shadow-slate-300/40 dark:shadow-sm dark:shadow-blue-500/30"
+        />
+      </div>
+    </div>
+
+
+    <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-3xl p-5 space-y-4">
+  <div>
+    <h3 className="text-lg font-bold text-[#080E2F] dark:text-white">
+      Áudio da aula
+    </h3>
+
+    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+      Cadastre o roteiro e o arquivo de áudio que serão exibidos para o aluno.
+    </p>
+  </div>
+
+  {loadingLessonAudio && (
+    <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-4 flex items-center gap-3 text-blue-600 dark:text-blue-400 font-semibold">
+      <Loader2 size={20} className="animate-spin" />
+      Carregando áudio da aula...
+    </div>
+  )}
+
+  <div className="flex flex-col gap-2">
+    <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
+      Roteiro do áudio
+    </label>
+
+    <textarea
+      value={lessonAudioForm.roteiro}
+      onChange={(e) => updateLessonAudioForm("roteiro", e.target.value)}
+      rows={5}
+      placeholder="Escreva o texto que será narrado ou usado como base para o áudio da aula."
+      className="bg-white dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500 shadow-md shadow-slate-300/40 dark:shadow-sm dark:shadow-blue-500/30 resize-none"
+    />
+  </div>
+
+
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+    <div className="flex flex-col gap-2">
+      <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
+        Idioma
+      </label>
+
+      <select
+        value={lessonAudioForm.idioma}
+        onChange={(e) => updateLessonAudioForm("idioma", e.target.value)}
+        className="bg-white dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500 shadow-md shadow-slate-300/40 dark:shadow-sm dark:shadow-blue-500/30"
+      >
+        <option value="pt-BR">Português</option>
+        <option value="en-US">Inglês</option>
+        <option value="es-ES">Espanhol</option>
+      </select>
+    </div>
+
+    <div className="flex flex-col gap-2">
+      <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
+        Duração
+      </label>
+
+      <input
+        type="number"
+        min={0}
+        value={lessonAudioForm.duracao_segundos}
+        onChange={(e) =>
+          updateLessonAudioForm("duracao_segundos", e.target.value)
+        }
+        placeholder="90"
+        className="bg-white dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500 shadow-md shadow-slate-300/40 dark:shadow-sm dark:shadow-blue-500/30"
+      />
+    </div>
+
+    <div className="flex flex-col gap-2">
+      <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
+        Status
+      </label>
+
+      <select
+        value={lessonAudioForm.status}
+        onChange={(e) =>
+          updateLessonAudioForm(
+            "status",
+            e.target.value as LessonAudioFormType["status"]
+          )
+        }
+        className="bg-white dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500 shadow-md shadow-slate-300/40 dark:shadow-sm dark:shadow-blue-500/30"
+      >
+        <option value="pendente">Pendente</option>
+        <option value="gerando">Gerando</option>
+        <option value="gerado">Gerado</option>
+        <option value="erro">Erro</option>
+      </select>
+    </div>
+  </div>
+
+  <button
+  type="button"
+  onClick={handleGenerateLessonAudioWithAi}
+  disabled={generatingLessonAudio || loadingLessonAudio || !editingAulaId}
+  className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-2xl px-4 py-3 font-semibold transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+>
+  {generatingLessonAudio ? (
+    <>
+      <Loader2 size={20} className="animate-spin" />
+      Gerando áudio com IA...
+    </>
+  ) : (
+    <>
+      <Wand2 size={20} />
+      Gerar áudio com IA
+    </>
+  )}
+</button>
+
+  {lessonAudioId && (
+    <button
+      type="button"
+      onClick={handleDeleteLessonAudio}
+      disabled={deletingLessonAudio}
+      className="w-full border border-red-300 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-2xl px-4 py-3 font-semibold transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+    >
+      {deletingLessonAudio ? "Removendo áudio..." : "Remover áudio da aula"}
+    </button>
+  )}
+</div>
+
+    {editingAulaId ? (
+      <div className="rounded-3xl border border-blue-500/20 bg-blue-500/5 dark:bg-blue-500/10 p-4 space-y-4">
+        <div>
+          <h3 className="text-base font-bold text-[#080E2F] dark:text-white flex items-center gap-2">
+            <FileText size={18} />
+            Imagens da aula
+          </h3>
+
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Adicione imagens reais do manual, dispositivo ou material técnico da aula.
+          </p>
+        </div>
+
+        {loadingLessonImages && (
+          <div className="rounded-2xl bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 px-4 py-3 text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
+            <Loader2 size={17} className="animate-spin" />
+            Carregando imagens...
+          </div>
+        )}
+
+        <div className="space-y-3">
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
+              Título da imagem
+            </label>
+
+            <input
+              type="text"
+              value={lessonImageForm.titulo}
+              onChange={(e) =>
+                updateLessonImageForm("titulo", e.target.value)
+              }
+              placeholder="Ex: Visão geral do dispositivo Sirros S1"
+              className="bg-white dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 shadow-md shadow-slate-300/40 dark:shadow-sm dark:shadow-blue-500/30"
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
+              Descrição da imagem
+            </label>
+
+            <textarea
+              value={lessonImageForm.descricao}
+              onChange={(e) =>
+                updateLessonImageForm("descricao", e.target.value)
+              }
+              placeholder="Explique o que essa imagem representa na aula."
+              rows={3}
+              className="bg-white dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 resize-none shadow-md shadow-slate-300/40 dark:shadow-sm dark:shadow-blue-500/30"
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
+              URL da imagem
+            </label>
+
+            <input
+              type="text"
+              value={lessonImageForm.imagem_url}
+              onChange={(e) =>
+                updateLessonImageForm("imagem_url", e.target.value)
+              }
+              placeholder="https://..."
+              className="bg-white dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 shadow-md shadow-slate-300/40 dark:shadow-sm dark:shadow-blue-500/30"
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+          <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
+            Onde essa imagem aparece?
+          </label>
+
+          <select
+            value={lessonImageForm.secao_tecnica}
+            onChange={(e) =>
+              updateLessonImageForm(
+                "secao_tecnica",
+                e.target.value as LessonImageTechnicalSection
+              )
+            }
+            className="bg-white dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500 shadow-md shadow-slate-300/40 dark:shadow-sm dark:shadow-blue-500/30"
+          >
+            <option value="geral">Geral da aula</option>
+            <option value="contexto_operacional">Contexto operacional</option>
+            <option value="conteudo_tecnico">Explicação técnica</option>
+            <option value="componentes_envolvidos">Componentes envolvidos</option>
+            <option value="procedimento">Procedimento</option>
+            <option value="pontos_atencao">Pontos de atenção</option>
+            <option value="resumo">Resumo</option>
+          </select>
+        </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
+                Origem
+              </label>
+
+              <select
+                value={lessonImageForm.origem}
+                onChange={(e) =>
+                  updateLessonImageForm(
+                    "origem",
+                    e.target.value as "manual" | "upload_admin" | "sistema"
+                  )
+                }
+                className="bg-white dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500 shadow-md shadow-slate-300/40 dark:shadow-sm dark:shadow-blue-500/30"
+              >
+                <option value="manual">Manual</option>
+                <option value="upload_admin">Upload admin</option>
+                <option value="sistema">Sistema</option>
+              </select>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
-                  Módulo
-                </label>
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
+                Página
+              </label>
 
-                <select
-                  value={form.moduloId}
-                  onChange={(e) =>
-                    updateForm("moduloId", e.target.value)
-                  }
-                  className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500 shadow-md shadow-slate-300/40 dark:shadow-sm dark:shadow-blue-500/30"
-                >
-                  <option value="">Selecione um módulo</option>
+              <input
+                type="number"
+                value={lessonImageForm.pagina_pdf}
+                onChange={(e) =>
+                  updateLessonImageForm("pagina_pdf", e.target.value)
+                }
+                placeholder="1"
+                className="bg-white dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 shadow-md shadow-slate-300/40 dark:shadow-sm dark:shadow-blue-500/30"
+              />
+            </div>
 
-                  {course.modulos.map((modulo) => (
-                    <option key={modulo.id} value={modulo.id}>
-                      {modulo.titulo}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
+                Ordem
+              </label>
 
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
-                  Título da aula
-                </label>
+              <input
+                type="number"
+                value={lessonImageForm.ordem}
+                onChange={(e) =>
+                  updateLessonImageForm("ordem", e.target.value)
+                }
+                placeholder="1"
+                className="bg-white dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 shadow-md shadow-slate-300/40 dark:shadow-sm dark:shadow-blue-500/30"
+              />
+            </div>
+          </div>
 
-                <input
-                  type="text"
-                  value={form.titulo}
-                  onChange={(e) =>
-                    updateForm("titulo", e.target.value)
-                  }
-                  placeholder="Ex: Introdução ao dispositivo"
-                  className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 shadow-md shadow-slate-300/40 dark:shadow-sm dark:shadow-blue-500/30"
-                />
-              </div>
+          {lessonImageForm.imagem_url && (
+            <div className="rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#091a2c] p-3">
+              <p className="text-sm font-semibold text-[#080E2F] dark:text-white mb-2">
+                Prévia
+              </p>
 
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
-                  Descrição
-                </label>
+              <img
+                src={lessonImageForm.imagem_url}
+                alt="Prévia da imagem"
+                className="w-full max-h-56 object-contain rounded-xl"
+              />
+            </div>
+          )}
 
-                <textarea
-                  value={form.descricao}
-                  onChange={(e) =>
-                    updateForm("descricao", e.target.value)
-                  }
-                  placeholder="Descrição breve da aula"
-                  rows={3}
-                  className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 resize-none shadow-md shadow-slate-300/40 dark:shadow-sm dark:shadow-blue-500/30"
-                />
-              </div>
+          <button
+            type="button"
+            onClick={handleAddLessonImage}
+            disabled={savingLessonImage}
+            className="w-full bg-blue-500 hover:bg-blue-600 text-white rounded-2xl py-3 font-semibold flex items-center justify-center gap-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <Plus size={18} />
+            {savingLessonImage ? "Adicionando..." : "Adicionar imagem"}
+          </button>
+        </div>
 
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
-                  Conteúdo textual
-                </label>
+        {lessonImages.length > 0 && (
+          <div className="space-y-3 pt-2">
+            <h4 className="font-bold text-[#080E2F] dark:text-white">
+              Imagens cadastradas
+            </h4>
 
-                <textarea
-                  value={form.conteudo}
-                  onChange={(e) =>
-                    updateForm("conteudo", e.target.value)
-                  }
-                  placeholder="Conteúdo da aula"
-                  rows={5}
-                  className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 resize-none shadow-md shadow-slate-300/40 dark:shadow-sm dark:shadow-blue-500/30"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="flex flex-col gap-2">
-                  <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
-                    Duração
-                  </label>
-
-                  <input
-                    type="number"
-                    value={form.duracao}
-                    onChange={(e) =>
-                      updateForm("duracao", e.target.value)
-                    }
-                    placeholder="Minutos"
-                    className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 shadow-md shadow-slate-300/40 dark:shadow-sm dark:shadow-blue-500/30"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
-                    Ordem
-                  </label>
-
-                  <input
-                    type="number"
-                    value={form.ordem}
-                    onChange={(e) =>
-                      updateForm("ordem", e.target.value)
-                    }
-                    placeholder="1"
-                    className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 shadow-md shadow-slate-300/40 dark:shadow-sm dark:shadow-blue-500/30"
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
-                  URL do vídeo
-                </label>
-
-                <input
-                  type="text"
-                  value={form.video_url}
-                  onChange={(e) =>
-                    updateForm("video_url", e.target.value)
-                  }
-                  placeholder="https://..."
-                  className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 shadow-md shadow-slate-300/40 dark:shadow-sm dark:shadow-blue-500/30"
-                />
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
-                  URL do PDF
-                </label>
-
-                <input
-                  type="text"
-                  value={form.pdf_url}
-                  onChange={(e) =>
-                    updateForm("pdf_url", e.target.value)
-                  }
-                  placeholder="https://..."
-                  className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 shadow-md shadow-slate-300/40 dark:shadow-sm dark:shadow-blue-500/30"
-                />
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
-                  Status
-                </label>
-
-                <select
-                  value={form.status}
-                  onChange={(e) =>
-                    updateForm(
-                      "status",
-                      e.target.value as "rascunho" | "publicada"
-                    )
-                  }
-                  className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500 shadow-md shadow-slate-300/40 dark:shadow-sm dark:shadow-blue-500/30"
-                >
-                  <option value="publicada">Publicada</option>
-                  <option value="rascunho">Rascunho</option>
-                </select>
-              </div>
-
-              <button
-                type="submit"
-                disabled={saving}
-                className="w-full bg-blue-500 hover:bg-blue-600 text-white rounded-2xl py-4 font-semibold flex items-center justify-center gap-3 transition-all disabled:opacity-60 disabled:cursor-not-allowed shadow-xl dark:shadow-sm dark:shadow-blue-500/40"
+            {lessonImages.map((image) => (
+              <div
+                key={image.id}
+                className="rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#091a2c] p-3"
               >
-                <Save size={22} />
+                <img
+                  src={image.imagem_url}
+                  alt={image.titulo || "Imagem da aula"}
+                  className="w-full max-h-44 object-contain rounded-xl bg-gray-50 dark:bg-[#0d2238]"
+                />
 
-                {saving
-                  ? "Salvando..."
-                  : editingAulaId
-                  ? "Salvar alterações"
-                  : "Criar aula"}
-              </button>
-            </form>
-          </aside>
+                <div className="mt-3">
+                  <p className="font-bold text-sm text-[#080E2F] dark:text-white">
+                    {image.titulo || "Imagem sem título"}
+                  </p>
+
+                  {image.descricao && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {image.descricao}
+                    </p>
+                  )}
+
+                  <div className="flex items-center justify-between gap-3 mt-3">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                     {getTechnicalSectionLabel(image.secao_tecnica)} • Ordem {image.ordem}
+                      {image.pagina_pdf ? ` • Página ${image.pagina_pdf}` : ""}
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteLessonImage(image.id)}
+                      disabled={deletingLessonImageId === image.id}
+                      className="text-red-500 text-sm font-semibold hover:underline disabled:opacity-60"
+                    >
+                      {deletingLessonImageId === image.id
+                        ? "Removendo..."
+                        : "Remover"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    ) : (
+      <div className="rounded-2xl bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 p-4 text-sm text-yellow-700 dark:text-yellow-300">
+        Salve a aula primeiro para liberar o cadastro de imagens.
+      </div>
+    )}
+
+    <div className="flex flex-col gap-2">
+      <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
+        URL do PDF
+      </label>
+
+      <input
+        type="text"
+        value={form.pdf_url}
+        onChange={(e) => updateForm("pdf_url", e.target.value)}
+        placeholder="https://..."
+        className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 shadow-md shadow-slate-300/40 dark:shadow-sm dark:shadow-blue-500/30"
+      />
+    </div>
+
+    <div className="flex flex-col gap-2">
+      <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
+        Status
+      </label>
+
+      <select
+        value={form.status}
+        onChange={(e) =>
+          updateForm("status", e.target.value as "rascunho" | "publicada")
+        }
+        className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500 shadow-md shadow-slate-300/40 dark:shadow-sm dark:shadow-blue-500/30"
+      >
+        <option value="publicada">Publicada</option>
+        <option value="rascunho">Rascunho</option>
+      </select>
+    </div>
+
+    <button
+      type="submit"
+      disabled={saving}
+      className="w-full bg-blue-500 hover:bg-blue-600 text-white rounded-2xl py-4 font-semibold flex items-center justify-center gap-3 transition-all disabled:opacity-60 disabled:cursor-not-allowed shadow-xl dark:shadow-sm dark:shadow-blue-500/40"
+    >
+      <Save size={22} />
+
+      {saving
+        ? "Salvando..."
+        : editingAulaId
+        ? "Salvar alterações"
+        : "Criar aula"}
+    </button>
+  </form>
+</aside>
         </div>
       </div>
       
-
 
       {quizModalOpen && (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
