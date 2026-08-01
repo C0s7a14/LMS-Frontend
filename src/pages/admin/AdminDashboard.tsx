@@ -680,7 +680,7 @@ setEnrollmentRequests(enrollmentRequestsResponse.data);
     }
 
     if (currentTab === "certificates") {
-      toast.error("Emissão de certificado será conectada depois.");
+      toast.error("Emissão de certificado manual será conectada depois.");
       return;
     }
 
@@ -1196,7 +1196,6 @@ async function handleSaveCourseEdit() {
   }
 }
 
-
   const header = getHeaderInfo();
 
   const availableDevicesForClient = devices.filter((device) => {
@@ -1481,6 +1480,106 @@ async function handleSaveAiPrompt() {
   }
 }
 
+// --- 🟢 ADMIN ACTIONS: CERTIFICATES ---
+
+async function handleDownloadCertificate(certificateId: number, studentName: string) {
+  try {
+    const config = getAuthConfig();
+    if (!config) return;
+
+    toast.loading("Gerando PDF...", { id: "download-cert" });
+
+    const response = await axios.get(
+      `http://localhost:3333/certificates/${certificateId}/download`,
+      {
+        ...config,
+        responseType: "blob",
+      }
+    );
+
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute(
+      "download",
+      `Certificado-${studentName.replace(/\s+/g, "-")}.pdf`
+    );
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+
+    toast.success("Download concluído!", { id: "download-cert" });
+  } catch (error) {
+    console.error(error);
+    toast.error("Erro ao baixar o certificado.", { id: "download-cert" });
+  }
+}
+
+async function handleRevokeCertificate(certificateId: number) {
+  // 1. Trigger an interactive confirmation toast
+  toast(
+    (t) => (
+      <div className="flex flex-col gap-3">
+        <p className="font-semibold text-gray-800 dark:text-gray-200">
+          Tem certeza que deseja revogar este certificado?
+        </p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Esta ação apagará o registro do banco de dados e não pode ser desfeita.
+        </p>
+
+        <div className="flex gap-3 justify-end mt-2">
+          {/* Cancel Button */}
+          <button
+            onClick={() => toast.dismiss(t.id)}
+            className="px-4 py-2 rounded-xl text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 transition-all cursor-pointer"
+          >
+            Cancelar
+          </button>
+
+          {/* Confirm Button */}
+          <button
+            onClick={async () => {
+              // Dismiss the confirmation toast immediately
+              toast.dismiss(t.id);
+
+              // Start the loading spinner toast
+              const loadingToast = toast.loading("Revogando certificado...");
+
+              try {
+                const config = getAuthConfig();
+                if (!config) {
+                  toast.dismiss(loadingToast);
+                  return;
+                }
+
+                await axios.delete(
+                  `http://localhost:3333/certificates/${certificateId}`,
+                  config
+                );
+
+                // Show success
+                toast.success("Certificado revogado com sucesso!", { id: loadingToast });
+                await loadDashboardData();
+              } catch (error) {
+                console.error("Erro ao revogar:", error);
+                // Show error
+                toast.error("Erro ao tentar revogar o certificado.", { id: loadingToast });
+              }
+            }}
+            className="px-4 py-2 rounded-xl text-sm font-medium bg-red-500 text-white hover:bg-red-600 transition-all shadow-md shadow-red-500/20 cursor-pointer"
+          >
+            Sim, revogar
+          </button>
+        </div>
+      </div>
+    ),
+    {
+      duration: Infinity,
+      position: "top-center"
+    }
+  );
+}
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -1694,8 +1793,13 @@ async function handleSaveAiPrompt() {
         />
           )}
 
+          {/* 🟢 UPDATED: Pass Download and Revoke props to CertificatesTab */}
           {currentTab === "certificates" && (
-            <CertificatesTab dashboardData={dashboardData} />
+            <CertificatesTab 
+              dashboardData={dashboardData} 
+              onDownload={handleDownloadCertificate}
+              onRevoke={handleRevokeCertificate}
+            />
           )}
 
        {currentTab === "ai" && (
@@ -3734,8 +3838,12 @@ function getStatusActionStyle(status: string) {
 
 function CertificatesTab({
   dashboardData,
+  onDownload,
+  onRevoke
 }: {
   dashboardData: AdminDashboardData | null;
+  onDownload: (id: number, name: string) => void;
+  onRevoke: (id: number) => void;
 }) {
   const resumo = dashboardData?.resumo;
   const certificates = dashboardData?.ultimosCertificados ?? [];
@@ -3802,19 +3910,21 @@ function CertificatesTab({
 
       <TableCard title="Últimos Certificados Emitidos">
         <div className="min-w-[900px]">
-          <div className="grid grid-cols-[0.9fr_1.2fr_1.5fr_1.3fr_1fr] text-sm text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-white/10 pb-3">
+          {/* 🟢 UPDATED: Grid now has 6 columns to fit the Action buttons */}
+          <div className="grid grid-cols-[0.8fr_1.3fr_1.5fr_1.2fr_1fr_120px] text-sm text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-white/10 pb-3">
             <span>ID</span>
             <span>Aluno</span>
             <span>Curso</span>
             <span>Código</span>
             <span>Emissão</span>
+            <span className="text-right">Ações</span>
           </div>
 
           {certificates.length > 0 ? (
             certificates.map((certificate) => (
               <div
                 key={certificate.id}
-                className="grid grid-cols-[0.9fr_1.2fr_1.5fr_1.3fr_1fr] gap-4 items-center py-4 border-b border-gray-200 dark:border-white/10 last:border-b-0"
+                className="grid grid-cols-[0.8fr_1.3fr_1.5fr_1.2fr_1fr_120px] gap-4 items-center py-4 border-b border-gray-200 dark:border-white/10 last:border-b-0"
               >
                 <span className="text-blue-600 dark:text-blue-400 font-semibold">
                   #{certificate.id}
@@ -3839,6 +3949,27 @@ function CertificatesTab({
                       )
                     : "-"}
                 </span>
+
+                {/* 🟢 NEW: Action Buttons */}
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onDownload(certificate.id, certificate.aluno_nome)}
+                    title="Baixar PDF Oficial"
+                    className="rounded-xl bg-blue-500/10 px-3 py-2 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 transition-all cursor-pointer"
+                  >
+                    <Download size={18} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => onRevoke(certificate.id)}
+                    title="Revogar certificado"
+                    className="rounded-xl bg-red-500/10 px-3 py-2 text-red-500 hover:bg-red-500/20 transition-all cursor-pointer"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
               </div>
             ))
           ) : (
@@ -4980,43 +5111,6 @@ function Avatar({
     <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold shrink-0">
       {initials || "U"}
     </div>
-  );
-}
-
-function RoleBadge({
-  role,
-}: {
-  role: UserType["role"];
-}) {
-  const label =
-    role === "admin"
-      ? "Administrador"
-      : role === "client"
-      ? "Cliente"
-      : "Aluno";
-
-  const style =
-    role === "admin"
-      ? "bg-blue-500/15 text-blue-600 dark:text-blue-400"
-      : role === "client"
-      ? "bg-orange-500/15 text-orange-600 dark:text-orange-400"
-      : "bg-purple-500/15 text-purple-600 dark:text-purple-400";
-
-  return (
-    <span
-      className={`
-        w-fit
-        px-3
-        py-1
-        rounded-xl
-        text-sm
-        font-semibold
-        whitespace-nowrap
-        ${style}
-      `}
-    >
-      {label}
-    </span>
   );
 }
 

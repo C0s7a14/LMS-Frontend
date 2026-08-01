@@ -14,3 +14,12 @@ export async function downloadCertificatePdf(id: number) {
     });
     return response.data;
 }
+
+export const validateCertificateCode = async (code: string) => {
+  try {
+    const response = await api.get(`/certificates/validate/${code}`); 
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.error || "Erro ao validar certificado");
+  }
+};

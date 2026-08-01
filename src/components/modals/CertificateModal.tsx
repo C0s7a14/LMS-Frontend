@@ -1,4 +1,4 @@
-import { X, Award, Download, Calendar, ShieldCheck } from "lucide-react";
+import { X, Award, Download, Calendar, ShieldCheck, ExternalLink, Clock3 } from "lucide-react"; 
 import { useState, useEffect } from "react";
 import { downloadCertificatePdf } from "../../services/certificateService";
 
@@ -9,6 +9,8 @@ interface Props {
   certificateTitle: string;
   studentName: string;
   emitidoEm: string;
+  validationCode?: string; 
+  workload: string;
 }
 
 export default function CertificateModal({
@@ -18,14 +20,15 @@ export default function CertificateModal({
   certificateTitle,
   studentName,
   emitidoEm,
+  validationCode,
+  workload, 
 }: Props) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [validUntil, setValidUntil] = useState("");
 
   useEffect(() => {
     if (emitidoEm) {
-      // Calculate 1 year validity to match your UI logic
-      const issueDate = new Date(emitidoEm.split('/').reverse().join('-')); // Basic string to Date handling
+      const issueDate = new Date(emitidoEm.split('/').reverse().join('-')); 
       const validDate = new Date(issueDate);
       validDate.setFullYear(validDate.getFullYear() + 1);
       setValidUntil(validDate.toLocaleDateString('pt-BR'));
@@ -35,6 +38,13 @@ export default function CertificateModal({
   if (!isOpen) {
     return null;
   }
+
+  // Generate QR Code URL
+  const qrCodeData = validationCode 
+    ? `${window.location.origin}/validar/${validationCode}`
+    : String(certificateId);
+    
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrCodeData)}`;
 
   async function handleDownload() {
     if (!certificateId) return;
@@ -63,7 +73,7 @@ export default function CertificateModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 transition-opacity">
-      <div className="w-full max-w-3xl bg-white dark:bg-[#091a2c] rounded-3xl border border-gray-200 dark:border-white/10 p-6 max-h-[90vh] overflow-y-auto shadow-2xl">
+      <div className="w-full max-w-5xl bg-white dark:bg-[#091a2c] rounded-3xl border border-gray-200 dark:border-white/10 p-6 max-h-[90vh] overflow-y-auto shadow-2xl">
         
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -91,28 +101,32 @@ export default function CertificateModal({
 
         {/* Content */}
         <div className="flex flex-col gap-6">
-          {/* Visual Preview */}
-          <div className="relative bg-white border border-gray-300 rounded-2xl overflow-hidden h-[300px] shadow-sm flex flex-col items-center justify-center text-center px-8">
-            <div className="absolute top-0 left-0 w-9 h-9 bg-blue-600 rounded-br-[2rem]" />
-            <div className="absolute top-0 right-0 w-9 h-9 bg-blue-600 rounded-bl-[2rem]" />
-            <div className="absolute bottom-0 left-0 w-9 h-9 bg-blue-600 rounded-tr-[2rem]" />
-            <div className="absolute bottom-0 right-0 w-9 h-9 bg-blue-600 rounded-tl-[2rem]" />
+          
+          {/* Anchored Absolute Positioning */}
+          <div className="relative w-full overflow-hidden rounded-2xl border border-gray-300 shadow-sm aspect-[1.414] bg-white">
+            <img 
+              src="/certificado_bg.png" 
+              alt="Fundo do Certificado" 
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            
+            {/* Student Name */}
+            <div className="absolute top-[43%] left-[58%] -translate-x-1/2 -translate-y-1/2 w-full text-center px-12">
+              <p className="text-[#1C2B4B] font-bold text-3xl sm:text-4xl">
+                {studentName}
+              </p>
+            </div>
 
-            <h3 className="text-[#080E2F] font-bold text-sm mb-3">SIRROS</h3>
-            <h2 className="text-[#080E2F] font-serif font-bold text-3xl">CERTIFICADO</h2>
-            <p className="text-[#080E2F] font-serif font-bold text-md">DE CONCLUSÃO</p>
-            
-            <p className="text-gray-500 text-sm mt-5">Certificamos que</p>
-            <p className="font-serif text-3xl text-[#080E2F] mt-1">{studentName}</p>
-            
-            <div className="w-64 h-px bg-gray-300 my-3" />
-            
-            <p className="text-sm text-gray-500">concluiu com êxito o curso</p>
-            <p className="text-[#080E2F] font-bold text-lg mt-1 line-clamp-2">{certificateTitle}</p>
+            {/* Course Title */}
+            <div className="absolute top-[65%] left-[59%] -translate-x-1/2 -translate-y-1/2 w-full text-center px-12">
+              <p className="text-[#444444] text-lg sm:text-xl line-clamp-2">
+                {certificateTitle}
+              </p>
+            </div>
           </div>
 
           {/* Info Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 dark:bg-[#0d2238] rounded-2xl p-5 border border-gray-200 dark:border-white/5">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-gray-50 dark:bg-[#0d2238] rounded-2xl p-5 border border-gray-200 dark:border-white/5">
             <div className="flex items-start gap-3">
               <Calendar className="text-blue-600 dark:text-blue-400 shrink-0 mt-1" size={20} />
               <div>
@@ -128,7 +142,54 @@ export default function CertificateModal({
                 <p className="font-semibold text-green-600 dark:text-green-400 mt-1">Até {validUntil}</p>
               </div>
             </div>
+
+            <div className="flex items-start gap-3">
+              <Clock3 className="text-purple-600 dark:text-purple-400 shrink-0 mt-1" size={20} />
+              <div>
+                <p className="text-gray-500 dark:text-gray-400 text-sm">Carga Horária</p>
+                <p className="font-semibold text-[#080E2F] dark:text-white mt-1">{workload}</p>
+              </div>
+            </div>
           </div>
+
+          {/* Validation Code & QR Code Block */}
+          {validationCode && (
+            <div className="p-5 bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+              
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-lg">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Código de Validação</p>
+                    <p className="text-sm font-bold text-[#080E2F] dark:text-white font-mono">{validationCode}</p>
+                  </div>
+                </div>
+                
+                <a 
+                  href={`/validar/${validationCode}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-transparent border border-gray-200 dark:border-white/20 text-sm font-medium text-blue-600 dark:text-blue-400 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 transition-all w-fit"
+                >
+                  Verificar Autenticidade
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              </div>
+
+              {/* QR Code Container */}
+              <div className="flex flex-col items-center justify-center p-2 bg-white dark:bg-[#091a2c] rounded-xl border border-gray-200 dark:border-white/10 shrink-0">
+                <img 
+                  src={qrCodeUrl} 
+                  alt="QR Code de Validação" 
+                  className="w-24 h-24 object-contain rounded-lg"
+                />
+              </div>
+
+            </div>
+          )}
+
         </div>
 
         {/* Footer Actions */}
@@ -146,7 +207,7 @@ export default function CertificateModal({
             className="px-6 py-3 rounded-2xl bg-blue-600 text-white font-semibold flex items-center gap-2 hover:bg-blue-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <Download size={20} />
-            {isDownloading ? "Baixando..." : "Baixar PDF Oficial"}
+            {isDownloading ? "Baixando..." : "Baixar PDF"}
           </button>
         </div>
 
