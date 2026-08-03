@@ -1,4 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { getCourseQuizzes } from "../../services/quizService";
@@ -20,7 +25,6 @@ import {
   Brain,
   Loader2,
   AlertTriangle,
-  Image as ImageIcon,
   Volume2,
    X,
   Maximize2,
@@ -110,6 +114,10 @@ interface LessonAudioType {
   atualizado_em?: string;
 }
 
+interface CourseAttemptType {
+  nota_final?: number | null;
+}
+
 export default function CourseStudy() {
   const { courseId } = useParams();
   const navigate = useNavigate();
@@ -121,7 +129,8 @@ export default function CourseStudy() {
   const [completing, setCompleting] = useState(false);
 
   const [reviewStatus, setReviewStatus] = useState<string>("sem_tentativa");
-  const [courseAttempt, setCourseAttempt] = useState<any>(null);
+  const [courseAttempt, setCourseAttempt] =
+  useState<CourseAttemptType | null>(null);
   const [completingReview, setCompletingReview] = useState(false);
   const [technicalContent, setTechnicalContent] =
   useState<LessonTechnicalContentType | null>(null);
@@ -132,109 +141,150 @@ export default function CourseStudy() {
 
 const [loadingTechnicalContent, setLoadingTechnicalContent] = useState(false);
 const [lessonImages, setLessonImages] = useState<LessonImageType[]>([]);
-const [loadingLessonImages, setLoadingLessonImages] = useState(false);
+const [, setLoadingLessonImages] = useState(false);
 const [lessonAudio, setLessonAudio] = useState<LessonAudioType | null>(null);
 const [loadingLessonAudio, setLoadingLessonAudio] = useState(false);
 
+const loadLessonTechnicalContent = useCallback(
+  async (lessonId: number) => {
+    try {
+      setLoadingTechnicalContent(true);
 
+      const response =
+        await api.get<LessonTechnicalContentType>(
+          `/lessons/${lessonId}/technical-content`,
+        );
 
-async function loadLessonTechnicalContent(lessonId: number) {
-  try {
-    setLoadingTechnicalContent(true);
+      setTechnicalContent(response.data);
+    } catch (error) {
+      console.log(error);
+      setTechnicalContent(null);
+    } finally {
+      setLoadingTechnicalContent(false);
+    }
+  },
+  [],
+);
 
-    const response = await api.get<LessonTechnicalContentType>(
-      `/lessons/${lessonId}/technical-content`
-    );
+const loadLessonImages = useCallback(
+  async (lessonId: number) => {
+    try {
+      setLoadingLessonImages(true);
 
-    setTechnicalContent(response.data);
-  } catch (error: any) {
-    console.log(error);
+      const response =
+        await api.get<LessonImageType[]>(
+          `/lessons/${lessonId}/images`,
+        );
 
-    setTechnicalContent(null);
-  } finally {
-    setLoadingTechnicalContent(false);
+      setLessonImages(response.data);
+    } catch (error) {
+      console.log(error);
+      setLessonImages([]);
+    } finally {
+      setLoadingLessonImages(false);
+    }
+  },
+  [],
+);
+
+const loadLessonAudio = useCallback(
+  async (lessonId: number) => {
+    try {
+      setLoadingLessonAudio(true);
+
+      const response =
+        await api.get<LessonAudioType | null>(
+          `/lessons/${lessonId}/audio`,
+        );
+
+      setLessonAudio(response.data);
+    } catch (error) {
+      console.log(error);
+      setLessonAudio(null);
+    } finally {
+      setLoadingLessonAudio(false);
+    }
+  },
+  [],
+);
+
+  const loadCourseContent = useCallback(async () => {
+  if (!courseId) {
+    toast.error("Curso inválido");
+    setLoading(false);
+    return;
   }
-}
 
-async function loadLessonImages(lessonId: number) {
-  try {
-    setLoadingLessonImages(true);
-
-    const response = await api.get<LessonImageType[]>(
-      `/lessons/${lessonId}/images`
-    );
-
-    setLessonImages(response.data);
-  } catch (error) {
-    console.log(error);
-    setLessonImages([]);
-  } finally {
-    setLoadingLessonImages(false);
-  }
-}
-
-async function loadLessonAudio(lessonId: number) {
-  try {
-    setLoadingLessonAudio(true);
-
-    const response = await api.get<LessonAudioType | null>(
-      `/lessons/${lessonId}/audio`
-    );
-
-    setLessonAudio(response.data);
-  } catch (error) {
-    console.log(error);
-    setLessonAudio(null);
-  } finally {
-    setLoadingLessonAudio(false);
-  }
-}
-
-  async function loadCourseContent() {
   try {
     setLoading(true);
 
-    const response = await api.get<CourseContentType>(
-      `/courses/${courseId}/content`
-    );
+    const response =
+      await api.get<CourseContentType>(
+        `/courses/${courseId}/content`,
+      );
 
     setCourse(response.data);
 
-   const quizzesData = await getCourseQuizzes(Number(courseId));
-   setQuizzes(quizzesData);
+    const quizzesData =
+      await getCourseQuizzes(Number(courseId));
 
-   const reviewData = await getCourseReviewStatus(Number(courseId));
-   setReviewStatus(reviewData.status);
-   setCourseAttempt(reviewData.curso_tentativa);
+    setQuizzes(quizzesData);
 
-    const allAulas = response.data.modulos.flatMap(
-      (modulo) => modulo.aulas
+    const reviewData =
+      await getCourseReviewStatus(
+        Number(courseId),
+      );
+
+    setReviewStatus(reviewData.status);
+    setCourseAttempt(
+      reviewData.curso_tentativa,
     );
 
-    const firstIncompleteAula = allAulas.find(
-      (aula) => !aula.concluida
-    );
+    const allAulas =
+      response.data.modulos.flatMap(
+        (modulo) => modulo.aulas,
+      );
+
+    const firstIncompleteAula =
+      allAulas.find(
+        (aula) => !aula.concluida,
+      );
 
     const firstAula = allAulas[0];
 
-    setSelectedAulaId((currentSelectedId) => {
-      if (currentSelectedId) {
-        return currentSelectedId;
-      }
+    setSelectedAulaId(
+      (currentSelectedId) => {
+        if (currentSelectedId) {
+          return currentSelectedId;
+        }
 
-      return firstIncompleteAula?.id || firstAula?.id || null;
-    });
+        return (
+          firstIncompleteAula?.id ||
+          firstAula?.id ||
+          null
+        );
+      },
+    );
   } catch (error) {
     console.log(error);
-    toast.error("Erro ao carregar conteúdo do curso");
+
+    toast.error(
+      "Erro ao carregar conteúdo do curso",
+    );
   } finally {
     setLoading(false);
   }
-}
-
-  useEffect(() => {
-  loadCourseContent();
 }, [courseId]);
+
+ useEffect(() => {
+  const timeoutId = window.setTimeout(() => {
+    void loadCourseContent();
+  }, 0);
+
+  return () => {
+    window.clearTimeout(timeoutId);
+  };
+}, [loadCourseContent]);
 
 const aulas = useMemo(() => {
   if (!course) {
@@ -247,18 +297,33 @@ const aulas = useMemo(() => {
 const selectedAula =
   aulas.find((aula) => aula.id === selectedAulaId) || null;
 
- useEffect(() => {
-  if (!selectedAulaId) {
-    setTechnicalContent(null);
-    setLessonImages([]);
-    setLessonAudio(null);
-    return;
-  }
+useEffect(() => {
+  const timeoutId = window.setTimeout(() => {
+    if (!selectedAulaId) {
+      setTechnicalContent(null);
+      setLessonImages([]);
+      setLessonAudio(null);
+      return;
+    }
 
-  loadLessonTechnicalContent(selectedAulaId);
-  loadLessonImages(selectedAulaId);
-  loadLessonAudio(selectedAulaId);
-}, [selectedAulaId]);
+    void loadLessonTechnicalContent(
+      selectedAulaId,
+    );
+
+    void loadLessonImages(selectedAulaId);
+
+    void loadLessonAudio(selectedAulaId);
+  }, 0);
+
+  return () => {
+    window.clearTimeout(timeoutId);
+  };
+}, [
+  selectedAulaId,
+  loadLessonTechnicalContent,
+  loadLessonImages,
+  loadLessonAudio,
+]);
 
   const hasTechnicalContent = technicalContent
   ? Boolean(

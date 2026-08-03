@@ -12,8 +12,11 @@ import {
   TrendingUp,
   Wrench,
   Loader2,
-  ExternalLink
+  ExternalLink,
 } from "lucide-react";
+
+import type { LucideIcon } from "lucide-react";
+
 
 import { useMemo, useState, useEffect } from "react";
 import { getCertificates, downloadCertificatePdf } from "../../services/certificateService";
@@ -29,6 +32,14 @@ interface CertificateType {
   score: string;
   workload: string;
   icon: "monitor" | "wrench" | "award";
+}
+
+interface CertificateApiType {
+  id?: number;
+  validation_code?: string;
+  curso_titulo?: string;
+  curso_id?: number | string;
+  emitido_em?: string;
 }
 
 function getUserFromStorage() {
@@ -53,9 +64,11 @@ export default function Certificates() {
       try {
         const data = await getCertificates();
         
-        const safeData = Array.isArray(data) ? data : [];
-        
-        const formattedCertificates = safeData.map((cert: any) => {
+        const safeData: CertificateApiType[] =
+          Array.isArray(data) ? data : [];
+
+        const formattedCertificates: CertificateType[] =
+          safeData.map((cert) => {
           const issueDate = cert.emitido_em ? new Date(cert.emitido_em) : new Date();
           const validDate = new Date(issueDate);
           validDate.setFullYear(validDate.getFullYear() + 1);
@@ -379,7 +392,22 @@ export default function Certificates() {
   );
 }
 
-function CertificateStatCard({ icon: Icon, title, value, subtitle, color, }: { icon: any; title: string; value: string | number; subtitle: string; color: string; }) {
+interface CertificateStatCardProps {
+  icon: LucideIcon;
+  title: string;
+  value: string | number;
+  subtitle: string;
+  color: string;
+}
+
+
+function CertificateStatCard({
+  icon: Icon,
+  title,
+  value,
+  subtitle,
+  color,
+}: CertificateStatCardProps) {
   return (
     <div className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-2xl dark:shadow-sm dark:shadow-blue-500 cursor-pointer transition-all duration-300 ease-in-out hover:scale-105">
       <div className="flex items-center gap-5">
@@ -424,13 +452,40 @@ function CertificatePreview({ studentName, courseTitle, }: { studentName: string
   );
 }
 
-function InfoItem({ icon: Icon, title, value, success = false, }: { icon: any; title: string; value: string; success?: boolean; }) {
+
+
+interface CertificateInfoProps {
+  icon: LucideIcon;
+  title: string;
+  value: string;
+  success?: boolean;
+}
+
+function InfoItem({
+  icon: Icon,
+  title,
+  value,
+  success = false,
+}: CertificateInfoProps) {
   return (
     <div className="flex items-start gap-3">
-      <Icon className="text-blue-600 dark:text-blue-400 shrink-0 mt-1" size={24} />
+      <Icon
+        className="text-blue-600 dark:text-blue-400 shrink-0 mt-1"
+        size={24}
+      />
+
       <div>
-        <p className="text-gray-500 dark:text-gray-400">{title}</p>
-        <p className={`font-semibold mt-1 ${success ? "text-green-600 dark:text-green-400" : "text-[#080E2F] dark:text-white"}`}>
+        <p className="text-gray-500 dark:text-gray-400">
+          {title}
+        </p>
+
+        <p
+          className={`font-semibold mt-1 ${
+            success
+              ? "text-green-600 dark:text-green-400"
+              : "text-[#080E2F] dark:text-white"
+          }`}
+        >
           {value}
         </p>
       </div>
@@ -438,13 +493,31 @@ function InfoItem({ icon: Icon, title, value, success = false, }: { icon: any; t
   );
 }
 
-function SmallInfo({ icon: Icon, title, value, success = false, }: { icon: any; title: string; value: string; success?: boolean; }) {
+function SmallInfo({
+  icon: Icon,
+  title,
+  value,
+  success = false,
+}: CertificateInfoProps) {
   return (
-    <div className="flex items-start gap-2 ">
-      <Icon className="text-blue-600 dark:text-blue-400 shrink-0 mt-1" size={20} />
+    <div className="flex items-start gap-2">
+      <Icon
+        className="text-blue-600 dark:text-blue-400 shrink-0 mt-1"
+        size={20}
+      />
+
       <div>
-        <p className="text-gray-500 dark:text-gray-400 text-sm">{title}</p>
-        <p className={`text-sm font-semibold mt-1 ${success ? "text-green-600 dark:text-green-400" : "text-[#080E2F] dark:text-white"}`}>
+        <p className="text-gray-500 dark:text-gray-400 text-sm">
+          {title}
+        </p>
+
+        <p
+          className={`text-sm font-semibold mt-1 ${
+            success
+              ? "text-green-600 dark:text-green-400"
+              : "text-[#080E2F] dark:text-white"
+          }`}
+        >
           {value}
         </p>
       </div>

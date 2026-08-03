@@ -1,0 +1,181 @@
+
+> lms-frontend@0.0.0 lint
+> eslint .
+
+
+C:\Users\ResTIC55\OneDrive\Desktop\Completo\LMS-Frontend\src\components\modals\CertificateModal.tsx
+  34:7  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\ResTIC55\OneDrive\Desktop\Completo\LMS-Frontend\src\components\modals\CertificateModal.tsx:34:7
+  32 |       const validDate = new Date(issueDate);
+  33 |       validDate.setFullYear(validDate.getFullYear() + 1);
+> 34 |       setValidUntil(validDate.toLocaleDateString('pt-BR'));
+     |       ^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  35 |     }
+  36 |   }, [emitidoEm]);
+  37 |  react-hooks/set-state-in-effect
+
+C:\Users\ResTIC55\OneDrive\Desktop\Completo\LMS-Frontend\src\components\modals\CourseModal.tsx
+   63:7   error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\ResTIC55\OneDrive\Desktop\Completo\LMS-Frontend\src\components\modals\CourseModal.tsx:63:7
+  61 |   useEffect(() => {
+  62 |     if (isOpen) {
+> 63 |       getDevices();
+     |       ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  64 |     }
+  65 |   }, [isOpen]);
+  66 |  react-hooks/set-state-in-effect
+  132:21  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-explicit-any
+
+C:\Users\ResTIC55\OneDrive\Desktop\Completo\LMS-Frontend\src\components\modals\UserModal.tsx
+  84:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\ResTIC55\OneDrive\Desktop\Completo\LMS-Frontend\src\contexts\ThemeContext.tsx
+  54:6   warning  React Hook useEffect has a missing dependency: 'theme'. Either include it or remove the dependency array                        react-hooks/exhaustive-deps
+  69:17  error    Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\ResTIC55\OneDrive\Desktop\Completo\LMS-Frontend\src\pages\admin\CreateCourse.tsx
+   91:5   error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\ResTIC55\OneDrive\Desktop\Completo\LMS-Frontend\src\pages\admin\CreateCourse.tsx:91:5
+  89 |
+  90 |   useEffect(() => {
+> 91 |     getDevices();
+     |     ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  92 |   }, []);
+  93 |
+  94 |   const selectedDeviceObjects = devices.filter((device) =>  react-hooks/set-state-in-effect
+  227:21  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         @typescript-eslint/no-explicit-any
+  296:19  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         @typescript-eslint/no-explicit-any
+
+C:\Users\ResTIC55\OneDrive\Desktop\Completo\LMS-Frontend\src\pages\admin\ManageCourseLessons.tsx
+   407:19  error    Unexpected any. Specify a different type                                                                                                        @typescript-eslint/no-explicit-any
+   447:19  error    Unexpected any. Specify a different type                                                                                                        @typescript-eslint/no-explicit-any
+   483:4   warning  React Hook useEffect has missing dependencies: 'loadCourseContent' and 'loadCourseQuizzes'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+   522:19  error    Unexpected any. Specify a different type                                                                                                        @typescript-eslint/no-explicit-any
+   649:48  error    Unexpected any. Specify a different type                                                                                                        @typescript-eslint/no-explicit-any
+   655:48  error    Unexpected any. Specify a different type                                                                                                        @typescript-eslint/no-explicit-any
+   663:19  error    Unexpected any. Specify a different type                                                                                                        @typescript-eslint/no-explicit-any
+   679:59  error    Unexpected any. Specify a different type                                                                                                        @typescript-eslint/no-explicit-any
+   864:19  error    Unexpected any. Specify a different type                                                                                                        @typescript-eslint/no-explicit-any
+   894:19  error    Unexpected any. Specify a different type                                                                                                        @typescript-eslint/no-explicit-any
+  1006:19  error    Unexpected any. Specify a different type                                                                                                        @typescript-eslint/no-explicit-any
+  1042:19  error    Unexpected any. Specify a different type                                                                                                        @typescript-eslint/no-explicit-any
+  1128:19  error    Unexpected any. Specify a different type                                                                                                        @typescript-eslint/no-explicit-any
+  1160:19  error    Unexpected any. Specify a different type                                                                                                        @typescript-eslint/no-explicit-any
+  1288:19  error    Unexpected any. Specify a different type                                                                                                        @typescript-eslint/no-explicit-any
+  1372:19  error    Unexpected any. Specify a different type                                                                                                        @typescript-eslint/no-explicit-any
+  1424:19  error    Unexpected any. Specify a different type                                                                                                        @typescript-eslint/no-explicit-any
+
+C:\Users\ResTIC55\OneDrive\Desktop\Completo\LMS-Frontend\src\pages\admin\dashboard\hooks\useAdminDashboard.ts
+  108:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\ResTIC55\OneDrive\Desktop\Completo\LMS-Frontend\src\pages\admin\dashboard\hooks\useAdminDashboard.ts:108:5
+  106 |
+  107 |   useEffect(() => {
+> 108 |     loadDashboardData();
+      |     ^^^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  109 |   }, [loadDashboardData]);
+  110 |
+  111 |   return {  react-hooks/set-state-in-effect
+
+C:\Users\ResTIC55\OneDrive\Desktop\Completo\LMS-Frontend\src\pages\admin\dashboard\tabs\AITab.tsx
+  222:21  error  Redundant Boolean call  no-extra-boolean-cast
+  228:18  error  Redundant Boolean call  no-extra-boolean-cast
+
+C:\Users\ResTIC55\OneDrive\Desktop\Completo\LMS-Frontend\src\pages\admin\user.tsx
+  51:5   error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\ResTIC55\OneDrive\Desktop\Completo\LMS-Frontend\src\pages\admin\user.tsx:51:5
+  49 |
+  50 |   useEffect(() => {
+> 51 |     getUsers();
+     |     ^^^^^^^^ Avoid calling setState() directly within an effect
+  52 |   }, []);
+  53 |
+  54 |   async function handleDeleteUser(userId: number) {  react-hooks/set-state-in-effect
+  78:21  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      @typescript-eslint/no-explicit-any
+
+C:\Users\ResTIC55\OneDrive\Desktop\Completo\LMS-Frontend\src\pages\auth\Devices.tsx
+  308:5  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\ResTIC55\OneDrive\Desktop\Completo\LMS-Frontend\src\pages\auth\Devices.tsx:308:5
+  306 |
+  307 |   useEffect(() => {
+> 308 |     getDevices();
+      |     ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  309 |   }, []);
+  310 |
+  311 |   const filteredDevices = devices.filter((device) => {  react-hooks/set-state-in-effect
+  309:6  warning  React Hook useEffect has a missing dependency: 'getDevices'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  react-hooks/exhaustive-deps
+
+C:\Users\ResTIC55\OneDrive\Desktop\Completo\LMS-Frontend\src\pages\auth\Forgotpassword.tsx
+  45:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\ResTIC55\OneDrive\Desktop\Completo\LMS-Frontend\src\pages\auth\Home.tsx
+  153:3  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\ResTIC55\OneDrive\Desktop\Completo\LMS-Frontend\src\pages\auth\Home.tsx:153:3
+  151 |   }
+  152 |
+> 153 |   loadUserProfile();
+      |   ^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  154 |   loadStudentHome();
+  155 |   loadMyCourses();
+  156 |  react-hooks/set-state-in-effect
+
+C:\Users\ResTIC55\OneDrive\Desktop\Completo\LMS-Frontend\src\pages\auth\Register.tsx
+  88:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\ResTIC55\OneDrive\Desktop\Completo\LMS-Frontend\src\pages\auth\ResetPassword.tsx
+  75:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\ResTIC55\OneDrive\Desktop\Completo\LMS-Frontend\src\pages\auth\Settings.tsx
+  185:4  warning  React Hook useEffect has missing dependencies: 'i18n' and 'user'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+✖ 38 problems (34 errors, 4 warnings)
+  2 errors and 0 warnings potentially fixable with the `--fix` option.
+

@@ -6,8 +6,12 @@ import {
   Copy,
   ShieldAlert,
   User,
-  Loader2
+  Loader2,
 } from "lucide-react";
+
+import type { LucideIcon } from "lucide-react";
+
+
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { validateCertificateCode } from "../../services/certificateService"; 
@@ -65,7 +69,7 @@ export default function CertificateDetails() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-[#071827]">
         <Loader2 className="w-12 h-12 text-blue-500 animate-spin mb-4" />
-        <p className="text-xl font-semibold text-gray-700 dark:text-gray-300">
+        <p className="text-xl font-semibold text-gray-700 dark:text-gray-300">https://www.crunchyroll.com/pt-br/discover
           Verificando autenticidade no sistema...
         </p>
       </div>
@@ -205,15 +209,30 @@ function BigCertificatePreview({
 }
 
 // COMPONENT: Detail Row
-function CertificateDetailRow({ icon: Icon, label, value }: { icon: any; label: string; value: string; }) {
+interface CertificateDetailRowProps {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+}
+
+function CertificateDetailRow({
+  icon: Icon,
+  label,
+  value,
+}: CertificateDetailRowProps) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-5 py-4 border-b border-gray-50 dark:border-white/5 last:border-0">
       <div className="flex items-center gap-3 text-gray-500 dark:text-gray-400">
         <div className="p-2 bg-blue-50 dark:bg-blue-500/10 rounded-lg shrink-0">
-          <Icon className="text-blue-600 dark:text-blue-400" size={20} />
+          <Icon
+            className="text-blue-600 dark:text-blue-400"
+            size={20}
+          />
         </div>
+
         <span className="font-medium">{label}</span>
       </div>
+
       <strong className="text-[#080E2F] dark:text-white sm:text-right text-lg">
         {value}
       </strong>

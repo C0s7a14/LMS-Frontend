@@ -84,7 +84,7 @@ export default function Settings() {
     useState(false);
 
   const [contaVerificada, setContaVerificada] = useState(false);
-  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [, setLoadingProfile] = useState(true);
 
   const [appearance, setAppearance] =
     useState<AppearanceType>("system");

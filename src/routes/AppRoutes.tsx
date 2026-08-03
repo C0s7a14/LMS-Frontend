@@ -13,7 +13,7 @@ import CreateCourses from "../pages/admin/CreateCourse";
 import Settings from "../pages/auth/Settings";
 import Certificates from "../pages/student/Certificates";
 import CertificateDetails from "../pages/student/CertificateDetails";
-import AdminDashboard from "../pages/admin/AdminDashboard";
+import AdminDashboard from "../pages/admin/dashboard/AdminDashboard";
 import CourseStudy from "../pages/student/CourseStudy";
 import ManageCourseLessons from "../pages/admin/ManageCourseLessons";
 import QuizAttempt from "../pages/student/QuizAttempt";

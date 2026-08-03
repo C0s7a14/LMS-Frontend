@@ -9,7 +9,6 @@ import {
   Brain,
   CheckCircle2,
   Cpu,
-  FileText,
   Loader2,
   MessageCircle,
   Send,

@@ -7,9 +7,19 @@ import {
   Loader2,
   MessageCircle,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+
+import type { LucideIcon } from "lucide-react";
+
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
+
 import { useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
+import axios from "axios";
+
 import { api } from "../../services/api";
 
 type DeviceDetailTab = "overview" | "documents" | "support";
@@ -35,6 +45,26 @@ interface ClientDeviceDocumentType {
   criado_em?: string;
 }
 
+function getApiErrorMessage(
+  error: unknown,
+  fallbackMessage: string,
+) {
+  if (
+    axios.isAxiosError<{
+      error?: string;
+      message?: string;
+    }>(error)
+  ) {
+    return (
+      error.response?.data?.error ||
+      error.response?.data?.message ||
+      fallbackMessage
+    );
+  }
+
+  return fallbackMessage;
+}
+
 export default function ClientDeviceDetails() {
   const { deviceId } = useParams();
   const navigate = useNavigate();
@@ -47,64 +77,98 @@ export default function ClientDeviceDetails() {
     number | null
   >(null);
 
-  async function loadDeviceDetails() {
-    try {
-      setLoading(true);
+  const loadDeviceDetails = useCallback(async () => {
+  if (!deviceId) {
+    toast.error("Dispositivo inválido.");
+    navigate("/devices");
+    return;
+  }
 
-      const [deviceResponse, documentsResponse] = await Promise.all([
-        api.get<ClientDeviceDetailsType>(`/client/devices/${deviceId}`),
+  try {
+    setLoading(true);
+
+    const [deviceResponse, documentsResponse] =
+      await Promise.all([
+        api.get<ClientDeviceDetailsType>(
+          `/client/devices/${deviceId}`,
+        ),
         api.get<ClientDeviceDocumentType[]>(
-          `/client/devices/${deviceId}/documents`
+          `/client/devices/${deviceId}/documents`,
         ),
       ]);
 
-      setDevice(deviceResponse.data);
-      setDocuments(documentsResponse.data);
-    } catch (error: any) {
-      console.log(error);
-      toast.error(
-        error.response?.data?.error || "Erro ao carregar dispositivo."
-      );
-      navigate("/devices");
-    } finally {
-      setLoading(false);
-    }
+    setDevice(deviceResponse.data);
+    setDocuments(documentsResponse.data);
+  } catch (error: unknown) {
+    console.log(error);
+
+    toast.error(
+      getApiErrorMessage(
+        error,
+        "Erro ao carregar dispositivo.",
+      ),
+    );
+
+    navigate("/devices");
+  } finally {
+    setLoading(false);
   }
+}, [deviceId, navigate]);
 
-  async function handleDownloadDocument(document: ClientDeviceDocumentType) {
-    try {
-      setDownloadingDocumentId(document.id);
+  async function handleDownloadDocument(
+  document: ClientDeviceDocumentType,
+) {
+  try {
+    setDownloadingDocumentId(document.id);
 
-      const response = await api.get(
-        `/client/device-documents/${document.id}/download`,
-        {
-          responseType: "blob",
-        }
-      );
+    const response = await api.get<Blob>(
+      `/client/device-documents/${document.id}/download`,
+      {
+        responseType: "blob",
+      },
+    );
 
-      const fileUrl = window.URL.createObjectURL(new Blob([response.data]));
-      const link = window.document.createElement("a");
+    const fileUrl =
+      window.URL.createObjectURL(response.data);
 
-      link.href = fileUrl;
-      link.setAttribute("download", document.nome_arquivo_original);
-      window.document.body.appendChild(link);
-      link.click();
+    const link =
+      window.document.createElement("a");
 
-      link.remove();
-      window.URL.revokeObjectURL(fileUrl);
-    } catch (error: any) {
-      console.log(error);
-      toast.error(
-        error.response?.data?.error || "Erro ao baixar documento."
-      );
-    } finally {
-      setDownloadingDocumentId(null);
-    }
+    link.href = fileUrl;
+
+    link.setAttribute(
+      "download",
+      document.nome_arquivo_original,
+    );
+
+    window.document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    window.URL.revokeObjectURL(fileUrl);
+  } catch (error: unknown) {
+    console.log(error);
+
+    toast.error(
+      getApiErrorMessage(
+        error,
+        "Erro ao baixar documento.",
+      ),
+    );
+  } finally {
+    setDownloadingDocumentId(null);
   }
+}
 
   useEffect(() => {
-    loadDeviceDetails();
-  }, [deviceId]);
+  const timeoutId = window.setTimeout(() => {
+    void loadDeviceDetails();
+  }, 0);
+
+  return () => {
+    window.clearTimeout(timeoutId);
+  };
+}, [loadDeviceDetails]);
 
   if (loading) {
     return (
@@ -318,17 +382,19 @@ export default function ClientDeviceDetails() {
   );
 }
 
+interface DeviceDetailTabButtonProps {
+  active: boolean;
+  icon: LucideIcon;
+  label: string;
+  onClick: () => void;
+}
+
 function DeviceDetailTabButton({
   active,
   icon: Icon,
   label,
   onClick,
-}: {
-  active: boolean;
-  icon: any;
-  label: string;
-  onClick: () => void;
-}) {
+}: DeviceDetailTabButtonProps) {
   return (
     <button
       type="button"

@@ -11,7 +11,12 @@ import {
   MapPin,
 } from "lucide-react";
 
-import { useEffect, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
+
 import { useNavigate } from "react-router-dom";
 import { api } from "../../services/api";
 import toast from "react-hot-toast";
@@ -53,11 +58,13 @@ export default function MyCourses() {
 
   const navigate = useNavigate();
 
-  async function getCourses() {
+  const getCourses = useCallback(async () => {
   try {
     setLoading(true);
 
-    const response = await api.get<CourseType[]>("/student/my-courses");
+    const response = await api.get<CourseType[]>(
+      "/student/my-courses",
+    );
 
     setCourses(response.data);
   } catch (error) {
@@ -66,11 +73,17 @@ export default function MyCourses() {
   } finally {
     setLoading(false);
   }
-}
+}, []);
 
   useEffect(() => {
-    getCourses();
-  }, []);
+  const timeoutId = window.setTimeout(() => {
+    void getCourses();
+  }, 0);
+
+  return () => {
+    window.clearTimeout(timeoutId);
+  };
+}, [getCourses]);
 
   const filteredCourses = courses.filter((course) => {
     const searchLower = search.toLowerCase();
