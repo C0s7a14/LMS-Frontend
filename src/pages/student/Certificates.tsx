@@ -29,7 +29,7 @@ interface CertificateType {
   academy: string;
   conclusionDate: string;
   validUntil: string;
-  score: string;
+  score: number | null;
   workload: string;
   icon: "monitor" | "wrench" | "award";
 }
@@ -40,6 +40,7 @@ interface CertificateApiType {
   curso_titulo?: string;
   curso_id?: number | string;
   emitido_em?: string;
+  nota_final?: number | string | null;
 }
 
 function getUserFromStorage() {
@@ -67,24 +68,48 @@ export default function Certificates() {
         const safeData: CertificateApiType[] =
           Array.isArray(data) ? data : [];
 
-        const formattedCertificates: CertificateType[] =
-          safeData.map((cert) => {
-          const issueDate = cert.emitido_em ? new Date(cert.emitido_em) : new Date();
-          const validDate = new Date(issueDate);
-          validDate.setFullYear(validDate.getFullYear() + 1);
+       const formattedCertificates: CertificateType[] =
+  safeData.map((cert) => {
+    const issueDate = cert.emitido_em
+      ? new Date(cert.emitido_em)
+      : new Date();
 
-          return {
-            dbId: cert.id || 0,
-            id: cert.validation_code || "Código Indisponível",
-            title: cert.curso_titulo || `Curso de ID: ${cert.curso_id || 'Desconhecido'}`,
-            academy: "SIRROS Academy",
-            conclusionDate: issueDate.toLocaleDateString('pt-BR'),
-            validUntil: validDate.toLocaleDateString('pt-BR'),
-            score: "100%", 
-            workload: "8h", 
-            icon: "award" as const,
-          };
-        });
+    const validDate = new Date(issueDate);
+    validDate.setFullYear(
+      validDate.getFullYear() + 1,
+    );
+
+    const parsedScore = Number(
+      cert.nota_final,
+    );
+
+    const score =
+      cert.nota_final === null ||
+      cert.nota_final === undefined ||
+      Number.isNaN(parsedScore)
+        ? null
+        : parsedScore;
+
+    return {
+      dbId: cert.id || 0,
+      id:
+        cert.validation_code ||
+        "Código Indisponível",
+      title:
+        cert.curso_titulo ||
+        `Curso de ID: ${
+          cert.curso_id || "Desconhecido"
+        }`,
+      academy: "SIRROS Academy",
+      conclusionDate:
+        issueDate.toLocaleDateString("pt-BR"),
+      validUntil:
+        validDate.toLocaleDateString("pt-BR"),
+      score,
+      workload: "8h",
+      icon: "award" as const,
+    };
+  });
 
         setCertificates(formattedCertificates);
       } catch (error) {
@@ -130,6 +155,26 @@ export default function Certificates() {
   const featuredCertificate = filteredCertificates[0];
   const otherCertificates = filteredCertificates.slice(1);
 
+  const averageScore = useMemo(() => {
+  const scores = certificates
+    .map((certificate) => certificate.score)
+    .filter(
+      (score): score is number =>
+        score !== null,
+    );
+
+  if (scores.length === 0) {
+    return null;
+  }
+
+  const total = scores.reduce(
+    (sum, score) => sum + score,
+    0,
+  );
+
+  return total / scores.length;
+}, [certificates]);
+
   function getCertificateIcon(type: CertificateType["icon"]) {
     if (type === "monitor") return Monitor;
     if (type === "wrench") return Wrench;
@@ -146,6 +191,8 @@ export default function Certificates() {
       </main>
     );
   }
+
+
 
   return (
     <main className="min-h-screen bg-gray-50 dark:bg-[#071827] px-4 py-6 sm:px-6 lg:px-10 transition-colors">
@@ -213,7 +260,23 @@ export default function Certificates() {
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           <CertificateStatCard icon={Award} title="Total de Certificados" value={certificates.length} subtitle="Certificados emitidos" color="bg-purple-500/15 text-purple-600 dark:text-purple-400" />
-          <CertificateStatCard icon={TrendingUp} title="Média de Notas" value="100%" subtitle="Desempenho geral" color="bg-green-500/15 text-green-600 dark:text-green-400" />
+          <CertificateStatCard
+                icon={TrendingUp}
+                title="Média de Notas"
+                value={
+                  averageScore === null
+                    ? "—"
+                    : `${averageScore
+                        .toFixed(1)
+                        .replace(".", ",")}%`
+                }
+                subtitle={
+                  averageScore === null
+                    ? "Sem avaliações concluídas"
+                    : "Desempenho geral"
+                }
+                color="bg-green-500/15 text-green-600 dark:text-green-400"
+              />
           <CertificateStatCard icon={Calendar} title="Último Certificado" value={featuredCertificate ? featuredCertificate.conclusionDate : "Nenhum"} subtitle="Data de emissão" color="bg-blue-500/15 text-blue-600 dark:text-blue-400" />
         </div>
 
@@ -251,7 +314,10 @@ export default function Certificates() {
                   </div>
 
                   <span className="w-fit rounded-2xl bg-green-500/15 text-green-600 dark:text-green-400 px-5 py-2 font-semibold">
-                    Nota: {featuredCertificate.score}
+                    Nota:{" "}
+                  {featuredCertificate.score === null
+                    ? "Não informada"
+                    : `${featuredCertificate.score}%`}
                   </span>
                 </div>
 
