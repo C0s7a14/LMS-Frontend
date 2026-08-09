@@ -41,6 +41,7 @@ interface CertificateApiType {
   curso_id?: number | string;
   emitido_em?: string;
   nota_final?: number | string | null;
+  carga_horaria?: number | string;
 }
 
 function getUserFromStorage() {
@@ -106,7 +107,7 @@ export default function Certificates() {
       validUntil:
         validDate.toLocaleDateString("pt-BR"),
       score,
-      workload: "8h",
+      workload: cert.carga_horaria ? `${cert.carga_horaria} Horas` : "0 Horas",
       icon: "award" as const,
     };
   });
@@ -450,7 +451,7 @@ export default function Certificates() {
           studentName={user?.name || "Aluno"}
           emitidoEm={selectedCert?.conclusionDate || ""}
           validationCode={selectedCert?.id || ""} 
-          workload={selectedCert?.workload || "0h"}
+          workload={selectedCert?.workload || ""}
         />
 
       </div>
