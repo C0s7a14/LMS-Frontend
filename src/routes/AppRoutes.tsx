@@ -18,6 +18,7 @@ import CourseStudy from "../pages/student/CourseStudy";
 import ManageCourseLessons from "../pages/admin/ManageCourseLessons";
 import QuizAttempt from "../pages/student/QuizAttempt";
 import ClientDeviceDetails from "../pages/client/ClientDeviceDetails";
+import FreelancerInvitePublicPage from "../pages/public/FreelancerInvitePublicPage";
 
 import Users from "../pages/admin/user";
 
@@ -42,6 +43,12 @@ export default function AppRoutes() {
         <Route 
           path="/validar/:certificateId" 
           element={<CertificateDetails />} 
+        />
+
+        {/* PÁGINA PÚBLICA DO CONVITE FREELANCER */}
+        <Route
+          path="/convite/:token"
+          element={<FreelancerInvitePublicPage />}
         />
 
         {/* Usuarios (Área Logada) */}

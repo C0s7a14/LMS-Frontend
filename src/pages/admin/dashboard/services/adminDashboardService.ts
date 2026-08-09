@@ -10,6 +10,7 @@ import type {
   DeviceType,
   EnrollmentRequestType,
   UserType,
+  AdminStudentOverviewType,
 } from "../types/adminDashboard.types";
 
 const API_URL = "http://localhost:3333";
@@ -17,6 +18,7 @@ const API_URL = "http://localhost:3333";
 export interface AdminDashboardLoadResult {
   dashboardData: AdminDashboardData;
   users: UserType[];
+  students: AdminStudentOverviewType[];
   courses: CourseType[];
   devices: DeviceType[];
   aiSummary: AiKnowledgeSummary;
@@ -36,30 +38,36 @@ export async function fetchAdminDashboardData(
   };
 
   const [
-    dashboardResponse,
-    usersResponse,
-    coursesResponse,
-    devicesResponse,
-    aiSummaryResponse,
-    aiDevicesResponse,
-    aiPromptsResponse,
-    reportsResponse,
-    enrollmentRequestsResponse,
-  ] = await Promise.all([
+  dashboardResponse,
+  usersResponse,
+  studentsResponse,
+  coursesResponse,
+  devicesResponse,
+  aiSummaryResponse,
+  aiDevicesResponse,
+  aiPromptsResponse,
+  reportsResponse,
+  enrollmentRequestsResponse,
+] = await Promise.all([
     axios.get<AdminDashboardData>(
       `${API_URL}/admin/dashboard`,
       config,
     ),
 
     axios.get<UserType[]>(
-      `${API_URL}/users`,
-      config,
-    ),
+  `${API_URL}/users`,
+  config,
+),
 
-    axios.get<CourseType[]>(
-      `${API_URL}/courses`,
-      config,
-    ),
+axios.get<AdminStudentOverviewType[]>(
+  `${API_URL}/admin/students`,
+  config,
+),
+
+axios.get<CourseType[]>(
+  `${API_URL}/courses`,
+  config,
+),
 
     axios.get<DeviceType[]>(
       `${API_URL}/devices`,
@@ -93,15 +101,16 @@ export async function fetchAdminDashboardData(
   ]);
 
   return {
-    dashboardData: dashboardResponse.data,
-    users: usersResponse.data,
-    courses: coursesResponse.data,
-    devices: devicesResponse.data,
-    aiSummary: aiSummaryResponse.data,
-    aiDevices: aiDevicesResponse.data,
-    aiPrompts: aiPromptsResponse.data,
-    reports: reportsResponse.data,
-    enrollmentRequests:
-      enrollmentRequestsResponse.data,
-  };
+  dashboardData: dashboardResponse.data,
+  users: usersResponse.data,
+  students: studentsResponse.data,
+  courses: coursesResponse.data,
+  devices: devicesResponse.data,
+  aiSummary: aiSummaryResponse.data,
+  aiDevices: aiDevicesResponse.data,
+  aiPrompts: aiPromptsResponse.data,
+  reports: reportsResponse.data,
+  enrollmentRequests:
+    enrollmentRequestsResponse.data,
+};
 }

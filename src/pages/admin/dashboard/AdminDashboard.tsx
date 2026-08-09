@@ -45,6 +45,7 @@ export default function AdminDashboard() {
     dashboardData,
     adminReports,
     users,
+    students,
     courses,
     devices,
     enrollmentRequests,
@@ -345,6 +346,7 @@ export default function AdminDashboard() {
           {currentTab === "users" && (
             <UsersTab
             users={users}
+            students={students}
             search={search}
             totalStudents={totalStudents}
             totalClients={totalClients}

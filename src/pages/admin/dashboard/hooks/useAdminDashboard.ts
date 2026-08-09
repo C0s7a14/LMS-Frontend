@@ -13,6 +13,7 @@ import { fetchAdminDashboardData } from "../services/adminDashboardService";
 import type {
   AdminDashboardData,
   AdminReportsData,
+  AdminStudentOverviewType,
   AiDeviceType,
   AiKnowledgeSummary,
   AiPromptType,
@@ -20,6 +21,7 @@ import type {
   DeviceType,
   EnrollmentRequestType,
   UserType,
+  
 } from "../types/adminDashboard.types";
 
 export default function useAdminDashboard() {
@@ -33,6 +35,9 @@ export default function useAdminDashboard() {
 
   const [users, setUsers] =
     useState<UserType[]>([]);
+
+    const [students, setStudents] =
+  useState<AdminStudentOverviewType[]>([]);
 
   const [courses, setCourses] =
     useState<CourseType[]>([]);
@@ -74,6 +79,7 @@ export default function useAdminDashboard() {
 
       setDashboardData(data.dashboardData);
       setUsers(data.users);
+      setStudents(data.students);
       setCourses(data.courses);
       setDevices(data.devices);
       setAiSummary(data.aiSummary);
@@ -112,6 +118,7 @@ export default function useAdminDashboard() {
     dashboardData,
     adminReports,
     users,
+    students,
     courses,
     devices,
     enrollmentRequests,

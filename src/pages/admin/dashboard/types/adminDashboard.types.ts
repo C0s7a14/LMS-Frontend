@@ -30,6 +30,20 @@ export interface UserType {
   email: string;
   role: UserRole;
   criado_em?: string;
+  devices?: DeviceType[];
+}
+
+export interface AdminStudentOverviewType {
+  id: number;
+  name: string;
+  email: string;
+  criado_em?: string;
+
+  total_cursos: number | string;
+  progresso_medio: number | string | null;
+  media_nota: number | string | null;
+  total_certificados: number | string;
+  ultima_atividade: string | null;
 }
 
 export interface AiKnowledgeSummary {
