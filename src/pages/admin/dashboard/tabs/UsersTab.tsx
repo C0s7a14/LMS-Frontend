@@ -16,6 +16,9 @@ import StatCard from "../components/StatCard";
 import StatsGrid from "../components/StatsGrid";
 import TableCard from "../components/TableCard";
 
+import ActiveUsersTodayView from "./ActiveUsersTodayView";
+import useActiveUsersToday from "../hooks/useActiveUsersToday";
+
 import {
   getFreelancerInviteSummary,
 } from "../services/freelancerInviteService";
@@ -58,8 +61,15 @@ export default function UsersTab({
 
 const [activeView, setActiveView] =
   useState<
-    "all" | "clients" | "students" | "admins" | "freelancer"
+    "all" | "clients" | "students" | "admins"  | "active"| "freelancer"
   >("all");
+
+
+const {
+  activeUsers,
+  activeUsersTotal,
+  loadingActiveUsers,
+} = useActiveUsersToday();
 
   const [
   freelancerInviteTotal,
@@ -174,41 +184,55 @@ const filteredStudents = useMemo(() => {
           active={activeView === "admins"}
         />
 
+       <StatCard
+        title="Ativos Hoje"
+        value={activeUsersTotal}
+        subtitle="Usuários ativos"
+        icon={Activity}
+        color="bg-green-500/15 text-green-600 dark:text-green-400"
+        onClick={() =>
+          setActiveView("active")
+        }
+        active={
+          activeView === "active"
+        }
+      />
+
         <StatCard
-  title="Ativos Hoje"
-  value={users.length}
-  subtitle="Usuários ativos"
-  icon={Activity}
-  color="bg-green-500/15 text-green-600 dark:text-green-400"
-/>
+          title="Convites"
+          value={
+          freelancerInviteTotal ?? "—"
+        }
+          subtitle="Freelancer"
+          icon={FileText}
+          color="bg-purple-500/15 text-purple-600 dark:text-purple-400"
+          onClick={() =>
+            setActiveView("freelancer")
+          }
+          active={
+            activeView === "freelancer"
+          }
+        />
 
-<StatCard
-  title="Convites"
-  value={
-  freelancerInviteTotal ?? "—"
-}
-  subtitle="Freelancer"
-  icon={FileText}
-  color="bg-purple-500/15 text-purple-600 dark:text-purple-400"
-  onClick={() =>
-    setActiveView("freelancer")
-  }
-  active={
-    activeView === "freelancer"
-  }
-/>
-
-</StatsGrid>
+        </StatsGrid>
 
 
-{activeView === "freelancer" ? (
-  <FreelancerTab
-    onSummaryChange={
-      setFreelancerInviteTotal
-    }
-  />
-      ) : activeView === "students" ? (
-        <TableCard title="Gestão de Alunos">
+        {activeView === "freelancer" ? (
+            <FreelancerTab
+              onSummaryChange={
+                setFreelancerInviteTotal
+              }
+            />
+          ) : activeView === "active" ? (
+            <ActiveUsersTodayView
+              users={activeUsers}
+              loading={
+                loadingActiveUsers
+              }
+              search={search}
+            />
+          ) : activeView === "students" ? (
+                <TableCard title="Gestão de Alunos">
 
     {/* DESKTOP / TABLET */}
     <div className="hidden lg:block min-w-[900px]">
