@@ -203,7 +203,7 @@ export default function CreateCourse() {
         `/courses/${courseId}/ai/generate-from-pdf`,
         formData,
         {
-          timeout: 300000,
+          timeout: 660000,
         }
       );
 

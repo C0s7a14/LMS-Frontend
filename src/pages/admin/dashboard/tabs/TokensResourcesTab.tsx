@@ -21,6 +21,7 @@ import useAdminResources from "../hooks/useAdminResources";
 import { useAiTokenAnalytics } from "../hooks/useAiTokenAnalytics";
 import { useAiCostAnalytics } from "../hooks/useAiCostAnalytics";
 import { useAiAudioAnalytics } from "../hooks/useAiAudioAnalytics";
+import { useAiCourseGenerationAnalytics } from "../hooks/useAiCourseGenerationAnalytics";
 
 import type {
   AdminResourceType,
@@ -42,7 +43,7 @@ const SUB_TABS = [
     description: "Consumo dos modelos de IA",
     icon: Coins,
     iconClasses:
-      "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+      "bg-blue-500/10 text-blue-600 dark:text-blue-400 ",
   },
   {
     id: "costs" as const,
@@ -111,9 +112,9 @@ function getOperationLabel(
       return "Geração de curso";
 
     case "quiz_generation":
-      return "Geração de quiz";
+      return "Quizzes e provas";
 
-    case "technical_chat":
+    case "technical_agent":
       return "Agente técnico";
 
     case "tts":
@@ -123,7 +124,6 @@ function getOperationLabel(
       return operation;
   }
 }
-
 
 function formatDuration(ms: number) {
   if (!ms) {
@@ -278,6 +278,9 @@ function getResourceIcon(
     case "ai-service":
       return Server;
 
+    case "perplexity":
+      return Bot;
+
     case "gemini":
       return Bot;
 
@@ -361,11 +364,14 @@ function SummaryCard({
       className="
         rounded-2xl
         border
-        border-gray-200
+        border-gray-300
         bg-white
         p-5
         dark:border-white/10
         dark:bg-[#11172D]
+        shadow-2xl
+        dark:shadow-blue-300
+        dark:shadow-sm
       "
     >
       <div
@@ -452,9 +458,12 @@ function ResourceCard({
       className="
         rounded-2xl
         border
-        border-gray-200
+        border-gray-300
         bg-white
         p-5
+        shadow-2xl
+        dark:shadow-blue-300
+        dark:shadow-sm
         dark:border-white/10
         dark:bg-[#11172D]
       "
@@ -617,83 +626,6 @@ function ResourceCard({
 }
 
 
-function EmptyAnalyticsTab({
-  type,
-}: {
-  type: "courses";
-}) {
-  const config = {
-    courses: {
-      title: "Cursos Gerados",
-      description:
-        "Aqui serão exibidas as métricas de cursos e conteúdos gerados pela IA.",
-      icon: BookOpen,
-    },
-  };
-
-  const current = config[type];
-  const Icon = current.icon;
-
-  return (
-    <div
-      className="
-        rounded-2xl
-        border
-        border-dashed
-        border-gray-300
-        bg-white
-        px-6
-        py-16
-        text-center
-        dark:border-white/10
-        dark:bg-[#11172D]
-      "
-    >
-      <div
-        className="
-          mx-auto
-          flex
-          h-14
-          w-14
-          items-center
-          justify-center
-          rounded-2xl
-          bg-blue-500/10
-          text-blue-600
-          dark:text-blue-400
-        "
-      >
-        <Icon size={25} />
-      </div>
-
-      <h3
-        className="
-          mt-4
-          text-lg
-          font-bold
-          text-[#080E2F]
-          dark:text-white
-        "
-      >
-        {current.title}
-      </h3>
-
-      <p
-        className="
-          mx-auto
-          mt-2
-          max-w-xl
-          text-sm
-          text-gray-500
-          dark:text-gray-400
-        "
-      >
-        {current.description}
-      </p>
-    </div>
-  );
-}
-
 
 export default function TokensResourcesTab() {
   const [activeTab, setActiveTab] =
@@ -732,12 +664,22 @@ export default function TokensResourcesTab() {
     loadAnalytics: loadAudioAnalytics,
   } = useAiAudioAnalytics(30);
 
-  const handleRefresh = async () => {
+
+  const {
+  data: courseData,
+  setDays: setCourseDays,
+  loading: courseLoading,
+  error: courseError,
+  loadAnalytics: loadCourseAnalytics,
+} = useAiCourseGenerationAnalytics(30);
+
+ const handleRefresh = async () => {
   await Promise.all([
     loadResources(),
     loadAnalytics(),
     loadCostAnalytics(),
     loadAudioAnalytics(),
+    loadCourseAnalytics(),
   ]);
 };
 
@@ -765,6 +707,7 @@ export default function TokensResourcesTab() {
     gap-4
     sm:grid-cols-2
     xl:grid-cols-4
+    
   "
 >
   {SUB_TABS.map((tab) => {
@@ -790,11 +733,13 @@ export default function TokensResourcesTab() {
           justify-center
           rounded-3xl
           border
+          border-gray-300
           bg-white
           px-5
           py-6
           text-center
-          shadow-sm
+          shadow-2xl
+          dark:shadow-none
           transition-all
           duration-200
           dark:bg-[#11172D]
@@ -885,6 +830,7 @@ export default function TokensResourcesTab() {
           setDays(selectedDays);
           setCostDays(selectedDays);
           setAudioDays(selectedDays);
+          setCourseDays(selectedDays);
         }}
                   className="
             rounded-xl
@@ -895,11 +841,15 @@ export default function TokensResourcesTab() {
             py-2.5
             text-sm
             font-semibold
-            text-[#080E2F]
+          text-[#080E2F]
+            shadow-xl
+          dark:shadow-blue-300
+            dark:shadow-sm
             outline-none
             dark:border-white/10
             dark:bg-[#11172D]
             dark:text-white
+            cursor-pointer
           "
         >
           <option value={7}>
@@ -928,7 +878,8 @@ export default function TokensResourcesTab() {
             resourcesLoading ||
             analyticsLoading ||
             costLoading      ||
-            audioLoading
+            audioLoading     ||
+            courseLoading
           }
           className="
             inline-flex
@@ -942,12 +893,16 @@ export default function TokensResourcesTab() {
             px-4
             py-2.5
             text-sm
+            shadow-xl
+          dark:shadow-blue-300
+            dark:shadow-sm
             font-semibold
             text-[#080E2F]
             disabled:opacity-50
             dark:border-white/10
             dark:bg-[#11172D]
             dark:text-white
+            cursor-pointer
           "
         >
           <RefreshCw
@@ -1063,9 +1018,12 @@ export default function TokensResourcesTab() {
                 className="
                   rounded-2xl
                   border
-                  border-gray-200
+                  border-gray-300
                   bg-white
                   p-5
+                  shadow-2xl
+                dark:shadow-blue-300
+                  dark:shadow-sm
                   dark:border-white/10
                   dark:bg-[#11172D]
                 "
@@ -1145,7 +1103,7 @@ export default function TokensResourcesTab() {
                       gap-3
                       overflow-x-auto
                       border-b
-                      border-gray-100
+                      border-gray-300
                       px-2
                       dark:border-white/10
                     "
@@ -1234,9 +1192,12 @@ export default function TokensResourcesTab() {
                 className="
                   rounded-2xl
                   border
-                  border-gray-200
+                  border-gray-300
                   bg-white
                   p-5
+                  shadow-2xl
+                dark:shadow-blue-300
+                  dark:shadow-sm
                   dark:border-white/10
                   dark:bg-[#11172D]
                 "
@@ -1366,11 +1327,14 @@ export default function TokensResourcesTab() {
                 className="
                   rounded-2xl
                   border
-                  border-gray-200
+                  border-gray-300
                   bg-white
                   p-5
-                  dark:border-white/10
-                  dark:bg-[#11172D]
+                  shadow-2xl
+                dark:shadow-blue-300
+                  dark:shadow-sm
+                dark:border-white/10
+                dark:bg-[#11172D]
                 "
               >
                 <div
@@ -1404,7 +1368,7 @@ export default function TokensResourcesTab() {
                         dark:text-white
                       "
                     >
-                      Credenciais Gemini
+                      Credenciais de IA
                     </h3>
 
                     <p
@@ -1415,7 +1379,7 @@ export default function TokensResourcesTab() {
                         dark:text-gray-400
                       "
                     >
-                      Principal e reservas,
+                      Providers e credenciais configuradas,
                       sem exposição das chaves.
                     </p>
                   </div>
@@ -1437,8 +1401,11 @@ export default function TokensResourcesTab() {
                         className="
                           rounded-2xl
                           border
-                          border-gray-200
+                          border-gray-300
                           p-4
+                          shadow-2xl
+                        dark:shadow-blue-300
+                          dark:shadow-sm
                           dark:border-white/10
                         "
                       >
@@ -1592,11 +1559,14 @@ export default function TokensResourcesTab() {
             className="
               rounded-2xl
               border
-              border-gray-200
+              border-gray-300
               bg-gray-50/50
               p-5
-              dark:border-white/10
-              dark:bg-white/[0.02]
+              shadow-2xl
+            dark:shadow-blue-300
+              dark:shadow-sm
+            dark:border-white/10
+            dark:bg-white/[0.02]
             "
           >
             <div className="mb-5">
@@ -1767,11 +1737,14 @@ export default function TokensResourcesTab() {
               bg-orange-50
               px-5
               py-4
+              shadow-2xl
+            dark:shadow-red-300
+              dark:shadow-sm
               text-sm
-              text-orange-700
-              dark:border-orange-500/20
-              dark:bg-orange-500/10
-              dark:text-orange-300
+            text-orange-700
+            dark:border-orange-500/20
+            dark:bg-orange-500/10
+            dark:text-orange-300
             "
           >
             {formatNumber(
@@ -1789,11 +1762,14 @@ export default function TokensResourcesTab() {
           className="
             rounded-2xl
             border
-            border-gray-200
+            border-gray-300
             bg-white
             p-5
-            dark:border-white/10
-            dark:bg-[#11172D]
+            shadow-2xl
+          dark:shadow-blue-300
+            dark:shadow-sm
+          dark:border-white/10
+          dark:bg-[#11172D]
           "
         >
           <div
@@ -1865,7 +1841,7 @@ export default function TokensResourcesTab() {
                 gap-5
                 overflow-x-auto
                 border-b
-                border-gray-100
+                border-gray-300
                 px-2
                 dark:border-white/10
               "
@@ -1962,11 +1938,14 @@ export default function TokensResourcesTab() {
           className="
             rounded-2xl
             border
-            border-gray-200
+            border-gray-300
             bg-white
             p-5
-            dark:border-white/10
-            dark:bg-[#11172D]
+            shadow-2xl
+          dark:shadow-blue-300
+            dark:shadow-sm
+          dark:border-white/10
+          dark:bg-[#11172D]
           "
         >
           <h3
@@ -2136,9 +2115,12 @@ export default function TokensResourcesTab() {
           className="
             rounded-2xl
             border
-            border-gray-200
+            border-gray-300
             bg-white
             p-5
+            shadow-2xl
+            dark:shadow-blue-300
+            dark:shadow-sm
             dark:border-white/10
             dark:bg-[#11172D]
           "
@@ -2181,9 +2163,12 @@ export default function TokensResourcesTab() {
                   className="
                     rounded-2xl
                     border
-                    border-gray-200
+                    border-gray-300
                     p-4
-                    dark:border-white/10
+                    shadow-xl
+                  dark:shadow-blue-300
+                    dark:shadow-sm
+                  dark:border-white/10
                   "
                 >
                   <div
@@ -2236,18 +2221,122 @@ export default function TokensResourcesTab() {
                   </div>
 
                   <div
-                    className="
-                      mt-4
-                      text-xs
-                      text-gray-500
-                      dark:text-gray-400
-                    "
+                  className="
+                    mt-4
+                    grid
+                    grid-cols-1
+                    gap-3
+                    sm:grid-cols-3
+                  "
+                >
+                  <div
+                   className="
+                    rounded-xl
+                    border
+                    border-gray-300
+                    bg-gray-50
+                    p-3
+                    dark:border-white/10
+                    dark:bg-white/5
+                  "
                   >
-                    {formatNumber(
-                      operation.totalTokens
-                    )}{" "}
-                    tokens consumidos
+                    <p
+                      className="
+                        text-xs
+                        text-gray-500
+                        dark:text-gray-400
+                      "
+                    >
+                      Chamadas
+                    </p>
+
+                    <p
+                      className="
+                        mt-1
+                        font-bold
+                        text-[#080E2F]
+                        dark:text-white
+                      "
+                    >
+                      {formatNumber(
+                        operation.totalCalls
+                      )}
+                    </p>
                   </div>
+
+                  <div
+                   className="
+                    rounded-xl
+                    border
+                    border-gray-300
+                    bg-gray-50
+                    p-3
+                    dark:border-white/10
+                    dark:bg-white/5
+                  "
+                  >
+                    <p
+                      className="
+                        text-xs
+                        text-gray-500
+                        dark:text-gray-400
+                      "
+                    >
+                      Tokens
+                    </p>
+
+                    <p
+                      className="
+                        mt-1
+                        font-bold
+                        text-[#080E2F]
+                        dark:text-white
+                      "
+                    >
+                      {formatNumber(
+                        operation.totalTokens
+                      )}
+                    </p>
+                  </div>
+
+                  <div
+                    className="
+                    rounded-xl
+                    border
+                    border-gray-300
+                    bg-gray-50
+                    p-3
+                    dark:border-white/10
+                    dark:bg-white/5
+                  "
+                  >
+                    <p
+                      className="
+                        text-xs
+                        text-gray-500
+                        dark:text-gray-400
+                      "
+                    >
+                      Média/chamada
+                    </p>
+
+                    <p
+                      className="
+                        mt-1
+                        font-bold
+                        text-[#080E2F]
+                        dark:text-white
+                      "
+                    >
+                      {formatUsd(
+                        operation.totalCalls > 0
+                          ? operation.totalCostUsd /
+                              operation.totalCalls
+                          : 0
+                      )}
+                    </p>
+                  </div>
+                </div>
                 </div>
               )
             )}
@@ -2276,7 +2365,7 @@ export default function TokensResourcesTab() {
         className="
           rounded-2xl
           border
-          border-red-200
+          border-red-300
           bg-red-50
           p-5
           text-sm
@@ -2360,9 +2449,12 @@ export default function TokensResourcesTab() {
           className="
             rounded-2xl
             border
-            border-gray-200
+            border-gray-300
             bg-white
             p-5
+            shadow-2xl
+          dark:shadow-blue-300
+            dark:shadow-sm
             dark:border-white/10
             dark:bg-[#11172D]
           "
@@ -2441,9 +2533,12 @@ export default function TokensResourcesTab() {
           className="
             rounded-2xl
             border
-            border-gray-200
+            border-gray-300
             bg-white
             p-5
+            shadow-2xl
+            dark:shadow-blue-300
+            dark:shadow-sm
             dark:border-white/10
             dark:bg-[#11172D]
           "
@@ -2495,7 +2590,7 @@ export default function TokensResourcesTab() {
                 gap-5
                 overflow-x-auto
                 border-b
-                border-gray-100
+                border-gray-300
                 px-2
                 dark:border-white/10
               "
@@ -2595,9 +2690,12 @@ export default function TokensResourcesTab() {
           className="
             rounded-2xl
             border
-            border-gray-200
+            border-gray-300
             bg-white
             p-5
+            shadow-2xl
+            dark:shadow-blue-300
+            dark:shadow-sm
             dark:border-white/10
             dark:bg-[#11172D]
           "
@@ -2641,8 +2739,11 @@ export default function TokensResourcesTab() {
                   className="
                     rounded-2xl
                     border
-                    border-gray-200
+                    border-gray-300
                     p-4
+                    shadow-2xl
+                 dark:shadow-blue-300
+                   dark:shadow-sm
                     dark:border-white/10
                   "
                 >
@@ -2740,9 +2841,12 @@ export default function TokensResourcesTab() {
           className="
             rounded-2xl
             border
-            border-gray-200
+            border-gray-300
             bg-white
             p-5
+            shadow-2xl
+            dark:shadow-blue-300
+            dark:shadow-sm
             dark:border-white/10
             dark:bg-[#11172D]
           "
@@ -2865,9 +2969,870 @@ export default function TokensResourcesTab() {
 )}
 
       {activeTab === "courses" && (
-        <EmptyAnalyticsTab type="courses" />
-      )}
+  <>
+    {courseLoading && !courseData ? (
+      <div
+        className="
+          py-16
+          text-center
+          text-gray-500
+          dark:text-gray-400
+        "
+      >
+        Carregando dados de cursos...
+      </div>
+    ) : courseError && !courseData ? (
+      <div
+        className="
+          rounded-2xl
+          border
+          border-red-200
+          bg-red-50
+          p-5
+          text-sm
+          text-red-600
+          dark:border-red-500/20
+          dark:bg-red-500/10
+          dark:text-red-400
+        "
+      >
+        {courseError}
+      </div>
+    ) : courseData ? (
+      <>
+        {/* RESUMO */}
+        <div
+          className="
+            grid
+            grid-cols-1
+            gap-4
+            sm:grid-cols-2
+            xl:grid-cols-4
+          "
+        >
+          <SummaryCard
+            title="Cursos gerados"
+            value={formatNumber(
+              courseData.summary.totalGenerations
+            )}
+            subtitle={`Últimos ${courseData.periodDays} dias`}
+            icon={BookOpen}
+          />
 
+          <SummaryCard
+            title="Tokens consumidos"
+            value={formatNumber(
+              courseData.summary.totalTokens
+            )}
+            subtitle={`${formatNumber(
+              courseData.summary.inputTokens
+            )} entrada · ${formatNumber(
+              courseData.summary.outputTokens
+            )} saída`}
+            icon={Coins}
+          />
+
+          <SummaryCard
+            title="Custo estimado"
+            value={formatUsd(
+              courseData.summary.totalCostUsd
+            )}
+            subtitle={`Média ${formatUsd(
+              courseData.summary
+                .averageCostPerGeneration
+            )} por geração`}
+            icon={DollarSign}
+          />
+
+          <SummaryCard
+            title="Tempo médio"
+            value={formatDuration(
+              courseData.summary
+                .averageGenerationMs
+            )}
+            subtitle={
+              courseData.summary.topModel ||
+              "Modelo não informado"
+            }
+            icon={Clock3}
+          />
+        </div>
+
+
+        {/* GERAÇÕES SEM PREÇO */}
+        {courseData.summary.unpricedGenerations >
+          0 && (
+          <div
+            className="
+              rounded-2xl
+              border
+              border-orange-200
+              bg-orange-50
+              px-5
+              py-4
+              shadow-2xl
+            dark:shadow-orange-300
+              dark:shadow-sm
+              text-sm
+              text-orange-700
+              dark:border-orange-500/20
+              dark:bg-orange-500/10
+              dark:text-orange-300
+            "
+          >
+            {formatNumber(
+              courseData.summary
+                .unpricedGenerations
+            )}{" "}
+            geração(ões) de curso deste período
+            não possuem custo calculado porque
+            foram registradas antes da
+            configuração de preços.
+          </div>
+        )}
+
+
+        {/* MÉDIAS */}
+        <div
+          className="
+            grid
+            grid-cols-1
+            gap-4
+            md:grid-cols-2
+          "
+        >
+          <div
+            className="
+              rounded-2xl
+              border
+              border-gray-300
+              bg-white
+              p-5
+              shadow-2xl
+              dark:shadow-blue-300
+              dark:shadow-sm
+              dark:border-white/10
+              dark:bg-[#11172D]
+            "
+          >
+            <p
+              className="
+                text-sm
+                font-medium
+                text-gray-500
+                dark:text-gray-400
+              "
+            >
+              Média de tokens por curso
+            </p>
+
+            <p
+              className="
+                mt-2
+                text-2xl
+                font-bold
+                text-[#080E2F]
+                dark:text-white
+              "
+            >
+              {formatNumber(
+                courseData.summary
+                  .averageTokensPerGeneration
+              )}
+            </p>
+
+            <p
+              className="
+                mt-2
+                text-xs
+                text-gray-400
+                dark:text-gray-500
+              "
+            >
+              Média considerando todas as
+              gerações do período
+            </p>
+          </div>
+
+          <div
+            className="
+              rounded-2xl
+              border
+              border-gray-300
+              bg-white
+              p-5
+              shadow-2xl
+              dark:shadow-blue-300
+              dark:shadow-sm
+              dark:border-white/10
+              dark:bg-[#11172D]
+            "
+          >
+            <p
+              className="
+                text-sm
+                font-medium
+                text-gray-500
+                dark:text-gray-400
+              "
+            >
+              Gerações com custo registrado
+            </p>
+
+            <p
+              className="
+                mt-2
+                text-2xl
+                font-bold
+                text-[#080E2F]
+                dark:text-white
+              "
+            >
+              {formatNumber(
+                courseData.summary
+                  .pricedGenerations
+              )}
+            </p>
+
+            <p
+              className="
+                mt-2
+                text-xs
+                text-gray-400
+                dark:text-gray-500
+              "
+            >
+              de{" "}
+              {formatNumber(
+                courseData.summary
+                  .totalGenerations
+              )}{" "}
+              geração(ões)
+            </p>
+          </div>
+        </div>
+
+
+        {/* TIMELINE */}
+        <div
+          className="
+            rounded-2xl
+            border
+            border-gray-300
+            bg-white
+            p-5
+            shadow-2xl
+          dark:shadow-blue-300
+            dark:shadow-sm
+            dark:border-white/10
+            dark:bg-[#11172D]
+          "
+        >
+          <div
+            className="
+              flex
+              flex-col
+              gap-1
+              sm:flex-row
+              sm:items-center
+              sm:justify-between
+            "
+          >
+            <div>
+              <h3
+                className="
+                  font-bold
+                  text-[#080E2F]
+                  dark:text-white
+                "
+              >
+                Cursos gerados ao longo do tempo
+              </h3>
+
+              <p
+                className="
+                  mt-1
+                  text-sm
+                  text-gray-500
+                  dark:text-gray-400
+                "
+              >
+                Quantidade de gerações concluídas
+                por dia.
+              </p>
+            </div>
+
+            <span
+              className="
+                text-xs
+                text-gray-500
+                dark:text-gray-400
+              "
+            >
+              {courseData.timeline.length} dia(s)
+              com geração
+            </span>
+          </div>
+
+          {courseData.timeline.length === 0 ? (
+            <div
+              className="
+                py-16
+                text-center
+                text-sm
+                text-gray-500
+                dark:text-gray-400
+              "
+            >
+              Nenhum curso gerado neste período.
+            </div>
+          ) : (
+            <div
+              className="
+                mt-8
+                flex
+                h-64
+                items-end
+                gap-5
+                overflow-x-auto
+                border-b
+                border-gray-300
+                px-2
+                dark:border-white/10
+              "
+            >
+              {courseData.timeline.map(
+                (item) => {
+                  const maxGenerations =
+                    Math.max(
+                      ...courseData.timeline.map(
+                        (timelineItem) =>
+                          timelineItem
+                            .totalGenerations
+                      ),
+                      1
+                    );
+
+                  const height = Math.max(
+                    (
+                      item.totalGenerations /
+                      maxGenerations
+                    ) * 100,
+                    8
+                  );
+
+                  return (
+                    <div
+                      key={item.date}
+                      className="
+                        flex
+                        h-full
+                        w-20
+                        shrink-0
+                        flex-col
+                        items-center
+                        justify-end
+                        gap-2
+                      "
+                    >
+                      <span
+                        className="
+                          text-xs
+                          font-semibold
+                          text-[#080E2F]
+                          dark:text-white
+                        "
+                      >
+                        {formatNumber(
+                          item.totalGenerations
+                        )}
+                      </span>
+
+                      <div
+                        className="
+                          flex
+                          h-[180px]
+                          w-full
+                          items-end
+                        "
+                      >
+                        <div
+                          style={{
+                            height: `${height}%`,
+                          }}
+                          className="
+                            w-full
+                            rounded-t-lg
+                            bg-orange-500
+                          "
+                        />
+                      </div>
+
+                      <span
+                        className="
+                          pb-2
+                          text-[11px]
+                          text-gray-400
+                        "
+                      >
+                        {formatDate(item.date)}
+                      </span>
+                    </div>
+                  );
+                }
+              )}
+            </div>
+          )}
+        </div>
+
+
+        {/* MODELOS */}
+        <div
+          className="
+            rounded-2xl
+            border
+            border-gray-300
+            bg-white
+            p-5
+            shadow-2xl
+          dark:shadow-blue-300
+            dark:shadow-sm
+            dark:border-white/10
+            dark:bg-[#11172D]
+          "
+        >
+          <h3
+            className="
+              font-bold
+              text-[#080E2F]
+              dark:text-white
+            "
+          >
+            Modelos utilizados
+          </h3>
+
+          <p
+            className="
+              mt-1
+              text-sm
+              text-gray-500
+              dark:text-gray-400
+            "
+          >
+            Consumo dos modelos utilizados para
+            geração de cursos.
+          </p>
+
+          <div className="mt-5 space-y-3">
+            {courseData.byModel.length === 0 ? (
+              <div
+                className="
+                  py-8
+                  text-center
+                  text-sm
+                  text-gray-500
+                  dark:text-gray-400
+                "
+              >
+                Nenhum modelo registrado neste
+                período.
+              </div>
+            ) : (
+              courseData.byModel.map(
+                (model) => (
+                  <div
+                    key={`${model.provider}-${model.model}`}
+                    className="
+                      rounded-xl
+                      bg-gray-50
+                      p-4
+                      dark:bg-white/5
+                    "
+                  >
+                    <div
+                      className="
+                        flex
+                        flex-col
+                        gap-4
+                        md:flex-row
+                        md:items-center
+                        md:justify-between
+                      "
+                    >
+                      <div className="min-w-0">
+                        <p
+                          className="
+                            truncate
+                            font-semibold
+                            text-[#080E2F]
+                            dark:text-white
+                          "
+                        >
+                          {model.model}
+                        </p>
+
+                        <p
+                          className="
+                            mt-1
+                            text-xs
+                            capitalize
+                            text-gray-500
+                            dark:text-gray-400
+                          "
+                        >
+                          {model.provider}
+                          {" · "}
+                          {formatNumber(
+                            model.totalGenerations
+                          )}{" "}
+                          geração(ões)
+                        </p>
+                      </div>
+
+                      <div
+                        className="
+                          text-left
+                          md:text-right
+                        "
+                      >
+                        <p
+                          className="
+                            font-bold
+                            text-[#080E2F]
+                            dark:text-white
+                          "
+                        >
+                          {formatNumber(
+                            model.totalTokens
+                          )}{" "}
+                          tokens
+                        </p>
+
+                        <p
+                          className="
+                            mt-1
+                            text-xs
+                            text-gray-500
+                            dark:text-gray-400
+                          "
+                        >
+                          {formatUsd(
+                            model.totalCostUsd
+                          )}
+                          {" · "}
+                          média{" "}
+                          {formatDuration(
+                            model
+                              .averageGenerationMs
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )
+              )
+            )}
+          </div>
+        </div>
+
+
+        {/* GERAÇÕES RECENTES */}
+        <div
+          className="
+            rounded-2xl
+            border
+            border-gray-300
+            bg-white
+            p-5
+            shadow-2xl
+          dark:shadow-blue-300
+            dark:shadow-sm
+            dark:border-white/10
+            dark:bg-[#11172D]
+          "
+        >
+          <h3
+            className="
+              font-bold
+              text-[#080E2F]
+              dark:text-white
+            "
+          >
+            Gerações recentes
+          </h3>
+
+          <p
+            className="
+              mt-1
+              text-sm
+              text-gray-500
+              dark:text-gray-400
+            "
+          >
+            Últimas gerações de curso registradas
+            pela IA.
+          </p>
+
+          {courseData.recentGenerations.length ===
+          0 ? (
+            <div
+              className="
+                py-10
+                text-center
+                text-sm
+                text-gray-500
+                dark:text-gray-400
+              "
+            >
+              Nenhuma geração recente.
+            </div>
+          ) : (
+            <div
+              className="
+                mt-5
+                space-y-3
+              "
+            >
+              {courseData.recentGenerations.map(
+                (generation) => (
+                  <div
+                    key={generation.id}
+                    className="
+                      rounded-2xl
+                      border
+                      border-gray-300
+                      p-4
+                      shadow-2xl
+                    dark:shadow-blue-300
+                      dark:shadow-sm
+                      dark:border-white/10
+                    "
+                  >
+                    <div
+                      className="
+                        flex
+                        flex-col
+                        gap-4
+                        lg:flex-row
+                        lg:items-center
+                        lg:justify-between
+                      "
+                    >
+                      <div className="min-w-0">
+                        <div
+                          className="
+                            flex
+                            flex-wrap
+                            items-center
+                            gap-2
+                          "
+                        >
+                          <p
+                            className="
+                              truncate
+                              font-semibold
+                              text-[#080E2F]
+                              dark:text-white
+                            "
+                          >
+                            {generation.courseId
+                              ? generation.courseTitle
+                              : "Curso não disponível"}
+                          </p>
+
+                          {!generation.courseId && (
+                            <span
+                              className="
+                                rounded-full
+                                bg-gray-100
+                                px-2.5
+                                py-1
+                                text-[11px]
+                                font-semibold
+                                text-gray-500
+                                dark:bg-white/10
+                                dark:text-gray-400
+                              "
+                            >
+                              Removido
+                            </span>
+                          )}
+                        </div>
+
+                        <p
+                          className="
+                            mt-1
+                            truncate
+                            text-xs
+                            text-gray-500
+                            dark:text-gray-400
+                          "
+                        >
+                          {generation.model}
+                          {" · "}
+                          {formatDateTime(
+                            generation.createdAt
+                          )}
+                        </p>
+                      </div>
+
+                      <div
+                        className="
+                          grid
+                          grid-cols-2
+                          gap-3
+                          sm:grid-cols-4
+                          lg:min-w-[500px]
+                        "
+                      >
+                        <div
+                          className="
+                            rounded-xl
+                            bg-gray-50
+                            p-3
+                            dark:bg-white/5
+                          "
+                        >
+                          <p
+                            className="
+                              text-[11px]
+                              text-gray-500
+                              dark:text-gray-400
+                            "
+                          >
+                            Tokens
+                          </p>
+
+                          <p
+                            className="
+                              mt-1
+                              text-sm
+                              font-bold
+                              text-[#080E2F]
+                              dark:text-white
+                            "
+                          >
+                            {formatNumber(
+                              generation.totalTokens
+                            )}
+                          </p>
+                        </div>
+
+                        <div
+                          className="
+                            rounded-xl
+                            bg-gray-50
+                            p-3
+                            dark:bg-white/5
+                          "
+                        >
+                          <p
+                            className="
+                              text-[11px]
+                              text-gray-500
+                              dark:text-gray-400
+                            "
+                          >
+                            Entrada
+                          </p>
+
+                          <p
+                            className="
+                              mt-1
+                              text-sm
+                              font-bold
+                              text-[#080E2F]
+                              dark:text-white
+                            "
+                          >
+                            {formatNumber(
+                              generation.inputTokens
+                            )}
+                          </p>
+                        </div>
+
+                        <div
+                          className="
+                            rounded-xl
+                            bg-gray-50
+                            p-3
+                            dark:bg-white/5
+                          "
+                        >
+                          <p
+                            className="
+                              text-[11px]
+                              text-gray-500
+                              dark:text-gray-400
+                            "
+                          >
+                            Tempo
+                          </p>
+
+                          <p
+                            className="
+                              mt-1
+                              text-sm
+                              font-bold
+                              text-[#080E2F]
+                              dark:text-white
+                            "
+                          >
+                            {formatDuration(
+                              generation.durationMs
+                            )}
+                          </p>
+                        </div>
+
+                        <div
+                          className="
+                            rounded-xl
+                            bg-gray-50
+                            p-3
+                            dark:bg-white/5
+                          "
+                        >
+                          <p
+                            className="
+                              text-[11px]
+                              text-gray-500
+                              dark:text-gray-400
+                            "
+                          >
+                            Custo
+                          </p>
+
+                          <p
+                            className="
+                              mt-1
+                              text-sm
+                              font-bold
+                              text-[#080E2F]
+                              dark:text-white
+                            "
+                          >
+                            {generation
+                              .estimatedCostUsd !==
+                            null
+                              ? formatUsd(
+                                  generation
+                                    .estimatedCostUsd
+                                )
+                              : "Sem cálculo"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              )}
+            </div>
+          )}
+        </div>
+      </>
+    ) : null}
+  </>
+)}
     </section>
   );
 }

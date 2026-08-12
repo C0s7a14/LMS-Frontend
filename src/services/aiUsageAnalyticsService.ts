@@ -4,6 +4,7 @@ import type {
   AiTokenAnalyticsType,
   AiCostAnalyticsType,
   AiAudioAnalyticsType,
+  AiCourseGenerationAnalyticsType,
 } from "../types/aiUsageAnalytics.types";
 
 
@@ -72,6 +73,32 @@ export async function getAiAudioAnalytics(
   const response =
     await axios.get<AiAudioAnalyticsType>(
       `${API_URL}/admin/ai-usage/audios`,
+      {
+        params: {
+          days,
+        },
+
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+  return response.data;
+}
+
+export async function getAiCourseGenerationAnalytics(
+  days = 30
+) {
+  const token = localStorage.getItem("token");
+
+  if (!token) {
+    throw new Error("Sessão expirada.");
+  }
+
+  const response =
+    await axios.get<AiCourseGenerationAnalyticsType>(
+      `${API_URL}/admin/ai-usage/courses`,
       {
         params: {
           days,

@@ -133,3 +133,90 @@ export interface AiAudioAnalyticsType {
   byVoice: AiAudioVoiceUsageType[];
   byModel: AiAudioModelUsageType[];
 }
+
+export interface AiCourseGenerationSummaryType {
+  totalGenerations: number;
+
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+
+  totalCostUsd: number;
+
+  averageGenerationMs: number;
+
+  pricedGenerations: number;
+  unpricedGenerations: number;
+
+  averageTokensPerGeneration: number;
+  averageCostPerGeneration: number;
+
+  topModel: string | null;
+}
+
+
+export interface AiCourseGenerationTimelineItemType {
+  date: string;
+
+  totalGenerations: number;
+  totalTokens: number;
+
+  totalCostUsd: number;
+
+  averageGenerationMs: number;
+}
+
+
+export interface AiCourseGenerationModelUsageType {
+  provider: string;
+  model: string;
+
+  totalGenerations: number;
+
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+
+  totalCostUsd: number;
+
+  averageGenerationMs: number;
+}
+
+
+export interface AiRecentCourseGenerationType {
+  id: number;
+
+  courseId: number | null;
+  courseTitle: string;
+
+  provider: string;
+  model: string;
+
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+
+  durationMs: number;
+
+  estimatedCostUsd: number | null;
+
+  createdAt: string;
+}
+
+
+export interface AiCourseGenerationAnalyticsType {
+  periodDays: number;
+
+  currency: "USD";
+
+  summary: AiCourseGenerationSummaryType;
+
+  timeline:
+    AiCourseGenerationTimelineItemType[];
+
+  byModel:
+    AiCourseGenerationModelUsageType[];
+
+  recentGenerations:
+    AiRecentCourseGenerationType[];
+}
