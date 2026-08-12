@@ -29,6 +29,7 @@ export default function DashboardHeader({
   onMainAction,
 }: DashboardHeaderProps) {
   const isReportsTab = currentTab === "reports";
+  const isResourcesTab = currentTab === "resources";
 
   return (
     <div className="flex flex-col gap-5 2xl:flex-row 2xl:items-start 2xl:justify-between">
@@ -42,6 +43,7 @@ export default function DashboardHeader({
         </p>
       </div>
 
+      {!isResourcesTab && (
       <div className="w-full 2xl:w-auto flex flex-col sm:flex-row gap-3">
         <div className="relative w-full sm:min-w-[320px] 2xl:w-[380px]">
           <Search
@@ -145,6 +147,8 @@ export default function DashboardHeader({
           </button>
         </div>
       </div>
+      )}
     </div>
+    
   );
 }

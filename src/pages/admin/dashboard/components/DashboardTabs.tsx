@@ -13,7 +13,7 @@ export default function DashboardTabs({
 }: DashboardTabsProps) {
   return (
     <div className="border-b border-gray-200 dark:border-white/10 overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0 cursor-pointer">
-      <div className="grid grid-cols-3 gap-2 sm:gap-6 min-w-max md:grid md:grid-cols-8 cursor-pointer">
+      <div className="grid grid-cols-3 gap-2 sm:gap-6 min-w-max md:grid md:grid-cols-9 cursor-pointer">
         {ADMIN_TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = currentTab === tab.id;

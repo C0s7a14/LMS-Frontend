@@ -18,6 +18,7 @@ import CertificatesTab from "./tabs/CertificatesTab";
 import CoursesTab from "./tabs/CoursesTab";
 import AITab from "./tabs/AITab";
 import EnrollmentRequestsTab from "./tabs/EnrollmentRequestsTab";
+import TokensResourcesTab from "./tabs/TokensResourcesTab";
 import ReportsTab from "./tabs/ReportsTab";
 
 // Modais da dashboard
@@ -235,6 +236,16 @@ export default function AdminDashboard() {
       };
     }
 
+    if (currentTab === "resources") {
+  return {
+    title: "Tokens & Recursos",
+    subtitle:
+      "Monitore os serviços, modelos e recursos utilizados pela plataforma.",
+    placeholder: "",
+    button: "",
+  };
+}
+
     if (currentTab === "reports") {
       return {
         title: "Relatórios e Métricas",
@@ -284,6 +295,8 @@ export default function AdminDashboard() {
     void loadDashboardData();
     return;
   }
+
+
 
     if (currentTab === "reports") {
       toast.error("Exportação de relatório será conectada depois.");
@@ -411,6 +424,10 @@ export default function AdminDashboard() {
             approveRequest={handleApproveEnrollmentRequest}
             rejectRequest={handleRejectEnrollmentRequest}
           />
+        )}
+
+        {currentTab === "resources" && (
+          <TokensResourcesTab />
         )}
 
           {currentTab === "reports" && (

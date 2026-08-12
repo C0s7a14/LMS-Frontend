@@ -4,6 +4,7 @@ import {
   BookOpen,
   BotMessageSquare,
   Cpu,
+  Gauge,
   LayoutDashboard,
   UserPlus,
   Users,
@@ -53,6 +54,11 @@ export const ADMIN_TABS: AdminTabItem[] = [
     id: "enrollments",
     label: "Matrículas",
     icon: UserPlus,
+  },
+  {
+  id: "resources",
+  label: "Tokens & Recursos",
+  icon: Gauge,
   },
   {
     id: "reports",
