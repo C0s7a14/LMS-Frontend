@@ -15,10 +15,11 @@ import {
   Trash2,
   X,
   Brain,
-Loader2,
-Sparkles,
-UploadCloud,
-Wand2,
+  Loader2,
+  Sparkles,
+  UploadCloud,
+  Wand2,
+  Link2,
 } from "lucide-react";
 
 import { api } from "../../services/api";
@@ -204,6 +205,16 @@ interface GeneratedCourseType {
   modulos: GeneratedModuloType[];
 }
 
+interface ComplementarySourceResultType {
+  received: number;
+  loaded: number;
+  failed: number;
+  errors: {
+    url: string;
+    error: string;
+  }[];
+}
+
 type AdminQuizTipo = "aula" | "modulo" | "prova_final";
 type AdminQuizStatus = "rascunho" | "publicado";
 
@@ -337,12 +348,21 @@ const [lessonImageForm, setLessonImageForm] =
 
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [aiPdf, setAiPdf] = useState<File | null>(null);
+  const [complementarySourceUrls, setComplementarySourceUrls] =
+  useState<string[]>([""]);
+
+const [complementarySourceResult, setComplementarySourceResult] =
+  useState<ComplementarySourceResultType | null>(null);
   const [generatedCourse, setGeneratedCourse] =
     useState<GeneratedCourseType | null>(null);
+
+
 
   const [generatingWithAi, setGeneratingWithAi] = useState(false);
   const [applyingGeneratedCourse, setApplyingGeneratedCourse] =
     useState(false);
+
+
 
 
   const [quizzes, setQuizzes] = useState<AdminQuizType[]>([]);
@@ -358,6 +378,54 @@ const [lessonImageForm, setLessonImageForm] =
   const [replaceExistingContent, setReplaceExistingContent] =
     useState(false);
 
+
+function updateComplementarySourceUrl(
+  index: number,
+  value: string
+) {
+  setComplementarySourceUrls((prev) =>
+    prev.map((url, currentIndex) =>
+      currentIndex === index
+        ? value
+        : url
+    )
+  );
+
+  setComplementarySourceResult(null);
+}
+
+function addComplementarySourceUrl() {
+  setComplementarySourceUrls((prev) => {
+    if (prev.length >= 5) {
+      toast.error(
+        "É possível adicionar até 5 fontes complementares."
+      );
+
+      return prev;
+    }
+
+    return [...prev, ""];
+  });
+}
+
+function removeComplementarySourceUrl(
+  index: number
+) {
+  setComplementarySourceUrls((prev) => {
+    const updated = prev.filter(
+      (_, currentIndex) =>
+        currentIndex !== index
+    );
+
+    return updated.length > 0
+      ? updated
+      : [""];
+  });
+
+  setComplementarySourceResult(null);
+}
+  
+
   function handleCloseAiModal() {
   if (generatingWithAi || applyingGeneratedCourse) {
     return;
@@ -366,6 +434,8 @@ const [lessonImageForm, setLessonImageForm] =
   setAiModalOpen(false);
   setAiPdf(null);
   setGeneratedCourse(null);
+  setComplementarySourceUrls([""]);
+  setComplementarySourceResult(null);
   setReplaceExistingContent(false);
 }
 
@@ -388,10 +458,28 @@ async function handleGenerateCourseWithAi() {
   try {
     setGeneratingWithAi(true);
     setGeneratedCourse(null);
+    setComplementarySourceResult(null);
 
     const formData = new FormData();
 
     formData.append("pdf", aiPdf);
+
+    const complementarySources =
+  complementarySourceUrls
+    .map((url) => ({
+      url: url.trim(),
+    }))
+    .filter(
+      (source) =>
+        source.url.length > 0
+    );
+
+formData.append(
+  "complementarySources",
+  JSON.stringify(
+    complementarySources
+  )
+);
 
     const response = await api.post(
       `/courses/${courseId}/ai/generate-from-pdf`,
@@ -401,9 +489,17 @@ async function handleGenerateCourseWithAi() {
       }
     );
 
-    setGeneratedCourse(response.data.generated_course);
+    setGeneratedCourse(
+  response.data.generated_course
+);
 
-    toast.success("Estrutura gerada com IA");
+setComplementarySourceResult(
+  response.data?.complementary_sources || null
+);
+
+toast.success(
+  "Estrutura gerada com IA"
+);
   } catch (error: any) {
     console.log(error);
 
@@ -441,6 +537,8 @@ async function handleApplyGeneratedCourse() {
     setAiModalOpen(false);
     setAiPdf(null);
     setGeneratedCourse(null);
+    setComplementarySourceUrls([""]);
+    setComplementarySourceResult(null);
     setReplaceExistingContent(false);
 
     await loadCourseContent();
@@ -2998,6 +3096,7 @@ function handleDeleteModulo(modulo: ModuloType) {
                 onClick={() => {
                   setAiPdf(null);
                   setGeneratedCourse(null);
+                  setComplementarySourceResult(null);
                 }}
                 disabled={generatingWithAi}
                 className="text-red-500 font-semibold hover:underline disabled:opacity-60"
@@ -3006,6 +3105,150 @@ function handleDeleteModulo(modulo: ModuloType) {
               </button>
             </div>
           )}
+
+          <div className="mt-5 rounded-3xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#091a2c] p-5">
+  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <div>
+      <h4 className="font-bold text-[#080E2F] dark:text-white flex items-center gap-2">
+        <Link2
+          size={20}
+          className="text-blue-500"
+        />
+
+        Fontes complementares
+      </h4>
+
+      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+        Adicione links de documentação ou materiais técnicos para complementar o manual.
+      </p>
+
+      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+        Opcional. O manual em PDF continuará sendo a fonte principal.
+      </p>
+    </div>
+
+    <button
+      type="button"
+      onClick={addComplementarySourceUrl}
+      disabled={
+        complementarySourceUrls.length >= 5 ||
+        generatingWithAi
+      }
+      className="shrink-0 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 px-4 py-3 font-semibold hover:bg-blue-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+    >
+      <Plus size={18} />
+      Adicionar fonte
+    </button>
+  </div>
+
+  <div className="space-y-3 mt-5">
+    {complementarySourceUrls.map(
+      (url, index) => (
+        <div
+          key={index}
+          className="flex flex-col sm:flex-row gap-2"
+        >
+          <div className="flex-1">
+            <input
+              type="url"
+              value={url}
+              onChange={(event) =>
+                updateComplementarySourceUrl(
+                  index,
+                  event.target.value
+                )
+              }
+              disabled={generatingWithAi}
+              placeholder="https://documentacao.exemplo.com/manual"
+              className="w-full bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 disabled:opacity-60"
+            />
+          </div>
+
+          {complementarySourceUrls.length > 1 && (
+            <button
+              type="button"
+              onClick={() =>
+                removeComplementarySourceUrl(
+                  index
+                )
+              }
+              disabled={generatingWithAi}
+              className="rounded-2xl bg-red-500/10 text-red-500 px-4 py-3 font-semibold hover:bg-red-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Remover
+            </button>
+          )}
+        </div>
+      )
+    )}
+  </div>
+
+  <div className="mt-4 flex items-center justify-between gap-4 text-xs text-gray-400 dark:text-gray-500">
+    <span>
+      Máximo de 5 fontes.
+    </span>
+
+    <span>
+      {
+        complementarySourceUrls.filter(
+          (url) => url.trim()
+        ).length
+      }
+      /5 adicionadas
+    </span>
+  </div>
+</div>
+
+          {complementarySourceResult &&
+  complementarySourceResult.received > 0 && (
+    <div
+      className={`
+        mt-4 rounded-2xl border p-4
+        ${
+          complementarySourceResult.failed > 0
+            ? "border-yellow-500/20 bg-yellow-500/10"
+            : "border-green-500/20 bg-green-500/10"
+        }
+      `}
+    >
+      <div className="flex items-start gap-3">
+        {complementarySourceResult.failed > 0 ? (
+          <AlertTriangle
+            size={20}
+            className="text-yellow-500 shrink-0 mt-0.5"
+          />
+        ) : (
+          <CheckCircle2
+            size={20}
+            className="text-green-500 shrink-0 mt-0.5"
+          />
+        )}
+
+        <div>
+          <p className="font-semibold text-[#080E2F] dark:text-white">
+            Fontes complementares processadas
+          </p>
+
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            {
+              complementarySourceResult.loaded
+            } de{" "}
+            {
+              complementarySourceResult.received
+            } fonte(s) foram utilizadas na geração.
+          </p>
+
+          {complementarySourceResult.failed > 0 && (
+            <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-1">
+              {
+                complementarySourceResult.failed
+              } fonte(s) não puderam ser carregadas.
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  )}
 
           <button
             type="button"
@@ -3152,7 +3395,10 @@ function handleDeleteModulo(modulo: ModuloType) {
             <div className="mt-6 flex flex-col sm:flex-row gap-3">
               <button
                 type="button"
-                onClick={() => setGeneratedCourse(null)}
+                onClick={() => {
+                  setGeneratedCourse(null);
+                  setComplementarySourceResult(null);
+                }}
                 disabled={applyingGeneratedCourse}
                 className="flex-1 rounded-2xl border border-gray-200 dark:border-white/10 px-5 py-4 font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-all disabled:opacity-60"
               >

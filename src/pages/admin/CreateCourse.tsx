@@ -1,9 +1,12 @@
 import {
+  AlertTriangle,
   BookOpen,
   CheckCircle2,
   Cpu,
   FileText,
+  Link2,
   Loader2,
+  Plus,
   RefreshCcw,
   Save,
   Sparkles,
@@ -49,6 +52,16 @@ interface GeneratedCourseType {
   modulos: GeneratedModuloType[];
 }
 
+interface ComplementarySourceResultType {
+  received: number;
+  loaded: number;
+  failed: number;
+  errors: {
+    url: string;
+    error: string;
+  }[];
+}
+
 export default function CreateCourse() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -60,6 +73,12 @@ export default function CreateCourse() {
 
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfName, setPdfName] = useState("");
+
+  const [complementarySourceUrls, setComplementarySourceUrls] =
+  useState<string[]>([""]);
+
+const [complementarySourceResult, setComplementarySourceResult] =
+  useState<ComplementarySourceResultType | null>(null);
 
   const [generatedCourse, setGeneratedCourse] =
     useState<GeneratedCourseType | null>(null);
@@ -107,6 +126,50 @@ export default function CreateCourse() {
     }
   }
 
+  function updateComplementarySourceUrl(
+  index: number,
+  value: string
+) {
+  setComplementarySourceUrls((prev) =>
+    prev.map((url, currentIndex) =>
+      currentIndex === index ? value : url
+    )
+  );
+
+  setComplementarySourceResult(null);
+  setGeneratedCourse(null);
+}
+
+function addComplementarySourceUrl() {
+  setComplementarySourceUrls((prev) => {
+    if (prev.length >= 5) {
+      toast.error(
+        "É possível adicionar até 5 fontes complementares."
+      );
+
+      return prev;
+    }
+
+    return [...prev, ""];
+  });
+}
+
+function removeComplementarySourceUrl(index: number) {
+  setComplementarySourceUrls((prev) => {
+    const updated = prev.filter(
+      (_, currentIndex) =>
+        currentIndex !== index
+    );
+
+    return updated.length > 0
+      ? updated
+      : [""];
+  });
+
+  setComplementarySourceResult(null);
+  setGeneratedCourse(null);
+}
+
   function handleSelectPdf() {
     fileInputRef.current?.click();
   }
@@ -128,6 +191,7 @@ export default function CreateCourse() {
     setPdfFile(file);
     setPdfName(file.name);
     setGeneratedCourse(null);
+    setComplementarySourceResult(null);
   }
 
   function getInitialCourseTitle() {
@@ -181,10 +245,6 @@ export default function CreateCourse() {
   }
 
   async function handleGenerateCourseWithAi() {
-    if (selectedDevices.length === 0) {
-      toast.error("Selecione pelo menos um dispositivo relacionado");
-      return;
-    }
 
     if (!pdfFile) {
       toast.error("Selecione o PDF de treinamento");
@@ -194,10 +254,28 @@ export default function CreateCourse() {
     try {
       setGenerating(true);
 
+      setComplementarySourceResult(null);
+
       const courseId = await createBaseCourseIfNeeded();
 
       const formData = new FormData();
+
       formData.append("pdf", pdfFile);
+
+      const complementarySources =
+        complementarySourceUrls
+          .map((url) => ({
+            url: url.trim(),
+          }))
+          .filter(
+            (source) =>
+              source.url.length > 0
+          );
+
+      formData.append(
+        "complementarySources",
+        JSON.stringify(complementarySources)
+      );
 
       const response = await api.post(
         `/courses/${courseId}/ai/generate-from-pdf`,
@@ -208,6 +286,10 @@ export default function CreateCourse() {
       );
 
       const generatedCourseFromAi = response.data.generated_course;
+
+      setComplementarySourceResult(
+      response.data?.complementary_sources || null
+    );
 
       if (!generatedCourseFromAi) {
         toast.error("A IA gerou a resposta, mas não retornou a estrutura do curso.");
@@ -254,18 +336,20 @@ async function handlePublishCourse() {
   try {
     setPublishing(true);
 
+    // Garante que a versão revisada esteja salva
     if (!courseSavedAsDraft) {
-  await api.post(
-    `/courses/${createdCourseId}/ai/apply-generated-course`,
-    {
-      replaceExisting: true,
-      generated_course: generatedCourse,
+      await api.post(
+        `/courses/${createdCourseId}/ai/apply-generated-course`,
+        {
+          replaceExisting: true,
+          generated_course: generatedCourse,
+        }
+      );
+
+      setCourseSavedAsDraft(true);
     }
-  );
 
-  setCourseSavedAsDraft(true);
-}
-
+    // Dispositivos são opcionais
     if (selectedDevices.length > 0) {
       await Promise.all(
         selectedDevices.map((deviceId) =>
@@ -276,6 +360,7 @@ async function handlePublishCourse() {
       );
     }
 
+    // Gera avaliações antes de publicar o curso
     if (generateAssessments) {
       setGeneratingAssessments(true);
 
@@ -286,11 +371,21 @@ async function handlePublishCourse() {
         nota_minima: 70,
         max_tentativas: 3,
       });
-
-      toast.success("Curso, quizzes e prova final gerados com sucesso!");
-    } else {
-      toast.success("Curso publicado com sucesso!");
     }
+
+    // Publica o curso somente depois de tudo ter sido concluído
+    await api.patch(
+      `/admin/courses/${createdCourseId}/status`,
+      {
+        status: "publicado",
+      }
+    );
+
+    toast.success(
+      generateAssessments
+        ? "Curso, quizzes e prova final publicados com sucesso!"
+        : "Curso publicado com sucesso!"
+    );
 
     resetPage();
   } catch (error: any) {
@@ -308,13 +403,14 @@ async function handlePublishCourse() {
   }
 }
 
-
   function resetPage() {
     setSelectedDevices([]);
     setThumbnail("");
     setBaseTitle("");
     setPdfFile(null);
     setPdfName("");
+    setComplementarySourceUrls([""]);
+    setComplementarySourceResult(null); 
     setGeneratedCourse(null);
     setCreatedCourseId(null);
     setCourseSavedAsDraft(false);
@@ -437,10 +533,11 @@ async function handlePublishCourse() {
               Criar curso com IA
             </h1>
 
-            <p className="text-gray-500 dark:text-gray-400 mt-3 text-base lg:text-lg max-w-3xl">
-              Escolha o dispositivo, envie o PDF técnico e deixe a IA gerar
-              automaticamente as informações do curso, módulos e aulas.
-            </p>
+           <p className="text-gray-500 dark:text-gray-400 mt-3 text-base lg:text-lg max-w-3xl">
+            Envie o PDF técnico, adicione fontes complementares se necessário
+            e deixe a IA gerar automaticamente as informações do curso,
+            módulos e aulas. O vínculo com dispositivos é opcional.
+          </p>
           </div>
 
           <div className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl px-6 py-5 shadow-xl dark:shadow-sm dark:shadow-blue-500/30">
@@ -449,7 +546,7 @@ async function handlePublishCourse() {
             </p>
 
             <strong className="text-[#080E2F] dark:text-white">
-              Dispositivo → PDF → IA → Publicar
+              PDF → IA → Revisar → Publicar
             </strong>
           </div>
         </header>
@@ -461,12 +558,12 @@ async function handlePublishCourse() {
               <Cpu size={26} />
             </div>
 
-            <h2 className="font-bold text-[#080E2F] dark:text-white">
-              1. Dispositivo
+          <h2 className="font-bold text-[#080E2F] dark:text-white">
+              1. Dispositivo opcional
             </h2>
 
             <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-              Escolha qual equipamento será treinado.
+              Vincule equipamentos quando o treinamento for específico de um dispositivo.
             </p>
           </div>
 
@@ -508,14 +605,26 @@ async function handlePublishCourse() {
 
             <div>
               <h2 className="text-xl font-bold text-[#080E2F] dark:text-white">
-                Dispositivo relacionado
+                Dispositivos relacionados
               </h2>
 
               <p className="text-gray-500 dark:text-gray-400 text-sm">
-                Selecione o dispositivo que condiz com o PDF de treinamento.
+                Opcional. Vincule um ou mais dispositivos quando o conteúdo do curso
+                for específico para esses equipamentos.
               </p>
             </div>
           </div>
+
+          
+
+            {selectedDevices.length === 0 && (
+            <div className="mb-5 rounded-2xl border border-blue-500/20 bg-blue-500/5 px-4 py-3">
+              <p className="text-sm text-blue-600 dark:text-blue-400">
+                Nenhum dispositivo selecionado. O curso será criado como
+                treinamento geral.
+              </p>
+            </div>
+          )}
 
           {devices.length === 0 ? (
             <div className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 rounded-2xl p-5 text-gray-500 dark:text-gray-400">
@@ -619,6 +728,7 @@ async function handlePublishCourse() {
                       setPdfFile(null);
                       setPdfName("");
                       setGeneratedCourse(null);
+                      setComplementarySourceResult(null);
 
                       if (fileInputRef.current) {
                         fileInputRef.current.value = "";
@@ -629,6 +739,149 @@ async function handlePublishCourse() {
                   >
                     Remover
                   </button>
+                </div>
+              )}
+
+              <div className="mt-5 rounded-3xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#0d2238] p-5">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h3 className="font-bold text-[#080E2F] dark:text-white flex items-center gap-2">
+                    <Link2
+                      size={20}
+                      className="text-blue-500"
+                    />
+
+                    Fontes complementares
+                  </h3>
+
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    Adicione links de documentação ou materiais técnicos que possam complementar o manual.
+                  </p>
+
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                    Opcional. O PDF continua sendo a fonte técnica principal.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={addComplementarySourceUrl}
+                  disabled={
+                    complementarySourceUrls.length >= 5 ||
+                    generating ||
+                    publishing
+                  }
+                  className="shrink-0 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 px-4 py-3 font-semibold hover:bg-blue-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  <Plus size={18} />
+                  Adicionar fonte
+                </button>
+              </div>
+
+              <div className="space-y-3 mt-5">
+                {complementarySourceUrls.map(
+                  (url, index) => (
+                    <div
+                      key={index}
+                      className="flex flex-col sm:flex-row gap-2"
+                    >
+                      <input
+                        type="url"
+                        value={url}
+                        onChange={(event) =>
+                          updateComplementarySourceUrl(
+                            index,
+                            event.target.value
+                          )
+                        }
+                        disabled={
+                          generating ||
+                          publishing
+                        }
+                        placeholder="https://documentacao.exemplo.com/manual"
+                        className="flex-1 bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 disabled:opacity-60"
+                      />
+
+                      {complementarySourceUrls.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            removeComplementarySourceUrl(index)
+                          }
+                          disabled={
+                            generating ||
+                            publishing
+                          }
+                          className="rounded-2xl bg-red-500/10 text-red-500 px-4 py-3 font-semibold hover:bg-red-500/20 transition-all disabled:opacity-50"
+                        >
+                          Remover
+                        </button>
+                      )}
+                    </div>
+                  )
+                )}
+              </div>
+
+              <div className="mt-4 flex items-center justify-between gap-3 text-xs text-gray-400 dark:text-gray-500">
+                <span>
+                  Máximo de 5 fontes.
+                </span>
+
+                <span>
+                  {
+                    complementarySourceUrls.filter(
+                      (url) => url.trim()
+                    ).length
+                  }
+                  /5 adicionadas
+                </span>
+              </div>
+            </div>
+
+            {complementarySourceResult &&
+              complementarySourceResult.received > 0 && (
+                <div
+                  className={`
+                    mt-4 rounded-2xl border p-4
+                    ${
+                      complementarySourceResult.failed > 0
+                        ? "border-yellow-500/20 bg-yellow-500/10"
+                        : "border-green-500/20 bg-green-500/10"
+                    }
+                  `}
+                >
+                  <div className="flex items-start gap-3">
+                    {complementarySourceResult.failed > 0 ? (
+                      <AlertTriangle
+                        size={20}
+                        className="text-yellow-500 shrink-0 mt-0.5"
+                      />
+                    ) : (
+                      <CheckCircle2
+                        size={20}
+                        className="text-green-500 shrink-0 mt-0.5"
+                      />
+                    )}
+
+                    <div>
+                      <p className="font-semibold text-[#080E2F] dark:text-white">
+                        Fontes complementares processadas
+                      </p>
+
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        {complementarySourceResult.loaded} de{" "}
+                        {complementarySourceResult.received} fonte(s)
+                        foram utilizadas na geração.
+                      </p>
+
+                      {complementarySourceResult.failed > 0 && (
+                        <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-1">
+                          {complementarySourceResult.failed} fonte(s)
+                          não puderam ser carregadas.
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -655,13 +908,12 @@ async function handlePublishCourse() {
                 type="button"
                 onClick={handleGenerateCourseWithAi}
                 disabled={
-                  generating ||
-                  publishing ||
-                  generatingAssessments ||
-                  !pdfFile ||
-                  selectedDevices.length === 0
-                }
-                className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                generating ||
+                publishing ||
+                generatingAssessments ||
+                !pdfFile
+              }
+              className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {generating ? (
                   <>

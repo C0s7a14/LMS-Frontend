@@ -21,6 +21,9 @@ import toast from "react-hot-toast";
 
 import DeviceModal from "../../components/modals/DeviceModal";
 import CoursePreviewModal from "../../components/modals/CoursePreviewModal";
+import StudentCourseCatalog from "./StudentCourseCatalog";
+
+
 import axios from "axios";
 
 
@@ -93,10 +96,8 @@ export default function Device() {
     setLoading(true);
 
    const endpoint = isClient
-  ? "/client/devices"
-  : isStudent
-  ? "/student/course-catalog"
-  : "/devices";
+    ? "/client/devices"
+    : "/devices";
 
     const response = await api.get<DeviceType[]>(endpoint);
 
@@ -305,8 +306,12 @@ function handleEnrollmentButtonClick(device: DeviceType) {
 
 
   useEffect(() => {
-    getDevices();
-  }, []);
+  if (isStudent) {
+    return;
+  }
+
+  getDevices();
+}, []);
 
   const filteredDevices = devices.filter((device) => {
   const searchLower = search.toLowerCase();
@@ -348,6 +353,10 @@ const emptyDescription = isClient
   : isStudent
   ? "Nenhum curso publicado foi vinculado aos dispositivos no momento."
   : "Cadastre dispositivos para eles aparecerem aqui.";
+
+  if (isStudent) {
+  return <StudentCourseCatalog />;
+}
 
   return (
     <main className="min-h-screen bg-gray-50 dark:bg-[#071827] px-6 py-8 lg:px-12 transition-colors">

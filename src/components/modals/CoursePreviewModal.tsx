@@ -20,10 +20,12 @@ interface CoursePreview {
   titulo: string;
   descricao: string;
   status: string;
-  dispositivo_id: number;
-  dispositivo_nome: string;
+
+  dispositivo_id: number | null;
+  dispositivo_nome: string | null;
   dispositivo_modelo?: string | null;
   dispositivo_imagem_url?: string | null;
+
   total_modulos: number;
   total_aulas: number;
   modulos: CourseModule[];
@@ -129,16 +131,20 @@ function isEnrollmentModalButtonDisabled() {
             <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
               <div className="bg-gray-100 dark:bg-[#0d2238] rounded-3xl p-5 flex items-center justify-center min-h-[240px]">
                 {course.dispositivo_imagem_url ? (
-                  <img
-                    src={course.dispositivo_imagem_url}
-                    alt={course.dispositivo_nome}
-                    className="max-h-56 object-contain drop-shadow-xl"
-                  />
-                ) : (
-                  <div className="w-36 h-36 rounded-3xl bg-blue-500/20 flex items-center justify-center">
+                <img
+                  src={course.dispositivo_imagem_url}
+                  alt={course.dispositivo_nome || course.titulo}
+                  className="max-h-56 object-contain drop-shadow-xl"
+                />
+              ) : (
+                <div className="w-36 h-36 rounded-3xl bg-blue-500/20 flex items-center justify-center">
+                  {course.dispositivo_id ? (
                     <Cpu size={70} className="text-blue-500" />
-                  </div>
-                )}
+                  ) : (
+                    <BookOpen size={70} className="text-blue-500" />
+                  )}
+                </div>
+              )}
               </div>
 
               <div>
@@ -156,12 +162,15 @@ function isEnrollmentModalButtonDisabled() {
                 </p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
-                  <InfoBox
-                    icon={Cpu}
-                    title="Dispositivo"
-                    value={course.dispositivo_nome || "Não informado"}
+                 <InfoBox
+                    icon={course.dispositivo_id ? Cpu : BookOpen}
+                    title={course.dispositivo_id ? "Dispositivo" : "Tipo"}
+                    value={
+                      course.dispositivo_nome
+                        ? course.dispositivo_nome
+                        : "Treinamento geral"
+                    }
                   />
-
                   <InfoBox
                     icon={Layers}
                     title="Módulos"

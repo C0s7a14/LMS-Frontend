@@ -405,7 +405,7 @@ function getCourseButtonLabel(course: CourseType) {
 
                     <p className="text-gray-500 dark:text-gray-400 mt-3 leading-relaxed">
                       {course.descricao ||
-                        "Curso completo para instalação, configuração e operação dos dispositivos SIRROS."}
+                       "Treinamento disponível na Sirros Academy."}
                     </p>
 
                     <div className="flex flex-wrap items-center gap-6 mt-5 text-gray-500 dark:text-gray-400">
