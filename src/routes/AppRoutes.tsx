@@ -27,6 +27,8 @@ import PlatformProtectedRoute from "../components/platform/PlatformProtectedRout
 // =====================================================
 
 import PlatformDashboard from "../pages/platform/PlatformDashboard";
+import PlatformCompanies from "../pages/platform/PlatformCompanies";
+import PlatformCompanyDetails from "../pages/platform/PlatformCompanyDetails";
 
 // =====================================================
 // AUTENTICAÇÃO / PÚBLICO
@@ -130,12 +132,19 @@ export default function AppRoutes() {
                 }
               />
 
-              {/*
-                Próximas páginas:
+              <Route
+              path="/platform/companies"
+              element={
+                <PlatformCompanies />
+              }
+            />
 
-                /platform/companies
-                /platform/companies/:companyId
-              */}
+            <Route
+            path="/platform/companies/:companyId"
+            element={
+              <PlatformCompanyDetails />
+            }
+          />
             </Route>
           </Route>
         </Route>
