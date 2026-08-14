@@ -1,5 +1,3 @@
-import logo from "../../assets/logo3.png";
-
 import { Link, useNavigate } from "react-router-dom";
 import { useState, type FormEvent } from "react";
 import axios from "axios";
@@ -16,88 +14,242 @@ import {
   LogIn,
   Mail,
   ShieldCheck,
-  UserPlus,
-  Cpu,
   BarChart3,
+  Building2,
 } from "lucide-react";
 
 import { api } from "../../services/api";
+import { platformApi } from "../../services/platformApi";
+
+type LoginMode =
+  | "company"
+  | "platform";
 
 export default function Login() {
-  const navigate = useNavigate();
+  const navigate =
+    useNavigate();
 
-  const [email, setEmail] = useState("");
-  const [senha, setSenha] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [remember, setRemember] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [
+    loginMode,
+    setLoginMode,
+  ] =
+    useState<LoginMode>(
+      "company"
+    );
 
-  async function handleLogin(e: FormEvent) {
+  const [email, setEmail] =
+    useState("");
+
+  const [senha, setSenha] =
+    useState("");
+
+  const [
+    showPassword,
+    setShowPassword,
+  ] =
+    useState(false);
+
+  const [
+    remember,
+    setRemember,
+  ] =
+    useState(false);
+
+  const [
+    loading,
+    setLoading,
+  ] =
+    useState(false);
+
+  async function handleLogin(
+    e: FormEvent
+  ) {
     e.preventDefault();
 
     if (!email.trim()) {
-      toast.error("Digite seu e-mail");
+      toast.error(
+        "Digite seu e-mail"
+      );
+
       return;
     }
 
     if (!senha.trim()) {
-      toast.error("Digite sua senha");
+      toast.error(
+        "Digite sua senha"
+      );
+
       return;
     }
 
     try {
       setLoading(true);
 
-      const response = await api.post("/auth/login", {
-        email,
-        senha,
-      });
+      // =============================================
+      // LOGIN SUPERADMIN
+      // =============================================
 
-      const data = response.data;
+      if (
+        loginMode ===
+        "platform"
+      ) {
+        const response =
+          await platformApi.post(
+            "/platform/auth/login",
+            {
+              email:
+                email
+                  .trim()
+                  .toLowerCase(),
 
-      localStorage.setItem("token", data.accessToken);
-      localStorage.setItem("refreshToken", data.refreshToken);
-      localStorage.setItem("user", JSON.stringify(data.user));
+              senha,
+            }
+          );
 
-      toast.success("Login feito com sucesso!");
+        const data =
+          response.data;
 
-      const role = data.user.role;
+        if (
+          !data.accessToken ||
+          !data.refreshToken
+        ) {
+          throw new Error(
+            "Resposta de autenticação inválida."
+          );
+        }
 
-    if (role === "admin") {
-      navigate("/Dashboard");
-      return;
-    }
+        localStorage.setItem(
+          "platformAccessToken",
+          data.accessToken
+        );
 
-    if (role === "student") {
-      navigate("/home");
-      return;
-    }
+        localStorage.setItem(
+          "platformRefreshToken",
+          data.refreshToken
+        );
 
-    if (role === "client") {
-      navigate("/devices");
-      return;
-    }
+        toast.success(
+          "Login SuperAdmin feito com sucesso!"
+        );
 
-    navigate("/login");
+        navigate(
+          "/platform/dashboard"
+        );
+
+        return;
+      }
+
+      // =============================================
+      // LOGIN EMPRESA
+      // =============================================
+
+      const response =
+        await api.post(
+          "/auth/login",
+          {
+            email:
+              email
+                .trim()
+                .toLowerCase(),
+
+            senha,
+          }
+        );
+
+      const data =
+        response.data;
+
+      localStorage.setItem(
+        "token",
+        data.accessToken
+      );
+
+      localStorage.setItem(
+        "refreshToken",
+        data.refreshToken
+      );
+
+      localStorage.setItem(
+        "user",
+        JSON.stringify(
+          data.user
+        )
+      );
+
+      toast.success(
+        "Login feito com sucesso!"
+      );
+
+      const role =
+        data.user.role;
+
+      if (
+        role ===
+        "admin"
+      ) {
+        navigate(
+          "/Dashboard"
+        );
+
+        return;
+      }
+
+      if (
+        role ===
+        "student"
+      ) {
+        navigate(
+          "/home"
+        );
+
+        return;
+      }
+
+      if (
+        role ===
+        "client"
+      ) {
+        navigate(
+          "/devices"
+        );
+
+        return;
+      }
+
+      navigate("/");
     } catch (error) {
-  if (axios.isAxiosError(error)) {
-    toast.error(
-      error.response?.data?.error ||
-        error.response?.data?.message ||
-        "Erro ao fazer login"
-    );
+      if (
+        axios.isAxiosError(
+          error
+        )
+      ) {
+        toast.error(
+          error.response
+            ?.data?.error ||
+            error.response
+              ?.data
+              ?.message ||
+            (
+              loginMode ===
+              "platform"
+                ? "Erro ao acessar o SuperAdmin"
+                : "Erro ao fazer login"
+            )
+        );
 
-    return;
-  }
+        return;
+      }
 
-  toast.error("Erro inesperado ao fazer login");
-} finally {
-  setLoading(false);
-}
+      toast.error(
+        "Erro inesperado ao fazer login"
+      );
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
-    <main className="min-h-screen overflow-hidden bg-white relative">
+    <main className="min-h-[100dvh] overflow-x-hidden bg-white relative">
       {/* Fundo industrial fake / gradiente */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.18),transparent_28%),linear-gradient(90deg,#ffffff_0%,#f8fbff_42%,rgba(15,23,42,0.08)_100%)]" />
 
@@ -107,40 +259,155 @@ export default function Login() {
       <div className="absolute left-0 top-0 w-64 h-64 opacity-40 bg-[radial-gradient(circle,#7c3aed_2px,transparent_2px)] [background-size:18px_18px]" />
 
       {/* Ondas inferiores */}
-      <div className="absolute left-0 bottom-0 w-[60%] h-48 pointer-events-none">
+      <div
+        className="
+          absolute
+          left-0
+          bottom-0
+          w-[60%]
+          h-48
+          pointer-events-none
+          overflow-hidden
+        "
+      >
         <div className="absolute left-[-120px] bottom-[-80px] w-[750px] h-[260px] rounded-[50%] border-t-2 border-blue-500/30 rotate-[-8deg]" />
+
         <div className="absolute left-[-80px] bottom-[-60px] w-[680px] h-[230px] rounded-[50%] border-t-2 border-purple-500/30 rotate-[-3deg]" />
+
         <div className="absolute left-[-30px] bottom-[-40px] w-[620px] h-[200px] rounded-[50%] border-t-2 border-blue-400/30 rotate-[4deg]" />
       </div>
 
-      <div className="relative min-h-screen grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr]">
-        {/* Lado esquerdo */}
-        <section className="hidden lg:flex flex-col justify-center px-16 xl:px-24 py-12 relative">
-          <div className="max-w-[720px]">          
-            <h1 className="text-[86px] xl:text-[105px] font-black leading-[0.9] tracking-tight text-[#071827]">
-              SIRROS
-              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
-                ACADEMY
+      <div className="relative min-h-screen grid grid-cols-1 xl:grid-cols-[1.08fr_0.92fr]">
+        {/* LADO ESQUERDO */}
+        <section
+          className="
+            hidden
+            xl:flex
+            items-center
+            px-10
+            2xl:px-16
+            py-10
+            relative
+          "
+        >
+          <div
+            className="
+              w-full
+              max-w-[900px]
+              mx-auto
+            "
+          >
+            <h1
+              className="
+                text-[56px]
+                2xl:text-[78px]
+                font-black
+                leading-[0.9]
+                tracking-tight
+                text-[#071827]
+              "
+            >
+              TREINAMENTO
+
+              <span
+                className="
+                  block
+                  text-transparent
+                  bg-clip-text
+                  bg-gradient-to-r
+                  from-blue-600
+                  to-purple-600
+                "
+              >
+                INTELIGENTE
               </span>
             </h1>
 
-            <h2 className="mt-10 text-2xl font-bold text-[#071827]">
-              Treinamento inteligente para{" "}
+            <h2
+              className="
+                mt-8
+                text-xl
+                2xl:text-2xl
+                font-bold
+                text-[#071827]
+              "
+            >
+              Capacitação
+              corporativa em{" "}
               <span className="text-blue-600">
-                dispositivos IoT.
+                um único
+                ambiente.
               </span>
             </h2>
 
-            <p className="mt-6 max-w-xl text-xl leading-relaxed text-slate-600">
-              Capacite técnicos, acompanhe cursos, emita certificados
-              e conte com suporte por IA em uma única plataforma.
+            <p
+              className="
+                mt-5
+                max-w-[700px]
+                text-lg
+                2xl:text-xl
+                leading-relaxed
+                text-slate-600
+              "
+            >
+              Aprenda,
+              acompanhe
+              treinamentos,
+              conclua avaliações,
+              emita
+              certificados e
+              utilize recursos
+              de inteligência
+              artificial em uma
+              única plataforma.
             </p>
 
-            <div className="grid grid-cols-4 gap-5 mt-10 max-w-[680px]">
+            {/* Destaques */}
+            <div
+              className="
+                grid
+                grid-cols-1
+                2xl:grid-cols-3
+                gap-3
+                mt-7
+                max-w-[760px]
+              "
+            >
+              <FloatingBadge
+                icon={Brain}
+                text="Análise Inteligente"
+              />
+
+              <FloatingBadge
+                icon={Bot}
+                text="Aprendizado com IA"
+              />
+
+              <FloatingBadge
+                icon={
+                  BarChart3
+                }
+                text="Performance em tempo real"
+              />
+            </div>
+
+            {/* Recursos */}
+            <div
+              className="
+                grid
+                grid-cols-2
+                2xl:grid-cols-4
+                gap-4
+                mt-7
+                max-w-[760px]
+              "
+            >
               <FeatureCard
-                icon={GraduationCap}
+                icon={
+                  GraduationCap
+                }
                 title="Cursos"
-                subtitle="técnicos"
+                subtitle="online"
               />
 
               <FeatureCard
@@ -151,63 +418,215 @@ export default function Login() {
 
               <FeatureCard
                 icon={Bot}
-                title="Agente"
-                subtitle="de IA"
+                title="Assistente"
+                subtitle="com IA"
               />
 
               <FeatureCard
-                icon={Cpu}
-                title="Dispositivos"
-                subtitle="IoT"
+                icon={
+                  Building2
+                }
+                title="Gestão"
+                subtitle="corporativa"
               />
             </div>
           </div>
-
-          {/* Cards flutuantes */}
-          <FloatingBadge
-            className="top-[16%] right-[12%]"
-            icon={Brain}
-            text="Análise Inteligente"
-          />
-
-          <FloatingBadge
-            className="top-[58%] right-[4%]"
-            icon={Bot}
-            text="Suporte por IA"
-          />
-
-          <FloatingBadge
-            className="bottom-[10%] right-[8%]"
-            icon={BarChart3}
-            text="Performance em tempo real"
-          />
         </section>
 
-        {/* Lado direito */}
-        <section className="flex items-center justify-center px-6 py-10 lg:py-12">
-          <div className="w-full max-w-[590px] bg-white/95 backdrop-blur-xl rounded-[36px] border border-white shadow-[0_28px_80px_rgba(15,23,42,0.22)] px-7 py-8 sm:px-10 sm:py-10 lg:px-12 lg:py-12">
-            <div className="flex justify-center mb-8">
-              <img
-                src={logo}
-                alt="Sirros logo"
-                className="w-52 object-contain"
-              />
+        {/* LADO DIREITO */}
+        <section
+          className="
+            flex
+            min-h-[100dvh]
+            items-center
+            justify-center
+            px-3
+            py-4
+            sm:px-5
+            sm:py-6
+            lg:px-8
+            xl:min-h-0
+            xl:py-8
+          "
+        >
+          <div
+            className="
+              w-full
+              max-w-[590px]
+              bg-white/95
+              backdrop-blur-xl
+              rounded-2xl
+              sm:rounded-[30px]
+              xl:rounded-[36px]
+              border
+              border-white
+              shadow-[0_20px_60px_rgba(15,23,42,0.18)]
+              sm:shadow-[0_28px_80px_rgba(15,23,42,0.22)]
+             px-4
+              py-5
+              sm:px-7
+              sm:py-7
+              lg:px-9
+              xl:px-10
+              xl:py-8
+            "
+          >
+            {/* Ícone */}
+           <div className="flex flex-col items-center justify-center mb-5 sm:mb-6">
+              <div
+                className="
+                 w-16
+                  h-16
+                  sm:w-20
+                  sm:h-20
+                  rounded-3xl
+                  bg-gradient-to-br
+                  from-blue-500
+                  to-purple-600
+                  flex
+                  items-center
+                  justify-center
+                  shadow-[0_16px_35px_rgba(37,99,235,0.28)]
+                "
+              >
+                {loginMode ===
+                "company" ? (
+                  <GraduationCap
+                    size={42}
+                    className="text-white"
+                  />
+                ) : (
+                  <ShieldCheck
+                    size={40}
+                    className="text-white"
+                  />
+                )}
+              </div>
+
+              <span className="mt-4 text-sm font-black tracking-[0.28em] text-slate-500 uppercase">
+                {loginMode ===
+                "company"
+                  ? "Portal de Treinamentos"
+                  : "Console SuperAdmin"}
+              </span>
             </div>
 
-            <div className="text-center mb-9">
-              <h1 className="text-4xl lg:text-5xl font-black text-[#071827]">
+            {/* ================================================= */}
+            {/* SELETOR DE ACESSO                                  */}
+            {/* ================================================= */}
+
+            <div className="mb-7 rounded-2xl bg-slate-100 p-1.5 shadow-inner">
+              <div className="grid grid-cols-2 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setLoginMode(
+                      "company"
+                    )
+                  }
+                  className={`
+                    flex
+                    items-center
+                    justify-center
+                    gap-2
+                    rounded-xl
+                    px-3
+                    py-3
+                    text-sm
+                    sm:text-base
+                    font-bold
+                    transition-all
+
+                    ${
+                      loginMode ===
+                      "company"
+                        ? `
+                          bg-white
+                          text-blue-600
+                          shadow-lg
+                        `
+                        : `
+                          text-slate-500
+                          hover:text-[#071827]
+                        `
+                    }
+                  `}
+                >
+                  <Building2
+                    size={20}
+                  />
+
+                  Empresa
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setLoginMode(
+                      "platform"
+                    )
+                  }
+                  className={`
+                    flex
+                    items-center
+                    justify-center
+                    gap-2
+                    rounded-xl
+                    px-3
+                    py-3
+                    text-sm
+                    sm:text-base
+                    font-bold
+                    transition-all
+
+                    ${
+                      loginMode ===
+                      "platform"
+                        ? `
+                          bg-white
+                          text-purple-600
+                          shadow-lg
+                        `
+                        : `
+                          text-slate-500
+                          hover:text-[#071827]
+                        `
+                    }
+                  `}
+                >
+                  <ShieldCheck
+                    size={20}
+                  />
+
+                  SuperAdmin
+                </button>
+              </div>
+            </div>
+
+            {/* Título */}
+            <div className="text-center mb-8">
+              <h1 className="text-3xl sm:text-4xl xl:text-5xl font-black text-[#071827]">
                 Acesse sua{" "}
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
                   conta
                 </span>
               </h1>
 
-              <p className="text-slate-500 mt-4 text-lg">
-                Entre para continuar sua jornada de aprendizado.
+              <p className="text-slate-500 mt-3 sm:mt-4 text-base sm:text-lg">
+                {loginMode ===
+                "company"
+                  ? "Entre para continuar sua jornada de aprendizado."
+                  : "Entre para administrar a plataforma."}
               </p>
             </div>
 
-            <form onSubmit={handleLogin} className="space-y-6">
+            <form
+              onSubmit={
+                handleLogin
+              }
+              className="space-y-6"
+            >
+              {/* E-MAIL */}
               <div className="flex flex-col gap-2">
                 <label className="text-[#071827] font-bold">
                   E-mail
@@ -223,7 +642,14 @@ export default function Login() {
                     type="email"
                     placeholder="Digite seu e-mail"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(
+                      e
+                    ) =>
+                      setEmail(
+                        e.target
+                          .value
+                      )
+                    }
                     className="
                       w-full
                       bg-white
@@ -247,6 +673,7 @@ export default function Login() {
                 </div>
               </div>
 
+              {/* SENHA */}
               <div className="flex flex-col gap-2">
                 <label className="text-[#071827] font-bold">
                   Senha
@@ -259,10 +686,23 @@ export default function Login() {
                   />
 
                   <input
-                    type={showPassword ? "text" : "password"}
+                    type={
+                      showPassword
+                        ? "text"
+                        : "password"
+                    }
                     placeholder="Digite sua senha"
-                    value={senha}
-                    onChange={(e) => setSenha(e.target.value)}
+                    value={
+                      senha
+                    }
+                    onChange={(
+                      e
+                    ) =>
+                      setSenha(
+                        e.target
+                          .value
+                      )
+                    }
                     className="
                       w-full
                       bg-white
@@ -286,22 +726,39 @@ export default function Login() {
 
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
+                    onClick={() =>
+                      setShowPassword(
+                        !showPassword
+                      )
+                    }
                     className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-500 hover:text-blue-600 transition-all"
                   >
                     {showPassword ? (
-                      <EyeOff size={25} />
+                      <EyeOff
+                        size={
+                          25
+                        }
+                      />
                     ) : (
-                      <Eye size={25} />
+                      <Eye
+                        size={
+                          25
+                        }
+                      />
                     )}
                   </button>
                 </div>
               </div>
 
+              {/* OPÇÕES */}
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <button
                   type="button"
-                  onClick={() => setRemember(!remember)}
+                  onClick={() =>
+                    setRemember(
+                      !remember
+                    )
+                  }
                   className="flex items-center gap-3 text-[#071827] font-semibold"
                 >
                   <span
@@ -314,7 +771,7 @@ export default function Login() {
                       items-center
                       justify-center
                       transition-all
-                      
+
                       ${
                         remember
                           ? "bg-blue-600 border-blue-600"
@@ -329,6 +786,7 @@ export default function Login() {
                       />
                     )}
                   </span>
+
                   Lembrar de mim
                 </button>
 
@@ -336,13 +794,17 @@ export default function Login() {
                   to="/forgot-password"
                   className="text-blue-600 hover:text-purple-600 font-semibold transition-all"
                 >
-                  Esqueceu a senha?
+                  Esqueceu a
+                  senha?
                 </Link>
               </div>
 
+              {/* BOTÃO LOGIN */}
               <button
                 type="submit"
-                disabled={loading}
+                disabled={
+                  loading
+                }
                 className="
                   w-full
                   bg-gradient-to-r
@@ -365,47 +827,30 @@ export default function Login() {
                   text-lg
                 "
               >
-                <LogIn size={25} />
+                <LogIn
+                  size={25}
+                />
 
-                {loading ? "Entrando..." : "Entrar"}
+                {loading
+                  ? "Entrando..."
+                  : loginMode ===
+                    "company"
+                  ? "Entrar"
+                  : "Entrar como SuperAdmin"}
               </button>
 
-              <div className="flex items-center gap-4">
-                <div className="h-px flex-1 bg-slate-200" />
-                <span className="text-slate-500">
-                  ou continue com
-                </span>
-                <div className="h-px flex-1 bg-slate-200" />
-              </div>
-
-              <Link
-                to="/register"
-                className="
-                  w-full
-                  border
-                  border-blue-500
-                  hover:bg-blue-500/10
-                  text-[#071827]
-                  font-bold
-                  py-5
-                  rounded-2xl
-                  transition-all
-                  text-center
-                  flex
-                  items-center
-                  justify-center
-                  gap-3
-                  text-lg
-                  shadow-xl
-                "
-              >
-                <UserPlus size={25} />
-                Criar conta
-              </Link>
-
               <div className="flex items-center justify-center gap-2 text-slate-500 pt-2">
-                <ShieldCheck size={20} className="text-blue-600" />
-                <span>Seus dados estão protegidos conosco.</span>
+                <ShieldCheck
+                  size={20}
+                  className="text-blue-600"
+                />
+
+                <span>
+                  Seus dados
+                  estão
+                  protegidos
+                  conosco.
+                </span>
               </div>
             </form>
           </div>
@@ -428,7 +873,10 @@ function FeatureCard({
 }: FeatureCardProps) {
   return (
     <div className="bg-white/85 backdrop-blur-xl rounded-2xl border border-white shadow-[0_16px_35px_rgba(15,23,42,0.12)] p-5 text-center">
-      <Icon size={40} className="mx-auto text-purple-600" />
+      <Icon
+        size={40}
+        className="mx-auto text-purple-600"
+      />
 
       <h3 className="font-black text-[#071827] mt-4 text-lg">
         {title}
@@ -444,35 +892,46 @@ function FeatureCard({
 interface FloatingBadgeProps {
   icon: React.ElementType;
   text: string;
-  className: string;
 }
 
 function FloatingBadge({
   icon: Icon,
   text,
-  className,
 }: FloatingBadgeProps) {
   return (
     <div
-      className={`
-        absolute
+      className="
+        min-h-[58px]
         bg-white/90
         backdrop-blur-xl
         border
         border-white
         rounded-2xl
-        shadow-[0_16px_35px_rgba(15,23,42,0.16)]
-        px-5
-        py-4
+        shadow-[0_12px_28px_rgba(15,23,42,0.12)]
+        px-4
+        py-3
         flex
         items-center
         gap-3
-        ${className}
-      `}
+      "
     >
-      <Icon size={26} className="text-purple-600" />
+      <Icon
+        size={22}
+        className="
+          text-purple-600
+          shrink-0
+        "
+      />
 
-      <span className="font-black text-[#071827]">
+      <span
+        className="
+          font-bold
+          text-sm
+          2xl:text-base
+          text-[#071827]
+          leading-tight
+        "
+      >
         {text}
       </span>
     </div>

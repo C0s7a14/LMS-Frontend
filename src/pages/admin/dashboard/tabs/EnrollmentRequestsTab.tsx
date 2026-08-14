@@ -1,9 +1,37 @@
-import { useState } from "react";
-import { Cpu } from "lucide-react";
+import {
+  CheckCircle2,
+  Clock3,
+  Cpu,
+  Loader2,
+  XCircle,
+} from "lucide-react";
+
+import {
+  useState,
+} from "react";
 
 import TableCard from "../components/TableCard";
 
-import type { EnrollmentRequestType } from "../types/adminDashboard.types";
+import type {
+  EnrollmentRequestType,
+} from "../types/adminDashboard.types";
+
+type EnrollmentFilter =
+  | "pendente"
+  | "aprovada"
+  | "rejeitada";
+
+interface EnrollmentRequestsTabProps {
+  requests: EnrollmentRequestType[];
+  search: string;
+  updatingRequestId: number | null;
+  approveRequest: (
+    requestId: number,
+  ) => void;
+  rejectRequest: (
+    requestId: number,
+  ) => void;
+}
 
 export default function EnrollmentRequestsTab({
   requests,
@@ -11,271 +39,966 @@ export default function EnrollmentRequestsTab({
   updatingRequestId,
   approveRequest,
   rejectRequest,
-}: {
-  requests: EnrollmentRequestType[];
-  search: string;
-  updatingRequestId: number | null;
-  approveRequest: (requestId: number) => void;
-  rejectRequest: (requestId: number) => void;
-}) {
-  const [statusFilter, setStatusFilter] = useState<
-    "pendente" | "aprovada" | "rejeitada"
-  >("pendente");
+}: EnrollmentRequestsTabProps) {
+  const [
+    statusFilter,
+    setStatusFilter,
+  ] = useState<EnrollmentFilter>(
+    "pendente",
+  );
 
-  const searchLower = search.toLowerCase();
+  const searchLower =
+    search
+      .toLowerCase()
+      .trim();
 
-  const totalPendentes = requests.filter(
-    (request) => request.status === "pendente"
-  ).length;
+  const totalPendentes =
+    requests.filter(
+      (request) =>
+        request.status === "pendente",
+    ).length;
 
-  const totalAprovadas = requests.filter(
-    (request) => request.status === "aprovada"
-  ).length;
+  const totalAprovadas =
+    requests.filter(
+      (request) =>
+        request.status === "aprovada",
+    ).length;
 
-  const totalRejeitadas = requests.filter(
-    (request) => request.status === "rejeitada"
-  ).length;
+  const totalRejeitadas =
+    requests.filter(
+      (request) =>
+        request.status === "rejeitada",
+    ).length;
 
- const filteredRequests = requests
-  .filter((request) => request.status === statusFilter)
-  .filter((request) => {
-    if (!searchLower.trim()) {
-      return true;
-    }
+  const filteredRequests =
+    requests
+      .filter(
+        (request) =>
+          request.status ===
+          statusFilter,
+      )
+      .filter((request) => {
+        if (!searchLower) {
+          return true;
+        }
 
-    return (
-      request.aluno_nome?.toLowerCase().includes(searchLower) ||
-      request.aluno_email?.toLowerCase().includes(searchLower) ||
-      request.curso_titulo?.toLowerCase().includes(searchLower) ||
-      request.dispositivo_nome?.toLowerCase().includes(searchLower)
-    );
-  });
+        return (
+          request.aluno_nome
+            ?.toLowerCase()
+            .includes(searchLower) ||
+          request.aluno_email
+            ?.toLowerCase()
+            .includes(searchLower) ||
+          request.curso_titulo
+            ?.toLowerCase()
+            .includes(searchLower) ||
+          request.dispositivo_nome
+            ?.toLowerCase()
+            .includes(searchLower)
+        );
+      });
 
   const filterCards = [
     {
-      status: "pendente" as const,
+      status:
+        "pendente" as const,
       title: "Pendentes",
       total: totalPendentes,
-      description: "Aguardando análise",
+      description:
+        "Aguardando análise",
+      icon: Clock3,
     },
     {
-      status: "aprovada" as const,
+      status:
+        "aprovada" as const,
       title: "Aprovadas",
       total: totalAprovadas,
-      description: "Matrículas liberadas",
+      description:
+        "Matrículas liberadas",
+      icon: CheckCircle2,
     },
     {
-      status: "rejeitada" as const,
+      status:
+        "rejeitada" as const,
       title: "Rejeitadas",
       total: totalRejeitadas,
-      description: "Solicitações recusadas",
+      description:
+        "Solicitações recusadas",
+      icon: XCircle,
     },
   ];
 
   const currentTitle =
     statusFilter === "pendente"
       ? "Solicitações pendentes"
-      : statusFilter === "aprovada"
-      ? "Solicitações aprovadas"
-      : "Solicitações rejeitadas";
+      : statusFilter ===
+          "aprovada"
+        ? "Solicitações aprovadas"
+        : "Solicitações rejeitadas";
 
   const emptyMessage =
     statusFilter === "pendente"
       ? "Nenhuma solicitação pendente encontrada"
-      : statusFilter === "aprovada"
-      ? "Nenhuma solicitação aprovada encontrada"
-      : "Nenhuma solicitação rejeitada encontrada";
+      : statusFilter ===
+          "aprovada"
+        ? "Nenhuma solicitação aprovada encontrada"
+        : "Nenhuma solicitação rejeitada encontrada";
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        {filterCards.map((card) => {
-          const active = statusFilter === card.status;
+    <div
+      className="
+        w-full
+        min-w-0
 
-          return (
-            <button
-              key={card.status}
-              type="button"
-              onClick={() => setStatusFilter(card.status)}
-              className={`
-                text-left
-                rounded-3xl
-                border
-                p-6
-                transition-all
-                shadow-xl
-                hover:shadow-2xl
-                dark:shadow-sm
-                dark:shadow-blue-500
-                ${
-                  active
-                    ? "border-blue-500 bg-blue-500/10 ring-2 ring-blue-500/30"
-                    : "border-gray-200 dark:border-white/10 bg-white dark:bg-[#091a2c] hover:border-blue-500/60"
+        space-y-6
+        sm:space-y-8
+      "
+    >
+      {/* FILTROS */}
+      <div
+        className="
+          grid
+          grid-cols-1
+
+          sm:grid-cols-3
+
+          gap-4
+          sm:gap-5
+        "
+      >
+        {filterCards.map(
+          (card) => {
+            const active =
+              statusFilter ===
+              card.status;
+
+            const Icon =
+              card.icon;
+
+            return (
+              <button
+                key={card.status}
+                type="button"
+                onClick={() =>
+                  setStatusFilter(
+                    card.status,
+                  )
                 }
-              `}
-            >
-              <div className="flex items-center justify-between gap-3">
-                <h3 className="text-xl font-bold text-[#080E2F] dark:text-white">
+                className={`
+                  min-w-0
+
+                  text-left
+
+                  rounded-2xl
+                  sm:rounded-3xl
+
+                  border
+
+                  p-4
+                  sm:p-5
+                  lg:p-6
+
+                  transition-all
+
+                  shadow-2xl
+                  dark:shadow-sm
+
+                  ${
+                    active
+                      ? `
+                          border-[var(--company-primary)]
+
+                          bg-[color-mix(in_srgb,var(--company-primary)_8%,transparent)]
+
+                          ring-2
+                          ring-[color-mix(in_srgb,var(--company-primary)_20%,transparent)]
+                        `
+                      : `
+                          border-gray-200
+                          dark:border-white/10
+
+                          bg-white
+                          dark:bg-[#091a2c]
+
+                          hover:border-[color-mix(in_srgb,var(--company-primary)_45%,transparent)]
+                        `
+                  }
+                `}
+              >
+                <div
+                  className="
+                    flex
+                    items-start
+                    justify-between
+
+                    gap-3
+                  "
+                >
+                  <div
+                    className={`
+                      w-10
+                      h-10
+
+                      rounded-xl
+
+                      flex
+                      items-center
+                      justify-center
+
+                      shrink-0
+
+                      ${
+                        active
+                          ? `
+                              bg-[var(--company-primary)]
+                              text-white
+                            `
+                          : `
+                              bg-gray-100
+                              dark:bg-white/5
+
+                              text-[var(--company-primary)]
+                            `
+                      }
+                    `}
+                  >
+                    <Icon size={20} />
+                  </div>
+
+                  {active && (
+                    <span
+                      className="
+                        rounded-full
+
+                        bg-[var(--company-primary)]
+
+                        px-2.5
+                        py-1
+
+                        text-[10px]
+                        sm:text-xs
+
+                        font-bold
+                        text-white
+
+                        whitespace-nowrap
+                      "
+                    >
+                      Filtro ativo
+                    </span>
+                  )}
+                </div>
+
+                <h3
+                  className="
+                    mt-5
+
+                    text-base
+                    sm:text-lg
+
+                    font-bold
+
+                    text-[#080E2F]
+                    dark:text-white
+                  "
+                >
                   {card.title}
                 </h3>
 
-                {active && (
-                  <span className="rounded-full bg-blue-500 px-3 py-1 text-xs font-bold text-white">
-                    Filtro ativo
-                  </span>
-                )}
-              </div>
-
-              <p className="text-3xl font-bold text-[#080E2F] dark:text-white mt-6">
-                {card.total}
-              </p>
-
-              <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-                {card.description}
-              </p>
-            </button>
-          );
-        })}
-      </div>
-
-      <TableCard
-        title={currentTitle}
-        className="!shadow-xl hover:!shadow-2xl dark:!shadow-sm dark:!shadow-blue-500"
-        contentClassName="!overflow-visible"
-      >
-        {filteredRequests.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-gray-200 dark:border-white/10 p-8 text-center">
-            <h3 className="text-lg font-bold text-[#080E2F] dark:text-white">
-              {emptyMessage}
-            </h3>
-
-            <p className="text-gray-500 dark:text-gray-400 mt-2">
-              Use os cards acima para alternar entre pendentes, aprovadas e
-              rejeitadas.
-            </p>
-          </div>
-        ) : (
-          <div key={statusFilter} className="space-y-6 py-2">
-  {filteredRequests.map((request) => {
-              const isUpdating = updatingRequestId === request.id;
-              const isPending = request.status === "pendente";
-
-              return (
-                <div
-                   key={`${statusFilter}-${request.id}`}
+                <p
                   className="
-                    relative
-                    rounded-3xl
-                    border
-                    border-gray-200
-                    dark:border-white/10
-                    bg-white
-                    dark:bg-[#0d2238]
-                    p-5
-                    shadow-2xl
-                    dark:shadow-blue-500
-                    dark:shadow-sm
+                    mt-1
+
+                    text-3xl
+                    font-bold
+
+                    text-[#080E2F]
+                    dark:text-white
                   "
                 >
-                  <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-5">
-                    <div className="flex gap-4">
-                      <div className="w-16 h-16 rounded-2xl bg-blue-500/10 flex items-center justify-center shrink-0 overflow-hidden">
-                        {request.dispositivo_imagem_url ? (
-                          <img
-                            src={request.dispositivo_imagem_url}
-                            alt={request.dispositivo_nome || "Dispositivo"}
-                            className="w-full h-full object-contain p-2"
-                          />
-                        ) : (
-                          <Cpu className="text-blue-500" size={30} />
-                        )}
-                      </div>
+                  {card.total}
+                </p>
 
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-lg font-bold text-[#080E2F] dark:text-white">
-                            {request.curso_titulo}
-                          </h3>
+                <p
+                  className="
+                    mt-1
 
-                          <EnrollmentStatusBadge status={request.status} />
+                    text-sm
+
+                    text-gray-500
+                    dark:text-gray-400
+                  "
+                >
+                  {card.description}
+                </p>
+              </button>
+            );
+          },
+        )}
+      </div>
+
+      {/* SOLICITAÇÕES */}
+      <TableCard
+        title={currentTitle}
+        className="
+          !shadow-2xl
+          dark:!shadow-sm
+        "
+      >
+        {filteredRequests.length ===
+        0 ? (
+          <EnrollmentEmptyState
+            message={emptyMessage}
+          />
+        ) : (
+          <div
+            key={statusFilter}
+            className="
+              space-y-4
+              sm:space-y-5
+
+              py-1
+            "
+          >
+            {filteredRequests.map(
+              (request) => {
+                const isUpdating =
+                  updatingRequestId ===
+                  request.id;
+
+                const isPending =
+                  request.status ===
+                  "pendente";
+
+                return (
+                  <article
+                    key={`${statusFilter}-${request.id}`}
+                    className="
+                      w-full
+                      min-w-0
+
+                      rounded-2xl
+                      sm:rounded-3xl
+
+                      border
+                      border-gray-200
+                      dark:border-white/10
+
+                      bg-white
+                      dark:bg-[#0d2238]
+
+                      p-4
+                      sm:p-5
+
+                      shadow-2xl
+                      dark:shadow-sm
+                    "
+                  >
+                    <div
+                      className="
+                        flex
+                        flex-col
+
+                        xl:flex-row
+                        xl:items-start
+                        xl:justify-between
+
+                        gap-5
+                      "
+                    >
+                      {/* CONTEÚDO */}
+                      <div
+                        className="
+                          min-w-0
+                          flex-1
+                        "
+                      >
+                        <div
+                          className="
+                            flex
+                            items-start
+
+                            gap-3
+                            sm:gap-4
+                          "
+                        >
+                          {/* IMAGEM */}
+                          <div
+                            className="
+                              w-12
+                              h-12
+
+                              sm:w-16
+                              sm:h-16
+
+                              rounded-2xl
+
+                              bg-[color-mix(in_srgb,var(--company-primary)_10%,transparent)]
+
+                              flex
+                              items-center
+                              justify-center
+
+                              shrink-0
+
+                              overflow-hidden
+                            "
+                          >
+                            {request.dispositivo_imagem_url ? (
+                              <img
+                                src={
+                                  request.dispositivo_imagem_url
+                                }
+                                alt={
+                                  request.dispositivo_nome ||
+                                  "Dispositivo"
+                                }
+                                className="
+                                  w-full
+                                  h-full
+
+                                  object-contain
+
+                                  p-2
+                                "
+                              />
+                            ) : (
+                              <Cpu
+                                size={28}
+                                className="
+                                  text-[var(--company-primary)]
+                                "
+                              />
+                            )}
+                          </div>
+
+                          <div className="min-w-0">
+                            <div
+                              className="
+                                flex
+                                flex-wrap
+                                items-center
+
+                                gap-2
+                              "
+                            >
+                              <h3
+                                className="
+                                  text-base
+                                  sm:text-lg
+
+                                  font-bold
+
+                                  text-[#080E2F]
+                                  dark:text-white
+
+                                  leading-snug
+                                  break-words
+                                "
+                              >
+                                {
+                                  request.curso_titulo
+                                }
+                              </h3>
+
+                              <EnrollmentStatusBadge
+                                status={
+                                  request.status
+                                }
+                              />
+                            </div>
+
+                            <p
+                              className="
+                                mt-2
+
+                                text-sm
+
+                                text-gray-500
+                                dark:text-gray-400
+
+                                leading-relaxed
+                              "
+                            >
+                              Aluno:{" "}
+                              <strong
+                                className="
+                                  text-[#080E2F]
+                                  dark:text-white
+                                "
+                              >
+                                {
+                                  request.aluno_nome
+                                }
+                              </strong>
+                            </p>
+
+                            <p
+                              className="
+                                mt-1
+
+                                text-sm
+
+                                text-gray-500
+                                dark:text-gray-400
+
+                                break-all
+                              "
+                            >
+                              {
+                                request.aluno_email
+                              }
+                            </p>
+                          </div>
                         </div>
 
-                        <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-                          Aluno:{" "}
-                          <strong className="text-[#080E2F] dark:text-white">
-                            {request.aluno_nome}
-                          </strong>{" "}
-                          • {request.aluno_email}
-                        </p>
+                        {/* INFORMAÇÕES */}
+                        <div
+                          className="
+                            grid
+                            grid-cols-1
 
-                        <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-                          Dispositivo:{" "}
-                          {request.dispositivo_nome || "Não informado"}
-                        </p>
+                            sm:grid-cols-2
+
+                            gap-3
+
+                            mt-4
+                          "
+                        >
+                          <EnrollmentInfo
+                            label="Dispositivo"
+                            value={
+                              request.dispositivo_nome ||
+                              "Não informado"
+                            }
+                          />
+
+                          <EnrollmentInfo
+                            label="Solicitado em"
+                            value={formatAdminDate(
+                              request.criado_em,
+                            )}
+                          />
+                        </div>
 
                         {request.mensagem && (
-                          <p className="text-gray-600 dark:text-gray-300 text-sm mt-3">
-                            Mensagem: “{request.mensagem}”
-                          </p>
+                          <div
+                            className="
+                              mt-3
+
+                              rounded-xl
+
+                              bg-gray-50
+                              dark:bg-white/5
+
+                              p-3
+                            "
+                          >
+                            <p
+                              className="
+                                text-xs
+                                font-semibold
+
+                                text-gray-500
+                                dark:text-gray-400
+                              "
+                            >
+                              Mensagem do aluno
+                            </p>
+
+                            <p
+                              className="
+                                mt-1
+
+                                text-sm
+
+                                text-gray-600
+                                dark:text-gray-300
+
+                                leading-relaxed
+                                break-words
+                              "
+                            >
+                              “
+                              {
+                                request.mensagem
+                              }
+                              ”
+                            </p>
+                          </div>
                         )}
 
                         {request.motivo_resposta && (
-                          <p className="text-red-500 text-sm mt-3">
-                            Motivo da rejeição: {request.motivo_resposta}
-                          </p>
+                          <div
+                            className="
+                              mt-3
+
+                              rounded-xl
+
+                              bg-red-500/10
+
+                              border
+                              border-red-500/15
+
+                              p-3
+                            "
+                          >
+                            <p
+                              className="
+                                text-xs
+                                font-semibold
+
+                                text-red-500
+                              "
+                            >
+                              Motivo da rejeição
+                            </p>
+
+                            <p
+                              className="
+                                mt-1
+
+                                text-sm
+
+                                text-red-500
+
+                                leading-relaxed
+                                break-words
+                              "
+                            >
+                              {
+                                request.motivo_resposta
+                              }
+                            </p>
+                          </div>
                         )}
 
-                        <p className="text-gray-400 dark:text-gray-500 text-xs mt-3">
-                          Solicitado em: {formatAdminDate(request.criado_em)}
-                          {request.respondido_em
-                            ? ` • Respondido em: ${formatAdminDate(
-                                request.respondido_em
-                              )}`
-                            : ""}
-                        </p>
+                        {(request.respondido_em ||
+                          request.admin_nome) && (
+                          <div
+                            className="
+                              mt-4
 
-                        {request.admin_nome && (
-                          <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">
-                            Respondido por: {request.admin_nome}
-                          </p>
+                              flex
+                              flex-col
+
+                              sm:flex-row
+                              sm:flex-wrap
+
+                              gap-1
+                              sm:gap-x-4
+
+                              text-xs
+
+                              text-gray-400
+                              dark:text-gray-500
+                            "
+                          >
+                            {request.respondido_em && (
+                              <span>
+                                Respondido em:{" "}
+                                {formatAdminDate(
+                                  request.respondido_em,
+                                )}
+                              </span>
+                            )}
+
+                            {request.admin_nome && (
+                              <span>
+                                Respondido por:{" "}
+                                {
+                                  request.admin_nome
+                                }
+                              </span>
+                            )}
+                          </div>
                         )}
                       </div>
-                    </div>
 
-                    {isPending ? (
-                      <div className="flex flex-col sm:flex-row xl:flex-col gap-3 xl:min-w-[180px]">
-                        <button
-                          type="button"
-                          onClick={() => approveRequest(request.id)}
-                          disabled={isUpdating}
-                          className="rounded-2xl bg-green-500 px-5 py-3 font-semibold text-white hover:bg-green-600 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                        >
-                          {isUpdating ? "Processando..." : "Aprovar"}
-                        </button>
+                      {/* AÇÕES */}
+                      {isPending ? (
+                        <div
+                          className="
+                            grid
+                            grid-cols-1
 
-                        <button
-                          type="button"
-                          onClick={() => rejectRequest(request.id)}
-                          disabled={isUpdating}
-                          className="rounded-2xl bg-red-500 px-5 py-3 font-semibold text-white hover:bg-red-600 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                            sm:grid-cols-2
+                            xl:grid-cols-1
+
+                            gap-3
+
+                            w-full
+                            xl:w-[180px]
+
+                            shrink-0
+                          "
                         >
-                          Rejeitar
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="xl:min-w-[180px]">
-                        <div className="rounded-2xl bg-gray-100 dark:bg-white/10 px-5 py-3 text-center text-sm font-semibold text-gray-500 dark:text-gray-400">
-                          Solicitação já respondida
+                          <button
+                            type="button"
+                            onClick={() =>
+                              approveRequest(
+                                request.id,
+                              )
+                            }
+                            disabled={
+                              isUpdating
+                            }
+                            className="
+                              w-full
+
+                              rounded-2xl
+
+                              bg-green-500
+
+                              px-5
+                              py-3
+
+                              font-semibold
+                              text-white
+
+                              flex
+                              items-center
+                              justify-center
+
+                              gap-2
+
+                              hover:bg-green-600
+
+                              transition-all
+
+                              active:scale-[0.98]
+
+                              disabled:opacity-50
+                              disabled:cursor-not-allowed
+                            "
+                          >
+                            {isUpdating ? (
+                              <>
+                                <Loader2
+                                  size={17}
+                                  className="animate-spin"
+                                />
+
+                                Processando...
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle2
+                                  size={17}
+                                />
+
+                                Aprovar
+                              </>
+                            )}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              rejectRequest(
+                                request.id,
+                              )
+                            }
+                            disabled={
+                              isUpdating
+                            }
+                            className="
+                              w-full
+
+                              rounded-2xl
+
+                              bg-red-500
+
+                              px-5
+                              py-3
+
+                              font-semibold
+                              text-white
+
+                              flex
+                              items-center
+                              justify-center
+
+                              gap-2
+
+                              hover:bg-red-600
+
+                              transition-all
+
+                              active:scale-[0.98]
+
+                              disabled:opacity-50
+                              disabled:cursor-not-allowed
+                            "
+                          >
+                            <XCircle
+                              size={17}
+                            />
+
+                            Rejeitar
+                          </button>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+                      ) : (
+                        <div
+                          className="
+                            w-full
+                            xl:w-[180px]
+
+                            shrink-0
+                          "
+                        >
+                          <div
+                            className="
+                              rounded-2xl
+
+                              bg-gray-100
+                              dark:bg-white/10
+
+                              px-5
+                              py-3
+
+                              text-center
+                              text-sm
+                              font-semibold
+
+                              text-gray-500
+                              dark:text-gray-400
+                            "
+                          >
+                            Solicitação já respondida
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </article>
+                );
+              },
+            )}
           </div>
         )}
       </TableCard>
+    </div>
+  );
+}
+
+function EnrollmentInfo({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div
+      className="
+        min-w-0
+
+        rounded-xl
+
+        bg-gray-50
+        dark:bg-white/5
+
+        p-3
+      "
+    >
+      <p
+        className="
+          text-xs
+
+          text-gray-500
+          dark:text-gray-400
+        "
+      >
+        {label}
+      </p>
+
+      <p
+        className="
+          mt-1
+
+          text-sm
+          font-semibold
+
+          text-[#080E2F]
+          dark:text-white
+
+          break-words
+        "
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function EnrollmentEmptyState({
+  message,
+}: {
+  message: string;
+}) {
+  return (
+    <div
+      className="
+        rounded-2xl
+
+        border
+        border-dashed
+        border-gray-200
+        dark:border-white/10
+
+        px-4
+        py-10
+
+        text-center
+      "
+    >
+      <div
+        className="
+          w-14
+          h-14
+
+          mx-auto
+          mb-4
+
+          rounded-2xl
+
+          bg-[color-mix(in_srgb,var(--company-primary)_10%,transparent)]
+
+          text-[var(--company-primary)]
+
+          flex
+          items-center
+          justify-center
+        "
+      >
+        <Clock3 size={25} />
+      </div>
+
+      <h3
+        className="
+          text-lg
+          font-bold
+
+          text-[#080E2F]
+          dark:text-white
+        "
+      >
+        {message}
+      </h3>
+
+      <p
+        className="
+          mt-2
+
+          text-sm
+
+          text-gray-500
+          dark:text-gray-400
+        "
+      >
+        Use os cards acima para alternar entre pendentes, aprovadas e
+        rejeitadas.
+      </p>
     </div>
   );
 }
@@ -289,30 +1012,36 @@ function EnrollmentStatusBadge({
     status === "pendente"
       ? "Pendente"
       : status === "aprovada"
-      ? "Aprovada"
-      : status === "rejeitada"
-      ? "Rejeitada"
-      : "Cancelada";
+        ? "Aprovada"
+        : status === "rejeitada"
+          ? "Rejeitada"
+          : "Cancelada";
 
   const style =
     status === "pendente"
       ? "bg-yellow-500/15 text-yellow-600 dark:text-yellow-400"
       : status === "aprovada"
-      ? "bg-green-500/15 text-green-600 dark:text-green-400"
-      : status === "rejeitada"
-      ? "bg-red-500/15 text-red-600 dark:text-red-400"
-      : "bg-gray-500/15 text-gray-600 dark:text-gray-400";
+        ? "bg-green-500/15 text-green-600 dark:text-green-400"
+        : status === "rejeitada"
+          ? "bg-red-500/15 text-red-600 dark:text-red-400"
+          : "bg-gray-500/15 text-gray-600 dark:text-gray-400";
 
   return (
     <span
       className={`
         inline-flex
         items-center
+
         rounded-full
+
         px-3
         py-1
+
         text-xs
         font-bold
+
+        whitespace-nowrap
+
         ${style}
       `}
     >
@@ -321,12 +1050,16 @@ function EnrollmentStatusBadge({
   );
 }
 
-function formatAdminDate(date?: string | null) {
+function formatAdminDate(
+  date?: string | null,
+) {
   if (!date) {
     return "Não informado";
   }
 
-  return new Date(date).toLocaleString("pt-BR", {
+  return new Date(
+    date,
+  ).toLocaleString("pt-BR", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",

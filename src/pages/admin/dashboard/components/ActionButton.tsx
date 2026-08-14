@@ -1,4 +1,9 @@
-import { ArrowRight, type LucideIcon } from "lucide-react";
+import {
+  ArrowRight,
+  type LucideIcon,
+} from "lucide-react";
+
+import CompanyIconBox from "../../../../components/ui/CompanyIconBox";
 
 interface ActionButtonProps {
   icon: LucideIcon;
@@ -8,7 +13,7 @@ interface ActionButtonProps {
 }
 
 export default function ActionButton({
-  icon: Icon,
+  icon,
   title,
   subtitle,
   onClick,
@@ -18,45 +23,100 @@ export default function ActionButton({
       type="button"
       onClick={onClick}
       className="
+        w-full
+        min-w-0
+        min-h-[104px]
+
+        bg-white
+        dark:bg-[#091a2c]
+
         border
-        border-gray-200
-        dark:border-blue-500
-        dark:shadow-none
+        border-gray-300
+        dark:border-white/10
+
         rounded-2xl
+
         p-4
-        flex
+
+        grid
+        grid-cols-[auto_minmax(0,1fr)_auto]
+
         items-center
-        justify-between
+
+        gap-3
+
+        text-left
+
+        shadow-2xl
+        dark:shadow-sm
+
         hover:bg-gray-50
         dark:hover:bg-white/5
-        text-left
-        gap-4
-        cursor-pointer
-        shadow-xl
-        hover:shadow-[0_18px_40px_rgba(15,23,42,0.12)]
+
         hover:-translate-y-1
+        hover:shadow-[0_18px_40px_rgba(15,23,42,0.16)]
+
         transition-all
+        duration-200
+
+        cursor-pointer
       "
     >
-      <div className="flex items-center gap-3 min-w-0">
-        <div className="w-11 h-11 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-          <Icon size={22} />
-        </div>
+      <CompanyIconBox
+        icon={icon}
+        size="sm"
+        variant="gradient"
+      />
 
-        <div className="min-w-0">
-          <h3 className="font-bold text-[#080E2F] dark:text-white truncate">
-            {title}
-          </h3>
+      <div
+        className="
+          min-w-0
+          min-h-[58px]
 
-          <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-            {subtitle}
-          </p>
-        </div>
+          flex
+          flex-col
+          justify-center
+        "
+      >
+        <h3
+          className="
+            font-bold
+
+            text-sm
+            sm:text-base
+
+            text-[#080E2F]
+            dark:text-white
+
+            leading-snug
+          "
+        >
+          {title}
+        </h3>
+
+        <p
+          className="
+            mt-1
+
+            text-xs
+            sm:text-sm
+
+            text-gray-500
+            dark:text-gray-400
+
+            leading-snug
+          "
+        >
+          {subtitle}
+        </p>
       </div>
 
       <ArrowRight
         size={20}
-        className="text-gray-500 shrink-0"
+        className="
+          shrink-0
+          text-[var(--company-primary)]
+        "
       />
     </button>
   );

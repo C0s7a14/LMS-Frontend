@@ -1,6 +1,11 @@
-import { Trash2 } from "lucide-react";
+import {
+  Loader2,
+  Trash2,
+} from "lucide-react";
 
-import type { DeviceType } from "../types/adminDashboard.types";
+import type {
+  DeviceType,
+} from "../types/adminDashboard.types";
 
 interface DeleteDeviceModalProps {
   device: DeviceType | null;
@@ -20,35 +25,187 @@ export default function DeleteDeviceModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-      <div className="w-full max-w-md rounded-3xl bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 p-6 shadow-2xl">
-        <div className="w-16 h-16 rounded-2xl bg-red-500/10 text-red-500 flex items-center justify-center mx-auto">
-          <Trash2 size={36} />
+    <div
+      className="
+        fixed
+        inset-0
+        z-[110]
+
+        flex
+        items-center
+        justify-center
+
+        bg-black/60
+        backdrop-blur-[2px]
+
+        p-3
+        sm:p-4
+      "
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="delete-device-title"
+        className="
+          w-full
+          max-w-md
+          max-h-[calc(100dvh-24px)]
+
+          overflow-y-auto
+
+          rounded-2xl
+          sm:rounded-3xl
+
+          bg-white
+          dark:bg-[#091a2c]
+
+          border
+          border-gray-200
+          dark:border-white/10
+
+          p-5
+          sm:p-6
+
+          shadow-2xl
+        "
+      >
+        <div
+          className="
+            w-14
+            h-14
+
+            sm:w-16
+            sm:h-16
+
+            rounded-2xl
+
+            bg-red-500/10
+            text-red-500
+
+            flex
+            items-center
+            justify-center
+
+            mx-auto
+          "
+        >
+          <Trash2
+            size={32}
+            className="sm:w-9 sm:h-9"
+          />
         </div>
 
-        <h2 className="text-2xl font-bold text-[#080E2F] dark:text-white text-center mt-5">
+        <h2
+          id="delete-device-title"
+          className="
+            text-xl
+            sm:text-2xl
+
+            font-bold
+
+            text-[#080E2F]
+            dark:text-white
+
+            text-center
+
+            mt-5
+          "
+        >
           Excluir dispositivo
         </h2>
 
-        <p className="text-gray-500 dark:text-gray-400 text-center mt-3 leading-relaxed">
+        <p
+          className="
+            text-sm
+            sm:text-base
+
+            text-gray-500
+            dark:text-gray-400
+
+            text-center
+
+            mt-3
+
+            leading-relaxed
+            break-words
+          "
+        >
           Tem certeza que deseja excluir o dispositivo{" "}
-          <strong className="text-[#080E2F] dark:text-white">
+          <strong
+            className="
+              text-[#080E2F]
+              dark:text-white
+            "
+          >
             “{device.nome}”
           </strong>
           ?
         </p>
 
-        <div className="mt-5 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-red-500 text-sm font-medium">
+        <div
+          className="
+            mt-5
+
+            rounded-2xl
+
+            border
+            border-red-500/20
+
+            bg-red-500/10
+
+            p-4
+
+            text-sm
+            font-medium
+            text-red-500
+
+            leading-relaxed
+          "
+        >
           Essa ação removerá vínculos com clientes, cursos e
           documentos da base da IA relacionados a este dispositivo.
         </div>
 
-        <div className="mt-6 flex flex-col sm:flex-row gap-3">
+        <div
+          className="
+            mt-6
+
+            grid
+            grid-cols-1
+            sm:grid-cols-2
+
+            gap-3
+          "
+        >
           <button
             type="button"
             onClick={onClose}
             disabled={deleting}
-            className="flex-1 rounded-2xl border border-gray-200 dark:border-white/10 px-5 py-3 font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-all disabled:opacity-60"
+            className="
+              w-full
+
+              rounded-2xl
+
+              border
+              border-gray-200
+              dark:border-white/10
+
+              px-5
+              py-3
+
+              font-semibold
+
+              text-gray-600
+              dark:text-gray-300
+
+              hover:bg-gray-50
+              dark:hover:bg-white/5
+
+              transition-all
+
+              disabled:opacity-60
+              disabled:cursor-not-allowed
+            "
           >
             Cancelar
           </button>
@@ -57,9 +214,54 @@ export default function DeleteDeviceModal({
             type="button"
             onClick={onConfirm}
             disabled={deleting}
-            className="flex-1 rounded-2xl bg-red-500 px-5 py-3 font-semibold text-white hover:bg-red-600 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            className="
+              w-full
+
+              rounded-2xl
+
+              bg-red-500
+
+              px-5
+              py-3
+
+              font-semibold
+              text-white
+
+              flex
+              items-center
+              justify-center
+              gap-2
+
+              shadow-lg
+              shadow-red-500/15
+
+              hover:bg-red-600
+
+              transition-all
+
+              active:scale-[0.98]
+
+              disabled:opacity-60
+              disabled:cursor-not-allowed
+              disabled:active:scale-100
+            "
           >
-            {deleting ? "Excluindo..." : "Excluir"}
+            {deleting ? (
+              <>
+                <Loader2
+                  size={18}
+                  className="animate-spin"
+                />
+
+                Excluindo...
+              </>
+            ) : (
+              <>
+                <Trash2 size={18} />
+
+                Excluir
+              </>
+            )}
           </button>
         </div>
       </div>

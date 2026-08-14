@@ -1,14 +1,14 @@
 import {
-  Search,
+  ArrowRight,
+  Award,
+  BookOpen,
+  Clock3,
   Grid3X3,
   List,
-  BookOpen,
-  ArrowRight,
-  Clock3,
-  Play,
-  Award,
-  Users,
   MapPin,
+  Play,
+  Search,
+  Users,
 } from "lucide-react";
 
 import {
@@ -17,9 +17,15 @@ import {
   useState,
 } from "react";
 
-import { useNavigate } from "react-router-dom";
-import { api } from "../../services/api";
+import {
+  useNavigate,
+} from "react-router-dom";
+
 import toast from "react-hot-toast";
+
+import {
+  api,
+} from "../../services/api";
 
 interface CourseType {
   id: number;
@@ -51,468 +57,1468 @@ interface CourseType {
 }
 
 export default function MyCourses() {
-  const [courses, setCourses] = useState<CourseType[]>([]);
-  const [search, setSearch] = useState("");
-  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
-  const [loading, setLoading] = useState(true);
+  const [
+    courses,
+    setCourses,
+  ] = useState<CourseType[]>([]);
 
-  const navigate = useNavigate();
+  const [
+    search,
+    setSearch,
+  ] = useState("");
 
-  const getCourses = useCallback(async () => {
-  try {
-    setLoading(true);
+  const [
+    viewMode,
+    setViewMode,
+  ] = useState<
+    "list" | "grid"
+  >("list");
 
-    const response = await api.get<CourseType[]>(
-      "/student/my-courses",
-    );
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
 
-    setCourses(response.data);
-  } catch (error) {
-    console.log(error);
-    toast.error("Erro ao buscar cursos");
-  } finally {
-    setLoading(false);
-  }
-}, []);
+  const navigate =
+    useNavigate();
+
+  const getCourses =
+    useCallback(async () => {
+      try {
+        setLoading(true);
+
+        const response =
+          await api.get<
+            CourseType[]
+          >(
+            "/student/my-courses",
+          );
+
+        setCourses(
+          response.data,
+        );
+      } catch (error) {
+        console.log(error);
+
+        toast.error(
+          "Erro ao buscar cursos",
+        );
+      } finally {
+        setLoading(false);
+      }
+    }, []);
 
   useEffect(() => {
-  const timeoutId = window.setTimeout(() => {
-    void getCourses();
-  }, 0);
+    const timeoutId =
+      window.setTimeout(
+        () => {
+          void getCourses();
+        },
+        0,
+      );
 
-  return () => {
-    window.clearTimeout(timeoutId);
-  };
-}, [getCourses]);
+    return () => {
+      window.clearTimeout(
+        timeoutId,
+      );
+    };
+  }, [getCourses]);
 
-  const filteredCourses = courses.filter((course) => {
-    const searchLower = search.toLowerCase();
+  const searchLower =
+    search
+      .trim()
+      .toLowerCase();
 
-    return (
-      course.titulo?.toLowerCase().includes(searchLower) ||
-      course.descricao?.toLowerCase().includes(searchLower) ||
-      course.categoria?.toLowerCase().includes(searchLower)
+  const filteredCourses =
+    courses.filter((course) => {
+      if (!searchLower) {
+        return true;
+      }
+
+      return (
+        course.titulo
+          ?.toLowerCase()
+          .includes(
+            searchLower,
+          ) ||
+        course.descricao
+          ?.toLowerCase()
+          .includes(
+            searchLower,
+          ) ||
+        course.categoria
+          ?.toLowerCase()
+          .includes(
+            searchLower,
+          )
+      );
+    });
+
+  function getCourseProgress(
+    course: CourseType,
+  ) {
+    return Math.min(
+      Math.max(
+        Number(
+          course.progresso,
+        ) || 0,
+        0,
+      ),
+      100,
     );
-  });
-
-  function getCourseProgress(course: CourseType) {
-    return Number(course.progresso) || 0;
   }
 
-  function getCourseTag(course: CourseType) {
-    return course.categoria || "Treinamento";
+  function getCourseTag(
+    course: CourseType,
+  ) {
+    return (
+      course.categoria ||
+      "Treinamento"
+    );
   }
 
-  function getCourseImage(course: CourseType) {
-  return course.thumbnail || course.dispositivo_imagem_url || "";
-}
-
-  function getCourseStatusLabel(course: CourseType) {
-  const progress = getCourseProgress(course);
-
-  if (course.curso_status === "em_revisao") {
-    return "Em revisão";
+  function getCourseImage(
+    course: CourseType,
+  ) {
+    return (
+      course.thumbnail ||
+      course.dispositivo_imagem_url ||
+      ""
+    );
   }
 
-  if (course.curso_status === "aprovado") {
-    return "Aprovado";
+  function getCourseStatusLabel(
+    course: CourseType,
+  ) {
+    const progress =
+      getCourseProgress(
+        course,
+      );
+
+    if (
+      course.curso_status ===
+      "em_revisao"
+    ) {
+      return "Em revisão";
+    }
+
+    if (
+      course.curso_status ===
+      "aprovado"
+    ) {
+      return "Aprovado";
+    }
+
+    if (
+      course.curso_status ===
+      "bloqueado"
+    ) {
+      return "Bloqueado";
+    }
+
+    if (
+      course.curso_status ===
+      "reprovado"
+    ) {
+      return "Reprovado";
+    }
+
+    return `${progress}% completo`;
   }
 
-  if (course.curso_status === "bloqueado") {
-    return "Bloqueado";
+  function getCourseStatusClasses(
+    course: CourseType,
+  ) {
+    if (
+      course.curso_status ===
+      "aprovado"
+    ) {
+      return `
+        bg-green-500/15
+        text-green-600
+        dark:text-green-400
+
+        border-green-500/20
+      `;
+    }
+
+    if (
+      course.curso_status ===
+      "em_revisao"
+    ) {
+      return `
+        bg-orange-500/15
+        text-orange-600
+        dark:text-orange-400
+
+        border-orange-500/20
+      `;
+    }
+
+    if (
+      course.curso_status ===
+        "bloqueado" ||
+      course.curso_status ===
+        "reprovado"
+    ) {
+      return `
+        bg-red-500/15
+        text-red-600
+        dark:text-red-400
+
+        border-red-500/20
+      `;
+    }
+
+    return `
+      bg-white/90
+      dark:bg-[#091a2c]/90
+
+      text-[#080E2F]
+      dark:text-white
+
+      border-gray-200
+      dark:border-white/10
+    `;
   }
 
-  return `${progress}% completo`;
-}
+  function getCourseButtonLabel(
+    course: CourseType,
+  ) {
+    const progress =
+      getCourseProgress(
+        course,
+      );
 
-function getCourseButtonLabel(course: CourseType) {
-  const progress = getCourseProgress(course);
+    if (
+      course.curso_status ===
+      "em_revisao"
+    ) {
+      return "Continuar revisão";
+    }
 
-  if (course.curso_status === "em_revisao") {
-    return "Continuar revisão";
+    if (
+      course.curso_status ===
+      "aprovado"
+    ) {
+      return "Rever curso";
+    }
+
+    if (
+      course.curso_status ===
+      "bloqueado"
+    ) {
+      return "Curso bloqueado";
+    }
+
+    if (progress === 0) {
+      return "Iniciar curso";
+    }
+
+    return "Continuar curso";
   }
 
-  if (course.curso_status === "aprovado") {
-    return "Rever curso";
+  function openCourse(
+    course: CourseType,
+  ) {
+    if (
+      course.curso_status ===
+      "bloqueado"
+    ) {
+      return;
+    }
+
+    navigate(
+      `/courses/${course.id}`,
+    );
   }
+return (
+  <main
+    className="
+      w-full
+      min-w-0
+    "
+  >
+      <div
+        className="
+          w-full
+          min-w-0
 
-  if (course.curso_status === "bloqueado") {
-    return "Curso bloqueado";
-  }
+          max-w-[1500px]
 
-  if (progress === 0) {
-    return "Iniciar curso";
-  }
+          mx-auto
+        "
+      >
+        {/* HEADER */}
+        <div
+          className="
+            mb-7
+            sm:mb-8
 
-  return "Continuar curso";
-}
+            flex
+            flex-col
 
-  return (
-    <main className="min-h-screen bg-gray-50 dark:bg-[#071827] px-6 py-8 lg:px-12 transition-colors">
-      <div className="max-w-[1500px] mx-auto">
+            gap-5
+            lg:gap-6
 
-        {/* Header */}
-        <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between mb-8 ">
-          <div>
-            <h1 className="text-3xl lg:text-4xl font-bold text-[#080E2F] dark:text-white">
+            xl:flex-row
+            xl:items-end
+            xl:justify-between
+          "
+        >
+          <div className="min-w-0">
+            <h1
+              className="
+                text-2xl
+                sm:text-3xl
+                lg:text-4xl
+
+                font-bold
+
+                text-[#080E2F]
+                dark:text-white
+
+                leading-tight
+              "
+            >
               Meus Cursos
             </h1>
 
-            <p className="text-gray-500 dark:text-gray-400 mt-2 text-base lg:text-lg">
-              Acompanhe seus cursos, revisões e certificados
+            <p
+              className="
+                mt-2
+
+                text-sm
+                sm:text-base
+                lg:text-lg
+
+                text-gray-500
+                dark:text-gray-400
+
+                leading-relaxed
+              "
+            >
+              Acompanhe seus cursos,
+              revisões e certificados.
             </p>
 
-            <div className="mt-5 inline-flex items-center gap-2 bg-blue-500/10 text-blue-500 dark:text-blue-400 border border-blue-500/20 rounded-2xl px-5 py-2 font-medium">
-              <Users size={20} />
-              {filteredCourses.length} cursos matriculados
+            <div
+              className="
+                mt-4
+                sm:mt-5
+
+                inline-flex
+                items-center
+
+                gap-2
+
+                rounded-2xl
+
+                border
+                border-[color-mix(in_srgb,var(--company-primary)_20%,transparent)]
+
+                bg-[color-mix(in_srgb,var(--company-primary)_10%,transparent)]
+
+                px-4
+                py-2
+
+                text-sm
+                font-semibold
+
+                text-[var(--company-primary)]
+              "
+            >
+              <Users size={18} />
+
+              {filteredCourses.length}{" "}
+              curso
+              {filteredCourses.length !==
+              1
+                ? "s"
+                : ""}{" "}
+              matriculado
+              {filteredCourses.length !==
+              1
+                ? "s"
+                : ""}
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 ">
-            {/* Search */}
-            <div className="relative w-full sm:w-[360px] shadow-2xl rounded-2xl">
+          <div
+            className="
+              w-full
+
+              flex
+              flex-col
+
+              sm:flex-row
+              sm:items-center
+
+              gap-3
+              sm:gap-4
+
+              xl:w-auto
+            "
+          >
+            {/* BUSCA */}
+            <div
+              className="
+                relative
+
+                w-full
+                sm:flex-1
+                xl:w-[360px]
+
+                rounded-2xl
+
+                shadow-2xl
+                dark:shadow-sm
+              "
+            >
               <Search
-                size={22}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                size={20}
+                className="
+                  absolute
+
+                  left-4
+                  top-1/2
+
+                  -translate-y-1/2
+
+                  text-gray-400
+
+                  pointer-events-none
+                "
               />
 
               <input
-                type="text"
+                type="search"
                 placeholder="Buscar cursos..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(event) =>
+                  setSearch(
+                    event.target
+                      .value,
+                  )
+                }
                 className="
                   w-full
-                  bg-white
-                  dark:bg-[#091a2c]
+                  min-w-0
+
+                  rounded-2xl
+
                   border
                   border-gray-200
                   dark:border-white/10
-                  rounded-2xl
-                  py-4
+
+                  bg-white
+                  dark:bg-[#091a2c]
+
+                  py-3.5
+                  sm:py-4
+
                   pl-12
                   pr-4
+
+                  text-sm
+                  sm:text-base
+
                   text-[#080E2F]
                   dark:text-white
-                  placeholder:text-gray-500
+
+                  placeholder:text-gray-400
                   dark:placeholder:text-gray-500
+
                   outline-none
-                  focus:border-blue-500
+
+                  focus:border-[var(--company-primary)]
+
+                  focus:ring-4
+                  focus:ring-[color-mix(in_srgb,var(--company-primary)_10%,transparent)]
+
                   transition-all
                 "
               />
             </div>
 
-            {/* View buttons */}
-            <div className="hidden sm:flex bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-2xl p-1 shadow-2xl ">
+            {/* MODO DE VISUALIZAÇÃO */}
+            <div
+              className="
+                hidden
+
+                sm:flex
+
+                shrink-0
+
+                rounded-2xl
+
+                border
+                border-gray-200
+                dark:border-white/10
+
+                bg-white
+                dark:bg-[#091a2c]
+
+                p-1
+
+                shadow-2xl
+                dark:shadow-sm
+              "
+            >
               <button
-                onClick={() => setViewMode("grid")}
+                type="button"
+                onClick={() =>
+                  setViewMode(
+                    "grid",
+                  )
+                }
+                aria-label="Visualizar cursos em grade"
                 className={`
-                  w-12
-                  h-12
+                  w-11
+                  h-11
+
+                  lg:w-12
+                  lg:h-12
+
                   rounded-xl
+
                   flex
                   items-center
                   justify-center
+
                   transition-all
-                  cursor-pointer
+
                   ${
-                    viewMode === "grid"
-                      ? "bg-blue-500/20 text-blue-500 dark:text-blue-400 cursor-pointer"
-                      : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 "
+                    viewMode ===
+                    "grid"
+                      ? `
+                          bg-[color-mix(in_srgb,var(--company-primary)_12%,transparent)]
+
+                          text-[var(--company-primary)]
+                        `
+                      : `
+                          text-gray-500
+                          dark:text-gray-400
+
+                          hover:bg-gray-100
+                          dark:hover:bg-white/5
+                        `
                   }
                 `}
               >
-                <Grid3X3 size={22} />
+                <Grid3X3
+                  size={21}
+                />
               </button>
 
               <button
-                onClick={() => setViewMode("list")}
+                type="button"
+                onClick={() =>
+                  setViewMode(
+                    "list",
+                  )
+                }
+                aria-label="Visualizar cursos em lista"
                 className={`
-                  w-12
-                  h-12
+                  w-11
+                  h-11
+
+                  lg:w-12
+                  lg:h-12
+
                   rounded-xl
+
                   flex
                   items-center
                   justify-center
+
                   transition-all
-                  cursor-pointer
+
                   ${
-                    viewMode === "list"
-                      ? "bg-blue-500/20 text-blue-500 dark:text-blue-400 "
-                      : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5"
+                    viewMode ===
+                    "list"
+                      ? `
+                          bg-[color-mix(in_srgb,var(--company-primary)_12%,transparent)]
+
+                          text-[var(--company-primary)]
+                        `
+                      : `
+                          text-gray-500
+                          dark:text-gray-400
+
+                          hover:bg-gray-100
+                          dark:hover:bg-white/5
+                        `
                   }
                 `}
               >
-                <List size={24} />
+                <List size={23} />
               </button>
             </div>
           </div>
         </div>
 
-        {/* Loading */}
+        {/* LOADING */}
         {loading && (
-          <div className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-10 text-center text-gray-500 dark:text-gray-400">
+          <div
+            className="
+              rounded-2xl
+              sm:rounded-3xl
+
+              border
+              border-gray-200
+              dark:border-white/10
+
+              bg-white
+              dark:bg-[#091a2c]
+
+              p-10
+
+              text-center
+
+              text-gray-500
+              dark:text-gray-400
+
+              shadow-2xl
+              dark:shadow-sm
+
+              animate-pulse
+            "
+          >
             Carregando cursos...
           </div>
         )}
 
-        {/* Empty */}
-        {!loading && filteredCourses.length === 0 && (
-          <div className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-10 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-blue-500/20 flex items-center justify-center mx-auto mb-4">
-              <BookOpen size={36} className="text-blue-500 dark:text-blue-400" />
+        {/* EMPTY */}
+        {!loading &&
+          filteredCourses.length ===
+            0 && (
+            <div
+              className="
+                rounded-2xl
+                sm:rounded-3xl
+
+                border
+                border-gray-200
+                dark:border-white/10
+
+                bg-white
+                dark:bg-[#091a2c]
+
+                px-5
+                py-10
+                sm:p-12
+
+                text-center
+
+                shadow-2xl
+                dark:shadow-sm
+              "
+            >
+              <div
+                className="
+                  w-16
+                  h-16
+
+                  rounded-2xl
+
+                  bg-[color-mix(in_srgb,var(--company-primary)_12%,transparent)]
+
+                  flex
+                  items-center
+                  justify-center
+
+                  mx-auto
+                  mb-4
+                "
+              >
+                <BookOpen
+                  size={32}
+                  className="
+                    text-[var(--company-primary)]
+                  "
+                />
+              </div>
+
+              <h2
+                className="
+                  text-lg
+                  sm:text-xl
+
+                  font-bold
+
+                  text-[#080E2F]
+                  dark:text-white
+                "
+              >
+                Nenhum curso
+                encontrado
+              </h2>
+
+              <p
+                className="
+                  mt-2
+
+                  max-w-lg
+                  mx-auto
+
+                  text-sm
+                  sm:text-base
+
+                  text-gray-500
+                  dark:text-gray-400
+
+                  leading-relaxed
+                "
+              >
+                {searchLower
+                  ? "Nenhum dos seus cursos corresponde à busca realizada."
+                  : "Quando sua matrícula for aprovada, seus cursos aparecerão aqui."}
+              </p>
             </div>
+          )}
 
-            <h2 className="text-xl font-bold text-[#080E2F] dark:text-white">
-              Nenhum curso encontrado
-            </h2>
+        {/* CURSOS */}
+        {!loading &&
+          filteredCourses.length >
+            0 && (
+            <div
+              className={
+                viewMode ===
+                "grid"
+                  ? `
+                      grid
+                      grid-cols-1
 
-            <p className="text-gray-500 dark:text-gray-400 mt-2">
-              Quando sua matrícula for aprovada, seus cursos aparecerão aqui.
-            </p>
-          </div>
-        )}
+                      lg:grid-cols-2
 
-        {/* Courses */}
-        {!loading && filteredCourses.length > 0 && (
-          <div
-            className={
-              viewMode === "grid"
-                ? "grid grid-cols-1 xl:grid-cols-2 gap-7"
-                : "flex flex-col gap-5"
-            }
-          >
-            {filteredCourses.map((course) => {
-              const progress = getCourseProgress(course);
-              const courseImage = getCourseImage(course);
+                      gap-5
+                      sm:gap-6
+                      xl:gap-7
+                    `
+                  : `
+                      flex
+                      flex-col
 
-              return (
-                <div
-                  key={course.id}
-                  className={`
-                    bg-white
-                    dark:bg-[#091a2c]
-                    border
-                    border-gray-200
-                    shadow-2xl
-                    dark:shadow-sm
-                    dark:shadow-blue-500
-                    dark:border-white/10
-                    rounded-3xl
-                    overflow-hidden
-                    cursor-pointer
-                    transition-all
-                    hover:-translate-y-1
-                    hover:border-blue-500/40
-                    ${
-                      viewMode === "list"
-                        ? "flex flex-col xl:flex-row"
-                        : ""
-                    }
-                  `}
-                >
-                  {/* Banner */}
-                  <div
-                    className={`
-                      relative
-                      bg-gray-100
-                      dark:bg-[#0d2238]
-                      overflow-hidden
-                      ${
-                        viewMode === "list"
-                          ? "xl:w-[420px] h-72 xl:h-auto"
-                          : "h-64"
-                      }
-                    `}
-                  >
-                  {courseImage ? (
-                        <img
-                          src={courseImage}
-                          alt={course.titulo}
-                          className="w-full h-full object-contain p-6"
-                        />
-                      ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-transparent" />
+                      gap-5
+                    `
+              }
+            >
+              {filteredCourses.map(
+                (course) => {
+                  const progress =
+                    getCourseProgress(
+                      course,
+                    );
 
-                        <div className="relative w-40 h-40 rounded-full bg-blue-500/10 flex items-center justify-center">
-                          <BookOpen
-                            size={78}
-                            className="text-blue-500 dark:text-blue-400"
-                          />
-                        </div>
-                      </div>
-                    )}
+                  const courseImage =
+                    getCourseImage(
+                      course,
+                    );
 
-                    {/* Progress badge */}
-                    <div className="absolute top-5 right-5 bg-white/90 dark:bg-[#091a2c]/90 border border-gray-200 dark:border-white/10 rounded-2xl px-4 py-2 text-[#080E2F] dark:text-white font-medium">
-                      {getCourseStatusLabel(course)}
-                    </div>
+                  const isBlocked =
+                    course.curso_status ===
+                    "bloqueado";
 
-                   {/* Play button */}
-                    <button
-                      disabled={course.curso_status === "bloqueado"}
-                      onClick={() => {
-                        if (course.curso_status === "bloqueado") {
-                          return;
-                        }
+                  return (
+                    <article
+                      key={course.id}
+                      className={`
+                        w-full
+                        min-w-0
 
-                        navigate(`/courses/${course.id}`);
-                      }}
-                      className="
-                        absolute
-                        left-1/2
-                        top-1/2
-                        -translate-x-1/2
-                        -translate-y-1/2
-                        w-20
-                        h-20
-                        rounded-full
+                        overflow-hidden
+
+                        rounded-2xl
+                        sm:rounded-3xl
+
+                        border
+                        border-gray-200
+                        dark:border-white/10
+
                         bg-white
                         dark:bg-[#091a2c]
-                        text-blue-500
-                        dark:text-blue-400
-                        flex
-                        items-center
-                        justify-center
-                        shadow-xl
-                        hover:scale-105
+
+                        shadow-2xl
+                        dark:shadow-sm
+
                         transition-all
-                        disabled:opacity-60
-                        disabled:cursor-not-allowed
-                      "
+                        duration-200
+
+                        hover:border-[color-mix(in_srgb,var(--company-primary)_35%,transparent)]
+
+                        ${
+                          viewMode ===
+                          "list"
+                            ? `
+                                flex
+                                flex-col
+
+                                xl:flex-row
+                              `
+                            : ""
+                        }
+                      `}
                     >
-                      <Play size={34} fill="currentColor" />
-                    </button>
-                  </div>
+                      {/* IMAGEM */}
+                      <div
+                        className={`
+                          relative
 
-                  {/* Content */}
-                  <div className="p-6 flex flex-col flex-1">
-                    <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-500 dark:text-blue-400 rounded-xl px-3 py-2 text-sm font-medium w-fit mb-4">
-                      {getCourseTag(course).toLowerCase().includes("geo") ? (
-                        <MapPin size={18} />
-                      ) : (
-                        <Users size={18} />
-                      )}
+                          shrink-0
 
-                      {getCourseTag(course)}
-                    </div>
+                          overflow-hidden
 
-                    <h2 className="text-2xl lg:text-3xl font-bold text-[#080E2F] dark:text-white leading-tight">
-                      {course.titulo}
-                    </h2>
+                          bg-gray-100
+                          dark:bg-[#0d2238]
 
-                    <p className="text-gray-500 dark:text-gray-400 mt-3 leading-relaxed">
-                      {course.descricao ||
-                       "Treinamento disponível na Sirros Academy."}
-                    </p>
+                          ${
+                            viewMode ===
+                            "list"
+                              ? `
+                                  h-56
 
-                    <div className="flex flex-wrap items-center gap-6 mt-5 text-gray-500 dark:text-gray-400">
-                      <div className="flex items-center gap-2">
-                        <Clock3 size={22} />
-                        <span>{course.duracao || "3h 45min"}</span>
-                      </div>
+                                  sm:h-64
 
-                      <div className="flex items-center gap-2">
-                        <BookOpen size={22} />
-                        <span>
-                          {course.aulas_concluidas || 0}/
-                          {course.total_aulas || 0} aulas
-                        </span>
-                      </div>
-                    </div>
+                                  xl:h-auto
+                                  xl:min-h-[360px]
+                                  xl:w-[380px]
 
-                    <div className="mt-5">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-gray-500 dark:text-gray-400 font-medium">
-                          Progresso
-                        </span>
+                                  2xl:w-[420px]
+                                `
+                              : `
+                                  h-52
+                                  sm:h-60
+                                  xl:h-64
+                                `
+                          }
+                        `}
+                      >
+                        {courseImage ? (
+                          <img
+                            src={
+                              courseImage
+                            }
+                            alt={
+                              course.titulo
+                            }
+                            className="
+                              w-full
+                              h-full
 
-                        <span className="text-[#080E2F] dark:text-white font-medium">
-                          {progress}%
-                        </span>
-                      </div>
+                              object-contain
 
-                      <div className="w-full h-2 bg-gray-200 dark:bg-[#132d46] rounded-full overflow-hidden">
+                              p-4
+                              sm:p-6
+                            "
+                          />
+                        ) : (
+                          <div
+                            className="
+                              relative
+
+                              w-full
+                              h-full
+
+                              flex
+                              items-center
+                              justify-center
+                            "
+                          >
+                            <div
+                              className="
+                                absolute
+                                inset-0
+
+                                bg-gradient-to-br
+
+                                from-[color-mix(in_srgb,var(--company-primary)_15%,transparent)]
+                                via-[color-mix(in_srgb,var(--company-secondary)_10%,transparent)]
+                                to-transparent
+                              "
+                            />
+
+                            <div
+                              className="
+                                relative
+
+                                w-28
+                                h-28
+
+                                sm:w-36
+                                sm:h-36
+
+                                rounded-full
+
+                                bg-[color-mix(in_srgb,var(--company-primary)_10%,transparent)]
+
+                                flex
+                                items-center
+                                justify-center
+                              "
+                            >
+                              <BookOpen
+                                size={58}
+                                className="
+                                  sm:w-[72px]
+                                  sm:h-[72px]
+
+                                  text-[var(--company-primary)]
+                                "
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* STATUS */}
                         <div
-                          style={{
-                            width: `${progress}%`,
-                          }}
-                          className="h-full bg-blue-500 rounded-full transition-all"
-                        />
+                          className={`
+                            absolute
+
+                            top-3
+                            right-3
+
+                            sm:top-5
+                            sm:right-5
+
+                            max-w-[70%]
+
+                            rounded-xl
+                            sm:rounded-2xl
+
+                            border
+
+                            px-3
+                            py-2
+
+                            text-xs
+                            sm:text-sm
+
+                            font-semibold
+
+                            backdrop-blur-md
+
+                            shadow-lg
+
+                            ${getCourseStatusClasses(
+                              course,
+                            )}
+                          `}
+                        >
+                          {getCourseStatusLabel(
+                            course,
+                          )}
+                        </div>
+
+                        {/* PLAY */}
+                        <button
+                          type="button"
+                          disabled={
+                            isBlocked
+                          }
+                          onClick={() =>
+                            openCourse(
+                              course,
+                            )
+                          }
+                          aria-label={`Abrir curso ${course.titulo}`}
+                          className="
+                            absolute
+
+                            left-1/2
+                            top-1/2
+
+                            -translate-x-1/2
+                            -translate-y-1/2
+
+                            w-16
+                            h-16
+
+                            sm:w-20
+                            sm:h-20
+
+                            rounded-full
+
+                            bg-white
+                            dark:bg-[#091a2c]
+
+                            text-[var(--company-primary)]
+
+                            flex
+                            items-center
+                            justify-center
+
+                            shadow-2xl
+
+                            hover:scale-105
+
+                            transition-all
+
+                            disabled:opacity-60
+                            disabled:cursor-not-allowed
+                          "
+                        >
+                          <Play
+                            size={30}
+                            fill="currentColor"
+                            className="
+                              sm:w-[34px]
+                              sm:h-[34px]
+                            "
+                          />
+                        </button>
                       </div>
-                    </div>
 
-                 <button
-                  disabled={course.curso_status === "bloqueado"}
-                  onClick={() => navigate(`/courses/${course.id}`)}
-                  className="
-                    mt-6
-                    w-full
-                    bg-blue-500
-                    hover:bg-blue-600
-                    text-white
-                    rounded-2xl
-                    py-4
-                    font-semibold
-                    flex
-                    shadow-2xl
-                    dark:shadow-blue-700
-                    dark:shadow-sm
-                    cursor-pointer
-                    items-center
-                    justify-center
-                    gap-3
-                    transition-all
-                    disabled:opacity-60
-                    disabled:cursor-not-allowed
-                  "
-                >
-                  {getCourseButtonLabel(course)}
-                  <ArrowRight size={22} />
-                </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                      {/* CONTEÚDO */}
+                      <div
+                        className="
+                          min-w-0
+                          flex-1
 
-        {/* Footer callout */}
-        <div className="mt-7 bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 flex flex-col gap-5 md:flex-row md:items-center md:justify-between transition-colors shadow-2xl dark:shadow-blue-500 dark:shadow-sm">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-blue-500/20 flex items-center justify-center">
-              <Award className="text-blue-500 dark:text-blue-400" />
+                          p-4
+                          sm:p-5
+                          lg:p-6
+
+                          flex
+                          flex-col
+                        "
+                      >
+                        <div
+                          className="
+                            inline-flex
+                            items-center
+
+                            gap-2
+
+                            w-fit
+
+                            max-w-full
+
+                            rounded-xl
+
+                            bg-[color-mix(in_srgb,var(--company-primary)_10%,transparent)]
+
+                            px-3
+                            py-2
+
+                            text-xs
+                            sm:text-sm
+
+                            font-semibold
+
+                            text-[var(--company-primary)]
+
+                            mb-4
+                          "
+                        >
+                          {getCourseTag(
+                            course,
+                          )
+                            .toLowerCase()
+                            .includes(
+                              "geo",
+                            ) ? (
+                            <MapPin
+                              size={17}
+                              className="shrink-0"
+                            />
+                          ) : (
+                            <Users
+                              size={17}
+                              className="shrink-0"
+                            />
+                          )}
+
+                          <span className="break-words">
+                            {getCourseTag(
+                              course,
+                            )}
+                          </span>
+                        </div>
+
+                        <h2
+                          className="
+                            text-xl
+                            sm:text-2xl
+                            lg:text-3xl
+
+                            font-bold
+
+                            text-[#080E2F]
+                            dark:text-white
+
+                            leading-tight
+                            break-words
+                          "
+                        >
+                          {course.titulo}
+                        </h2>
+
+                        <p
+                          className="
+                            mt-3
+
+                            text-sm
+                            sm:text-base
+
+                            text-gray-500
+                            dark:text-gray-400
+
+                            leading-relaxed
+                            break-words
+                          "
+                        >
+                          {course.descricao ||
+                            "Treinamento disponível para sua empresa."}
+                        </p>
+
+                        {/* INFORMAÇÕES */}
+                        <div
+                          className="
+                            mt-5
+
+                            flex
+                            flex-wrap
+                            items-center
+
+                            gap-x-5
+                            gap-y-3
+
+                            text-sm
+                            sm:text-base
+
+                            text-gray-500
+                            dark:text-gray-400
+                          "
+                        >
+                          <div
+                            className="
+                              flex
+                              items-center
+
+                              gap-2
+                            "
+                          >
+                            <Clock3
+                              size={19}
+                              className="shrink-0"
+                            />
+
+                            <span>
+                              {course.duracao ||
+                                "Duração não informada"}
+                            </span>
+                          </div>
+
+                          <div
+                            className="
+                              flex
+                              items-center
+
+                              gap-2
+                            "
+                          >
+                            <BookOpen
+                              size={19}
+                              className="shrink-0"
+                            />
+
+                            <span>
+                              {course.aulas_concluidas ||
+                                0}
+                              /
+                              {course.total_aulas ||
+                                0}{" "}
+                              aulas
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* PROGRESSO */}
+                        <div
+                          className="
+                            mt-5
+                            sm:mt-6
+                          "
+                        >
+                          <div
+                            className="
+                              flex
+                              items-center
+                              justify-between
+
+                              gap-3
+
+                              mb-2
+                            "
+                          >
+                            <span
+                              className="
+                                text-sm
+
+                                font-medium
+
+                                text-gray-500
+                                dark:text-gray-400
+                              "
+                            >
+                              Progresso
+                            </span>
+
+                            <span
+                              className="
+                                text-sm
+
+                                font-bold
+
+                                text-[var(--company-primary)]
+                              "
+                            >
+                              {progress}%
+                            </span>
+                          </div>
+
+                          <div
+                            className="
+                              w-full
+                              h-2.5
+
+                              overflow-hidden
+
+                              rounded-full
+
+                              bg-gray-200
+                              dark:bg-[#132d46]
+                            "
+                          >
+                            <div
+                              style={{
+                                width: `${progress}%`,
+                              }}
+                              className="
+                                h-full
+
+                                rounded-full
+
+                                bg-gradient-to-r
+                                from-[var(--company-primary)]
+                                to-[var(--company-secondary)]
+
+                                transition-all
+                                duration-500
+                              "
+                            />
+                          </div>
+                        </div>
+
+                        {/* AÇÃO */}
+                        <button
+                          type="button"
+                          disabled={
+                            isBlocked
+                          }
+                          onClick={() =>
+                            openCourse(
+                              course,
+                            )
+                          }
+                          className="
+                            mt-6
+
+                            w-full
+
+                            rounded-2xl
+
+                            bg-gradient-to-r
+                            from-[var(--company-primary)]
+                            to-[var(--company-secondary)]
+
+                            px-4
+                            py-3.5
+                            sm:py-4
+
+                            text-sm
+                            sm:text-base
+
+                            font-semibold
+
+                            text-white
+
+                            flex
+                            items-center
+                            justify-center
+
+                            gap-3
+
+                            shadow-2xl
+                            dark:shadow-sm
+
+                            transition-all
+
+                            hover:opacity-95
+
+                            active:scale-[0.99]
+
+                            disabled:opacity-50
+                            disabled:cursor-not-allowed
+                          "
+                        >
+                          {getCourseButtonLabel(
+                            course,
+                          )}
+
+                          {!isBlocked && (
+                            <ArrowRight
+                              size={20}
+                              className="shrink-0"
+                            />
+                          )}
+                        </button>
+                      </div>
+                    </article>
+                  );
+                },
+              )}
+            </div>
+          )}
+
+        {/* CERTIFICADOS */}
+        <div
+          className="
+            mt-6
+            sm:mt-7
+
+            rounded-2xl
+            sm:rounded-3xl
+
+            border
+            border-gray-200
+            dark:border-white/10
+
+            bg-white
+            dark:bg-[#091a2c]
+
+            p-4
+            sm:p-6
+
+            flex
+            flex-col
+
+            gap-5
+
+            md:flex-row
+            md:items-center
+            md:justify-between
+
+            shadow-2xl
+            dark:shadow-sm
+
+            transition-colors
+          "
+        >
+          <div
+            className="
+              min-w-0
+
+              flex
+              items-start
+              sm:items-center
+
+              gap-3
+              sm:gap-4
+            "
+          >
+            <div
+              className="
+                w-12
+                h-12
+
+                sm:w-14
+                sm:h-14
+
+                rounded-2xl
+
+                bg-[color-mix(in_srgb,var(--company-primary)_12%,transparent)]
+
+                text-[var(--company-primary)]
+
+                flex
+                items-center
+                justify-center
+
+                shrink-0
+              "
+            >
+              <Award size={24} />
             </div>
 
-            <div>
-              <h2 className="text-xl font-bold text-[#080E2F] dark:text-white">
+            <div className="min-w-0">
+              <h2
+                className="
+                  text-lg
+                  sm:text-xl
+
+                  font-bold
+
+                  text-[#080E2F]
+                  dark:text-white
+                "
+              >
                 Continue aprendendo
               </h2>
 
-              <p className="text-gray-500 dark:text-gray-400 mt-1">
-                Mantenha sua jornada de aprendizado e conquiste novos certificados.
+              <p
+                className="
+                  mt-1
+
+                  text-sm
+                  sm:text-base
+
+                  text-gray-500
+                  dark:text-gray-400
+
+                  leading-relaxed
+                "
+              >
+                Mantenha sua jornada
+                de aprendizado e
+                conquiste novos
+                certificados.
               </p>
             </div>
           </div>
 
           <button
-            onClick={() => navigate("/certificate")}
+            type="button"
+            onClick={() =>
+              navigate(
+                "/certificate",
+              )
+            }
             className="
+              w-full
+              md:w-auto
+
+              shrink-0
+
+              rounded-2xl
+
               border
-              border-blue-500/40
-              text-blue-500
-              shadow-2xl
-              dark:shadow-blue-500
-              dark:shadow-sm
-              dark:text-blue-400
-              cursor-pointer
+              border-[color-mix(in_srgb,var(--company-primary)_35%,transparent)]
+
+              bg-[color-mix(in_srgb,var(--company-primary)_5%,transparent)]
+
               px-5
               py-3
-              rounded-2xl
-              font-medium
-              hover:bg-blue-500/10
+
+              font-semibold
+
+              text-[var(--company-primary)]
+
+              shadow-xl
+
+              hover:bg-[color-mix(in_srgb,var(--company-primary)_10%,transparent)]
+
               transition-all
             "
           >

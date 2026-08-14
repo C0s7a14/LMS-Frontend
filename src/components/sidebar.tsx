@@ -12,6 +12,8 @@ import {
   Sun,
   BotMessageSquare,
   Brain,
+   Building2,
+   LibraryBig,
 } from "lucide-react";
 
 import type { LucideIcon } from "lucide-react";
@@ -29,9 +31,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import { api } from "../services/api";
 
-import logo from "../assets/logo-preto.png";
 
 import { useTheme } from "../contexts/ThemeContext";
+import {
+  useCompany,
+} from "../contexts/CompanyContext";
 
 type UserRole = "student" | "client" | "admin";
 
@@ -86,6 +90,9 @@ export default function Sidebar() {
   const [open, setOpen] = useState(false);
 
   const navigate = useNavigate();
+  const {
+  clearCompany,
+} = useCompany();
 
  const [user, setUser] = useState<UserData>(getUserFromStorage());
 
@@ -150,13 +157,23 @@ useEffect(() => {
       );
     } catch (error) {
       console.log(error);
-    } finally {
-      localStorage.removeItem("token");
-      localStorage.removeItem("refreshToken");
-      localStorage.removeItem("user");
+    }finally {
+  localStorage.removeItem(
+    "token"
+  );
 
-      navigate("/");
-    }
+  localStorage.removeItem(
+    "refreshToken"
+  );
+
+  localStorage.removeItem(
+    "user"
+  );
+
+  clearCompany();
+
+  navigate("/");
+}
   }
 
 const menuItems: MenuItem[] = [
@@ -173,10 +190,16 @@ const menuItems: MenuItem[] = [
     allowedRoles: ["student"],
   },
   {
+    name: "Cursos Disponíveis",
+    icon: LibraryBig,
+    path: "/catalog",
+    allowedRoles: ["student"],
+  },
+  {
     name: "Dispositivos",
     icon: Cpu,
     path: "/devices",
-    allowedRoles: ["student", "client"],
+    allowedRoles: ["client"],
   },
   {
     name: "Meus Cursos",
@@ -188,7 +211,7 @@ const menuItems: MenuItem[] = [
     name: "Suporte IA",
     icon: BotMessageSquare,
     path: "/support",
-    allowedRoles: ["client", "admin"],
+    allowedRoles: ["client"],
   },
   {
     name: "Certificados",
@@ -211,31 +234,36 @@ const menuItems: MenuItem[] = [
   return (
     <>
       {!open && (
-        <button
-          onClick={() => setOpen(true)}
-          className="
-            lg:hidden
-            fixed
-            top-5
-            left-5
-            z-[60]
-            bg-white
-            dark:bg-[#11293D]
-            border
-            border-gray-200
-            dark:border-white/10
-            p-3
-            rounded-xl
-            text-[#080E2F]
-            dark:text-white
-            shadow-md
-            dark:shadow-none
-            transition-colors
-          "
-        >
-          <Menu size={24} />
-        </button>
-      )}
+    <button
+      onClick={() => setOpen(true)}
+      className="
+        lg:hidden
+        fixed
+        top-4
+        left-4
+        sm:top-5
+        sm:left-5
+        z-[60]
+        bg-white
+        dark:bg-[#11293D]
+        border
+        border-gray-200
+        dark:border-white/10
+        p-3
+        rounded-xl
+        shadow-md
+        dark:shadow-none
+        transition-all
+        hover:scale-105
+      "
+      aria-label="Abrir menu"
+    >
+      <Menu
+        size={24}
+        className="text-[var(--company-primary)]"
+      />
+    </button>
+  )}
 
       {/* Desktop */}
       <aside
@@ -246,7 +274,9 @@ const menuItems: MenuItem[] = [
           top-0
           self-start
           shrink-0
-          w-72
+           w-[270px]
+          xl:w-72
+          2xl:w-[300px]
           h-screen
           bg-white
           dark:bg-[#11293D]
@@ -294,15 +324,15 @@ const menuItems: MenuItem[] = [
               "
             />
 
-            <motion.aside
+           <motion.aside
               initial={{
-                x: -300,
+                x: -320,
               }}
               animate={{
                 x: 0,
               }}
               exit={{
-                x: -300,
+                x: -320,
               }}
               transition={{
                 duration: 0.3,
@@ -312,14 +342,15 @@ const menuItems: MenuItem[] = [
                 top-0
                 left-0
                 z-50
-                w-72
-                h-screen
+                w-[min(290px,calc(100vw-24px))]
+                h-[100dvh]
                 bg-white
                 dark:bg-[#11293D]
                 border-r
                 border-gray-200
                 dark:border-white/10
-                p-5
+                p-4
+                sm:p-5
                 flex
                 flex-col
                 justify-between
@@ -376,6 +407,28 @@ function SidebarContent({
 
   const isDark = theme === "dark";
 
+  const {
+  company,
+  loading: companyLoading,
+} = useCompany();
+
+const companyLogo =
+  isDark
+    ? company?.configuracao?.logoDarkUrl ||
+      company?.configuracao?.logoUrl
+    : company?.configuracao?.logoUrl ||
+      company?.configuracao?.logoDarkUrl;
+
+
+const companyName =
+  company?.nomeFantasia ||
+  "Empresa";
+
+
+const environmentName =
+  company?.configuracao?.nomeAmbiente ||
+  "Plataforma de Treinamento";
+
   function isBlockedItem(item: MenuItem) {
   if (role !== "student") {
     return false;
@@ -385,66 +438,156 @@ function SidebarContent({
     return false;
   }
 
-  return (
-    item.path === "/devices" ||
-    item.path === "/courses" ||
-    item.path === "/certificate"
-  );
+return (
+  item.path === "/courses" ||
+  item.path === "/certificate"
+);
 }
 
   return (
     <>
       {/* Top */}
       <div>
-        {/* Logo */}
-        <div className="mb-5">
-          <div className="flex">
-            <img
-              src={logo}
-              alt="Sirros logo"
-              className="
-                w-20
-                ml-8
-                object-contain
-                drop-shadow-[0_0_20px_rgba(59,130,246,0.35)]
-              "
-            />
+        {/* Identidade da empresa */}
+<div className="mb-6">
+  <div
+    className="
+      flex
+      items-center
+      gap-3
+      min-h-[64px]
+    "
+  >
+    {companyLoading ? (
+      <>
+        <div
+          className="
+            w-14
+            h-14
+            rounded-2xl
+            bg-gray-200
+            dark:bg-white/10
+            animate-pulse
+            shrink-0
+          "
+        />
 
-            <h1 className="font-bold pt-6 text-2xl text-[#080E2F] dark:text-white">
-              SIRROS
-            </h1>
+        <div className="flex-1">
+          <div
+            className="
+              h-5
+              w-32
+              rounded
+              bg-gray-200
+              dark:bg-white/10
+              animate-pulse
+            "
+          />
+
+          <div
+            className="
+              h-3
+              w-24
+              mt-2
+              rounded
+              bg-gray-200
+              dark:bg-white/10
+              animate-pulse
+            "
+          />
+        </div>
+      </>
+    ) : (
+      <>
+        {companyLogo ? (
+          <div
+            className="
+              w-16
+              h-16
+              flex
+              items-center
+              justify-center
+              shrink-0
+            "
+          >
+            <img
+              src={companyLogo}
+              alt={`Logo ${companyName}`}
+              className="
+              max-w-full
+              max-h-[56px]
+              object-contain
+            "
+            />
           </div>
+        ) : (
+          <div
+            className="
+              w-14
+              h-14
+              rounded-2xl
+             bg-[var(--company-primary)]
+              flex
+              items-center
+              justify-center
+              text-white
+              shrink-0
+            "
+          >
+            <Building2
+              size={28}
+            />
+          </div>
+        )}
+
+        <div
+          className="
+            min-w-0
+            flex-1
+          "
+        >
+          <h1
+            className="
+              font-bold
+              text-xl
+              text-[#080E2F]
+              dark:text-white
+              truncate
+            "
+            title={companyName}
+          >
+            {companyName}
+          </h1>
 
           <p
             className="
               text-gray-500
               dark:text-gray-400
-              text-sm
+              text-xs
               mt-1
-              flex
-              text-center
-              justify-center
+              line-clamp-2
             "
           >
-            Plataforma de Treinamento
+            {environmentName}
           </p>
         </div>
+      </>
+    )}
+  </div>
+</div>
 
         {/* Menu */}
       <nav className="space-y-3">
-  {menuItems.map((item, index) => {
+ {menuItems.map((item) => {
     const Icon = item.icon;
     const blocked = isBlockedItem(item);
 
-    const itemName =
-      role === "student" && item.path === "/devices"
-        ? "Cursos"
-        : item.name;
+  
 
     if (blocked) {
       return (
         <button
-          key={index}
+          key={item.path}
           type="button"
           onClick={() =>
             toast.error(
@@ -470,7 +613,7 @@ function SidebarContent({
           <Icon size={22} />
 
           <span className="font-medium">
-            {itemName}
+            {item.name}
           </span>
 
           <Lock size={18} className="ml-auto" />
@@ -478,37 +621,61 @@ function SidebarContent({
       );
     }
 
-    return (
-      <NavLink
-        key={index}
+          return (
+          <NavLink
+        key={item.path}
         to={item.path}
         className={({ isActive }) =>
           `
-          w-full
-          flex
-          items-center
-          gap-4
-          px-4
-          py-4
-          rounded-2xl
-          transition-all
-          ${
-            isActive
-              ? "bg-blue-500 text-white"
-              : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5"
-          }
-          `
-        }
-      >
-        <Icon size={22} />
+            w-full
+            flex
+            items-center
+            gap-3
+            xl:gap-4
+            px-3
+            xl:px-4
+            py-3
+            xl:py-4
+            rounded-2xl
+            transition-all
+            duration-200
 
-        <span className="font-medium">
-          {itemName}
-        </span>
-      </NavLink>
-    );
-  })}
-</nav>
+            ${
+              isActive
+                ? `
+              bg-gradient-to-r
+              from-[var(--company-primary)]
+              to-[var(--company-secondary)]
+              text-white
+              shadow-lg
+            `
+          : `
+              text-gray-700
+              dark:text-gray-200
+              hover:bg-gray-100
+              dark:hover:bg-white/5
+            `
+                  }
+                `
+              }
+            >
+              <Icon
+                size={22}
+                className="shrink-0"
+              />
+
+              <span
+                className="
+                  font-medium
+                  truncate
+                "
+              >
+                {item.name}
+              </span>
+            </NavLink>
+                );
+              })}
+            </nav>
       </div>
 
       {/* Bottom */}
@@ -545,8 +712,7 @@ function SidebarContent({
             gap-3
             font-medium
             shadow-2xl
-            dark:shadow-blue-500
-            dark:shadow-sm
+           dark:shadow-sm
             cursor-pointer
             
           "
@@ -567,7 +733,7 @@ function SidebarContent({
               w-12
               h-12
               rounded-full
-              bg-blue-500
+             bg-[var(--company-primary)]
               flex
               items-center
               justify-center
@@ -578,16 +744,18 @@ function SidebarContent({
             {user?.name?.[0] || "U"}
           </div>
 
-          <div>
+      <div className="min-w-0 flex-1">
             <h2
-              className="
-                text-[#080E2F]
-                dark:text-white
-                font-medium
-              "
-            >
-              {user?.name || "Usuário"}
-            </h2>
+          className="
+            text-[#080E2F]
+            dark:text-white
+            font-medium
+            truncate
+          "
+          title={user?.name || "Usuário"}
+        >
+          {user?.name || "Usuário"}
+        </h2>
 
             <p
               className="
@@ -621,7 +789,6 @@ function SidebarContent({
             font-medium
             shadow-2xl
             dark:shadow-sm
-            dark:shadow-red-100
             cursor-pointer
           "
         >

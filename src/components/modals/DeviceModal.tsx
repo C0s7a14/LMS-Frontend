@@ -1,6 +1,8 @@
 import {
-  X,
   Cpu,
+  Loader2,
+  Plus,
+  X,
 } from "lucide-react";
 
 import {
@@ -29,25 +31,32 @@ export default function DeviceModal({
   onClose,
   onSuccess,
 }: Props) {
-  const [creating, setCreating] = useState(false);
+  const [creating, setCreating] =
+    useState(false);
 
-  const [formData, setFormData] = useState<DeviceFormData>({
-    nome: "",
-    modelo: "",
-    tipo: "",
-    descricao: "",
-    imagem_url: "",
-  });
+  const [formData, setFormData] =
+    useState<DeviceFormData>({
+      nome: "",
+      modelo: "",
+      tipo: "",
+      descricao: "",
+      imagem_url: "",
+    });
 
   if (!isOpen) {
     return null;
   }
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
+  async function handleSubmit(
+    event: FormEvent,
+  ) {
+    event.preventDefault();
 
     if (!formData.nome.trim()) {
-      alert("O nome do dispositivo é obrigatório");
+      alert(
+        "O nome do dispositivo é obrigatório",
+      );
+
       return;
     }
 
@@ -56,7 +65,7 @@ export default function DeviceModal({
 
       await axios.post(
         "http://localhost:3333/devices",
-        formData
+        formData,
       );
 
       setFormData({
@@ -71,145 +80,642 @@ export default function DeviceModal({
       onClose();
     } catch (error) {
       console.log(error);
-      alert("Erro ao cadastrar dispositivo");
+
+      alert(
+        "Erro ao cadastrar dispositivo",
+      );
     } finally {
       setCreating(false);
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-      <div className="w-full max-w-2xl bg-white dark:bg-[#091a2c] rounded-3xl border border-gray-200 dark:border-white/10 p-6">
+    <div
+      className="
+        fixed
+        inset-0
+        z-[110]
 
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-blue-500/20 flex items-center justify-center">
-              <Cpu className="text-blue-500 dark:text-blue-400" />
+        flex
+        items-center
+        justify-center
+
+        bg-black/60
+        backdrop-blur-[2px]
+
+        p-3
+        sm:p-4
+      "
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="new-device-title"
+        className="
+          w-full
+          max-w-2xl
+
+          max-h-[calc(100dvh-24px)]
+          sm:max-h-[calc(100dvh-32px)]
+
+          overflow-y-auto
+          overscroll-contain
+
+          rounded-2xl
+          sm:rounded-3xl
+
+          bg-white
+          dark:bg-[#091a2c]
+
+          border
+          border-gray-200
+          dark:border-white/10
+
+          shadow-2xl
+        "
+      >
+        {/* HEADER */}
+        <div
+          className="
+            sticky
+            top-0
+            z-10
+
+            flex
+            items-start
+            justify-between
+
+            gap-3
+            sm:gap-4
+
+            bg-white/95
+            dark:bg-[#091a2c]/95
+
+            backdrop-blur-xl
+
+            border-b
+            border-gray-200
+            dark:border-white/10
+
+            px-4
+            sm:px-6
+
+            py-4
+            sm:py-5
+          "
+        >
+          <div
+            className="
+              flex
+              items-start
+              gap-3
+
+              min-w-0
+            "
+          >
+            <div
+              className="
+                w-10
+                h-10
+
+                sm:w-12
+                sm:h-12
+
+                rounded-2xl
+
+                bg-[color-mix(in_srgb,var(--company-primary)_10%,transparent)]
+                text-[var(--company-primary)]
+
+                flex
+                items-center
+                justify-center
+
+                shrink-0
+              "
+            >
+              <Cpu
+                size={24}
+              />
             </div>
 
-            <div>
-              <h2 className="text-2xl font-bold text-[#080E2F] dark:text-white">
+            <div className="min-w-0">
+              <h2
+                id="new-device-title"
+                className="
+                  text-xl
+                  sm:text-2xl
+
+                  font-bold
+
+                  text-[#080E2F]
+                  dark:text-white
+
+                  leading-tight
+                "
+              >
                 Novo Dispositivo
               </h2>
 
-              <p className="text-gray-500 dark:text-gray-400 mt-1">
-                Cadastre um novo dispositivo SIRROS
+              <p
+                className="
+                  mt-1
+
+                  text-sm
+
+                  text-gray-500
+                  dark:text-gray-400
+
+                  leading-relaxed
+                "
+              >
+                Cadastre um novo dispositivo
+                para a empresa.
               </p>
             </div>
           </div>
 
           <button
+            type="button"
             onClick={onClose}
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-red-500/20 hover:text-red-400 transition-all"
+            disabled={creating}
+            aria-label="Fechar modal"
+            className="
+              w-10
+              h-10
+
+              rounded-xl
+
+              flex
+              items-center
+              justify-center
+
+              text-gray-500
+              dark:text-gray-400
+
+              hover:bg-red-500/10
+              hover:text-red-500
+
+              transition-all
+
+              disabled:opacity-60
+
+              shrink-0
+            "
           >
-            <X size={24} />
+            <X size={23} />
           </button>
         </div>
 
+        {/* FORMULÁRIO */}
         <form
           onSubmit={handleSubmit}
-          className="grid grid-cols-1 md:grid-cols-2 gap-4"
+          className="
+            p-4
+            sm:p-6
+
+            grid
+            grid-cols-1
+            sm:grid-cols-2
+
+            gap-4
+            sm:gap-5
+          "
         >
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
+          {/* NOME */}
+          <div
+            className="
+              flex
+              flex-col
+              gap-2
+            "
+          >
+            <label
+              htmlFor="new-device-name"
+              className="
+                text-sm
+                font-semibold
+
+                text-[#080E2F]
+                dark:text-gray-300
+              "
+            >
               Nome
             </label>
 
             <input
+              id="new-device-name"
               type="text"
               value={formData.nome}
-              onChange={(e) =>
+              onChange={(event) =>
                 setFormData({
                   ...formData,
-                  nome: e.target.value,
+                  nome:
+                    event.target.value,
                 })
               }
               placeholder="Sensor de Temperatura"
-              className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 rounded-2xl px-4 py-3 outline-none focus:border-blue-500"
+              className="
+                w-full
+
+                bg-gray-50
+                dark:bg-[#0d2238]
+
+                border
+                border-gray-200
+                dark:border-white/10
+
+                text-[#080E2F]
+                dark:text-white
+
+                placeholder:text-gray-400
+                dark:placeholder:text-gray-500
+
+                rounded-2xl
+
+                px-4
+                py-3
+
+                outline-none
+
+                focus:border-[var(--company-primary)]
+                focus:ring-4
+                focus:ring-[color-mix(in_srgb,var(--company-primary)_10%,transparent)]
+
+                transition-all
+              "
             />
           </div>
 
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
+          {/* MODELO */}
+          <div
+            className="
+              flex
+              flex-col
+              gap-2
+            "
+          >
+            <label
+              htmlFor="new-device-model"
+              className="
+                text-sm
+                font-semibold
+
+                text-[#080E2F]
+                dark:text-gray-300
+              "
+            >
               Modelo
             </label>
 
             <input
+              id="new-device-model"
               type="text"
               value={formData.modelo}
-              onChange={(e) =>
+              onChange={(event) =>
                 setFormData({
                   ...formData,
-                  modelo: e.target.value,
+                  modelo:
+                    event.target.value,
                 })
               }
-              placeholder="SIRROS-TEMP-01"
-              className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 rounded-2xl px-4 py-3 outline-none focus:border-blue-500"
+              placeholder="TEMP-01"
+              className="
+                w-full
+
+                bg-gray-50
+                dark:bg-[#0d2238]
+
+                border
+                border-gray-200
+                dark:border-white/10
+
+                text-[#080E2F]
+                dark:text-white
+
+                placeholder:text-gray-400
+                dark:placeholder:text-gray-500
+
+                rounded-2xl
+
+                px-4
+                py-3
+
+                outline-none
+
+                focus:border-[var(--company-primary)]
+                focus:ring-4
+                focus:ring-[color-mix(in_srgb,var(--company-primary)_10%,transparent)]
+
+                transition-all
+              "
             />
           </div>
 
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
+          {/* TIPO */}
+          <div
+            className="
+              flex
+              flex-col
+              gap-2
+            "
+          >
+            <label
+              htmlFor="new-device-type"
+              className="
+                text-sm
+                font-semibold
+
+                text-[#080E2F]
+                dark:text-gray-300
+              "
+            >
               Tipo
             </label>
 
             <input
+              id="new-device-type"
               type="text"
               value={formData.tipo}
-              onChange={(e) =>
+              onChange={(event) =>
                 setFormData({
                   ...formData,
-                  tipo: e.target.value,
+                  tipo:
+                    event.target.value,
                 })
               }
-              placeholder="sensor, gateway, atuador..."
-              className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 rounded-2xl px-4 py-3 outline-none focus:border-blue-500"
+              placeholder="Sensor, gateway, atuador..."
+              className="
+                w-full
+
+                bg-gray-50
+                dark:bg-[#0d2238]
+
+                border
+                border-gray-200
+                dark:border-white/10
+
+                text-[#080E2F]
+                dark:text-white
+
+                placeholder:text-gray-400
+                dark:placeholder:text-gray-500
+
+                rounded-2xl
+
+                px-4
+                py-3
+
+                outline-none
+
+                focus:border-[var(--company-primary)]
+                focus:ring-4
+                focus:ring-[color-mix(in_srgb,var(--company-primary)_10%,transparent)]
+
+                transition-all
+              "
             />
           </div>
 
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
+          {/* URL DA IMAGEM */}
+          <div
+            className="
+              flex
+              flex-col
+              gap-2
+            "
+          >
+            <label
+              htmlFor="new-device-image"
+              className="
+                text-sm
+                font-semibold
+
+                text-[#080E2F]
+                dark:text-gray-300
+              "
+            >
               URL da Imagem
             </label>
 
             <input
+              id="new-device-image"
               type="text"
-              value={formData.imagem_url}
-              onChange={(e) =>
+              value={
+                formData.imagem_url
+              }
+              onChange={(event) =>
                 setFormData({
                   ...formData,
-                  imagem_url: e.target.value,
+                  imagem_url:
+                    event.target.value,
                 })
               }
-              placeholder="https://imagem.com/sensor.png"
-              className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 rounded-2xl px-4 py-3 outline-none focus:border-blue-500"
+              placeholder="https://imagem.com/dispositivo.png"
+              className="
+                w-full
+
+                bg-gray-50
+                dark:bg-[#0d2238]
+
+                border
+                border-gray-200
+                dark:border-white/10
+
+                text-[#080E2F]
+                dark:text-white
+
+                placeholder:text-gray-400
+                dark:placeholder:text-gray-500
+
+                rounded-2xl
+
+                px-4
+                py-3
+
+                outline-none
+
+                focus:border-[var(--company-primary)]
+                focus:ring-4
+                focus:ring-[color-mix(in_srgb,var(--company-primary)_10%,transparent)]
+
+                transition-all
+              "
             />
           </div>
 
-          <div className="md:col-span-2 flex flex-col gap-2">
-            <label className="text-sm font-medium text-[#080E2F] dark:text-gray-300">
+          {/* DESCRIÇÃO */}
+          <div
+            className="
+              sm:col-span-2
+
+              flex
+              flex-col
+              gap-2
+            "
+          >
+            <label
+              htmlFor="new-device-description"
+              className="
+                text-sm
+                font-semibold
+
+                text-[#080E2F]
+                dark:text-gray-300
+              "
+            >
               Descrição
             </label>
 
             <textarea
-              value={formData.descricao}
-              onChange={(e) =>
+              id="new-device-description"
+              value={
+                formData.descricao
+              }
+              onChange={(event) =>
                 setFormData({
                   ...formData,
-                  descricao: e.target.value,
+                  descricao:
+                    event.target.value,
                 })
               }
               placeholder="Descrição do dispositivo..."
               rows={4}
-              className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 resize-none"
+              className="
+                w-full
+
+                bg-gray-50
+                dark:bg-[#0d2238]
+
+                border
+                border-gray-200
+                dark:border-white/10
+
+                text-[#080E2F]
+                dark:text-white
+
+                placeholder:text-gray-400
+                dark:placeholder:text-gray-500
+
+                rounded-2xl
+
+                px-4
+                py-3
+
+                outline-none
+
+                focus:border-[var(--company-primary)]
+                focus:ring-4
+                focus:ring-[color-mix(in_srgb,var(--company-primary)_10%,transparent)]
+
+                resize-none
+
+                transition-all
+              "
             />
           </div>
 
-          <div className="md:col-span-2 flex justify-end gap-3 mt-4">
+          {/* PRÉVIA */}
+          {formData.imagem_url && (
+            <div
+              className="
+                sm:col-span-2
+
+                rounded-2xl
+
+                border
+                border-gray-200
+                dark:border-white/10
+
+                p-3
+                sm:p-4
+              "
+            >
+              <p
+                className="
+                  text-sm
+                  font-semibold
+
+                  text-[#080E2F]
+                  dark:text-white
+
+                  mb-3
+                "
+              >
+                Prévia da imagem
+              </p>
+
+              <div
+                className="
+                  w-full
+
+                  rounded-2xl
+
+                  bg-gray-100
+                  dark:bg-[#0d2238]
+
+                  overflow-hidden
+                "
+              >
+                <img
+                  src={
+                    formData.imagem_url
+                  }
+                  alt="Prévia do dispositivo"
+                  className="
+                    w-full
+                    max-h-64
+
+                    object-contain
+                  "
+                />
+              </div>
+            </div>
+          )}
+
+          {/* AÇÕES */}
+          <div
+            className="
+              sm:col-span-2
+
+              grid
+              grid-cols-1
+              sm:grid-cols-2
+
+              gap-3
+
+              pt-2
+              sm:pt-3
+            "
+          >
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-3 rounded-2xl border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-300 font-medium hover:bg-gray-100 dark:hover:bg-white/5 transition-all"
+              disabled={creating}
+              className="
+                w-full
+
+                rounded-2xl
+
+                border
+                border-gray-200
+                dark:border-white/10
+
+                px-5
+                py-3
+
+                font-semibold
+
+                text-gray-600
+                dark:text-gray-300
+
+                hover:bg-gray-100
+                dark:hover:bg-white/5
+
+                transition-all
+
+                disabled:opacity-60
+                disabled:cursor-not-allowed
+              "
             >
               Cancelar
             </button>
@@ -217,9 +723,55 @@ export default function DeviceModal({
             <button
               type="submit"
               disabled={creating}
-              className="px-6 py-3 rounded-2xl bg-blue-500 text-white font-semibold hover:bg-blue-600 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              className="
+                w-full
+
+                rounded-2xl
+
+                bg-gradient-to-r
+                from-[var(--company-primary)]
+                to-[var(--company-secondary)]
+
+                px-5
+                py-3
+
+                font-semibold
+                text-white
+
+                flex
+                items-center
+                justify-center
+                gap-2
+
+                shadow-lg
+
+                hover:brightness-105
+
+                transition-all
+
+                active:scale-[0.99]
+
+                disabled:opacity-60
+                disabled:cursor-not-allowed
+                disabled:active:scale-100
+              "
             >
-              {creating ? "Cadastrando..." : "Cadastrar Dispositivo"}
+              {creating ? (
+                <>
+                  <Loader2
+                    size={19}
+                    className="animate-spin"
+                  />
+
+                  Cadastrando...
+                </>
+              ) : (
+                <>
+                  <Plus size={19} />
+
+                  Cadastrar Dispositivo
+                </>
+              )}
             </button>
           </div>
         </form>

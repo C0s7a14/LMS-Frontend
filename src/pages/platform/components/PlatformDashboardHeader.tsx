@@ -4,44 +4,68 @@ import {
   Search,
 } from "lucide-react";
 
-import type {
-  AdminTab,
-} from "../types/adminDashboard.types";
-
-import CompanyButton from "../../../../components/ui/CompanyButton";
-
-interface DashboardHeaderProps {
+interface PlatformDashboardHeaderProps {
   title: string;
   subtitle: string;
-  placeholder: string;
-  actionLabel: string;
-  search: string;
-  currentTab: AdminTab;
-  onSearchChange: (value: string) => void;
-  onMainAction: () => void;
+
+  placeholder?: string;
+
+  actionLabel?: string;
+
+  search?: string;
+
+  actionType?:
+    | "create"
+    | "refresh";
+
+  onSearchChange?: (
+    value: string
+  ) => void;
+
+  onMainAction?: () => void;
+
+  actionLoading?: boolean;
 }
 
-export default function DashboardHeader({
+export default function PlatformDashboardHeader({
   title,
   subtitle,
-  placeholder,
-  actionLabel,
-  search,
-  currentTab,
+
+  placeholder = "",
+
+  actionLabel = "",
+
+  search = "",
+
+  actionType = "create",
+
   onSearchChange,
   onMainAction,
-}: DashboardHeaderProps) {
+
+  actionLoading = false,
+}: PlatformDashboardHeaderProps) {
   const hasSearch =
-    Boolean(placeholder.trim());
+    Boolean(
+      placeholder.trim()
+    ) &&
+    Boolean(
+      onSearchChange
+    );
 
   const hasAction =
-    Boolean(actionLabel.trim());
+    Boolean(
+      actionLabel.trim()
+    ) &&
+    Boolean(
+      onMainAction
+    );
 
   const hasControls =
-    hasSearch || hasAction;
+    hasSearch ||
+    hasAction;
 
   const ActionIcon =
-    currentTab === "enrollments"
+    actionType === "refresh"
       ? RefreshCw
       : Plus;
 
@@ -156,12 +180,18 @@ export default function DashboardHeader({
               <input
                 type="search"
                 value={search}
-                onChange={(event) =>
-                  onSearchChange(
-                    event.target.value,
+                onChange={(
+                  event
+                ) =>
+                  onSearchChange?.(
+                    event
+                      .target
+                      .value
                   )
                 }
-                placeholder={placeholder}
+                placeholder={
+                  placeholder
+                }
                 className="
                   w-full
                   min-w-0
@@ -195,10 +225,10 @@ export default function DashboardHeader({
                   shadow-xl
                   dark:shadow-sm
 
-                  focus:border-[var(--company-primary)]
+                  focus:border-blue-500
 
                   focus:ring-4
-                  focus:ring-[color-mix(in_srgb,var(--company-primary)_10%,transparent)]
+                  focus:ring-blue-500/10
 
                   transition-all
                 "
@@ -216,9 +246,14 @@ export default function DashboardHeader({
                 sm:justify-end
               "
             >
-              <CompanyButton
-                onClick={onMainAction}
-                variant="gradient"
+              <button
+                type="button"
+                onClick={
+                  onMainAction
+                }
+                disabled={
+                  actionLoading
+                }
                 className="
                   w-full
                   sm:w-auto
@@ -230,20 +265,58 @@ export default function DashboardHeader({
                   py-3.5
                   sm:py-4
 
+                  rounded-2xl
+
                   whitespace-nowrap
 
+                  bg-gradient-to-r
+                  from-blue-500
+                  to-purple-600
+
+                  hover:from-blue-600
+                  hover:to-purple-700
+
+                  text-white
+
+                  font-semibold
+
                   shadow-xl
+
+                  transition-all
+
+                  flex
+                  items-center
+                  justify-center
+                  gap-2
+
+                  disabled:opacity-60
+                  disabled:cursor-not-allowed
                 "
               >
                 <ActionIcon
                   size={20}
-                  className="shrink-0"
+                  className={`
+                    shrink-0
+
+                    ${
+                      actionLoading &&
+                      actionType ===
+                        "refresh"
+                        ? "animate-spin"
+                        : ""
+                    }
+                  `}
                 />
 
                 <span className="truncate">
-                  {actionLabel}
+                  {actionLoading
+                    ? actionType ===
+                      "refresh"
+                      ? "Atualizando..."
+                      : "Processando..."
+                    : actionLabel}
                 </span>
-              </CompanyButton>
+              </button>
             </div>
           )}
         </div>

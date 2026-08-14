@@ -177,132 +177,124 @@ export default function AdminDashboard() {
   }
 
   function getHeaderInfo() {
-    if (currentTab === "users") {
-      return {
-        title: "Gerenciar Usuários",
-        subtitle: "Cadastre, acompanhe e administre os usuários da plataforma.",
-        placeholder: "Buscar usuários...",
-        button: "Novo Usuário",
-      };
-    }
-
-    if (currentTab === "devices") {
-      return {
-        title: "Gerenciar Dispositivos",
-        subtitle:
-          "Liste os dispositivos cadastrados, consulte informações e vincule cursos relacionados.",
-        placeholder: "Buscar dispositivos...",
-        button: "Novo Dispositivo",
-      };
-    }
-
-    if (currentTab === "courses") {
-      return {
-        title: "Gerenciar Cursos",
-        subtitle:
-          "Organize, publique e acompanhe os cursos disponíveis na plataforma.",
-        placeholder: "Buscar cursos...",
-        button: "Novo Curso",
-      };
-    }
-
-    if (currentTab === "certificates") {
-      return {
-        title: "Gerenciar Certificados",
-        subtitle:
-          "Emita, valide e acompanhe os certificados gerados na plataforma.",
-        placeholder: "Buscar certificados...",
-        button: "Emitir Certificado",
-      };
-    }
-
-     if (currentTab === "ai") {
-      return {
-        title: "IA Técnica",
-        subtitle:
-          "Configure a base de conhecimento do agente IA para responder dúvidas dos clientes sobre dispositivos Sirros.",
-        placeholder: "Buscar prompts, documentos ou dispositivos...",
-        button: "Novo Prompt",
-      };
-    }
-
-        if (currentTab === "enrollments") {
-      return {
-        title: "Solicitações de Matrícula",
-        subtitle:
-          "Aprove ou rejeite pedidos de matrícula enviados pelos alunos.",
-        placeholder: "Buscar por aluno, curso ou dispositivo...",
-        button: "Atualizar lista",
-      };
-    }
-
-    if (currentTab === "resources") {
-  return {
-    title: "Tokens & Recursos",
-    subtitle:
-      "Monitore os serviços, modelos e recursos utilizados pela plataforma.",
-    placeholder: "",
-    button: "",
-  };
-}
-
-    if (currentTab === "reports") {
-      return {
-        title: "Relatórios e Métricas",
-        subtitle:
-          "Analise dados estratégicos de usuários, cursos, dispositivos e certificados.",
-        placeholder: "Buscar relatórios...",
-        button: "Exportar Relatório",
-      };
-    }
-
+  if (currentTab === "users") {
     return {
-      title: "Visão Geral Administrativa",
+      title: "Gerenciar Usuários",
       subtitle:
-        "Acompanhe rapidamente os principais indicadores da plataforma.",
-      placeholder: "Buscar usuários, cursos, dispositivos...",
+        "Cadastre, acompanhe e administre os usuários da plataforma.",
+      placeholder: "Buscar usuários...",
       button: "Novo Usuário",
     };
   }
 
-  function handleMainAction() {
-    if (currentTab === "overview" || currentTab === "users") {
-      setUserModalOpen(true);
-      return;
-    }
+  if (currentTab === "devices") {
+    return {
+      title: "Gerenciar Dispositivos",
+      subtitle:
+        "Liste os dispositivos cadastrados, consulte informações e vincule cursos relacionados.",
+      placeholder: "Buscar dispositivos...",
+      button: "Novo Dispositivo",
+    };
+  }
 
-    if (currentTab === "devices") {
-      setDeviceModalOpen(true);
-      return;
-    }
+  if (currentTab === "courses") {
+    return {
+      title: "Gerenciar Cursos",
+      subtitle:
+        "Organize, publique e acompanhe os cursos disponíveis na plataforma.",
+      placeholder: "Buscar cursos...",
+      button: "Novo Curso",
+    };
+  }
 
-    if (currentTab === "courses") {
-      navigate("/create-courses");
-      return;
-    }
+  if (currentTab === "certificates") {
+    return {
+      title: "Gerenciar Certificados",
+      subtitle:
+        "Acompanhe, baixe e gerencie os certificados emitidos pela plataforma.",
+      placeholder: "",
+      button: "",
+    };
+  }
 
-    if (currentTab === "certificates") {
-      toast.error("Emissão de certificado manual será conectada depois.");
-      return;
-    }
-
-    if (currentTab === "ai") {
-      openAiPromptModal(null);
-      return;
-    }
+  if (currentTab === "ai") {
+    return {
+      title: "IA Técnica",
+      subtitle:
+        "Configure a base de conhecimento e as instruções do agente técnico da empresa.",
+      placeholder: "",
+      button: "Novo Prompt",
+    };
+  }
 
   if (currentTab === "enrollments") {
-    void loadDashboardData();
+    return {
+      title: "Solicitações de Matrícula",
+      subtitle:
+        "Aprove ou rejeite pedidos de matrícula enviados pelos alunos.",
+      placeholder:
+        "Buscar por aluno, curso ou dispositivo...",
+      button: "Atualizar lista",
+    };
+  }
+
+  if (currentTab === "resources") {
+    return {
+      title: "Tokens & Recursos",
+      subtitle:
+        "Monitore serviços, modelos, consumo e recursos de IA utilizados pela plataforma.",
+      placeholder: "",
+      button: "",
+    };
+  }
+
+  if (currentTab === "reports") {
+    return {
+      title: "Relatórios e Métricas",
+      subtitle:
+        "Analise dados estratégicos de usuários, cursos, dispositivos e certificados.",
+      placeholder: "",
+      button: "",
+    };
+  }
+
+  return {
+    title: "Visão Geral Administrativa",
+    subtitle:
+      "Acompanhe rapidamente os principais indicadores da plataforma.",
+    placeholder: "",
+    button: "Novo Usuário",
+  };
+}
+
+ function handleMainAction() {
+  if (
+    currentTab === "overview" ||
+    currentTab === "users"
+  ) {
+    setUserModalOpen(true);
     return;
   }
 
-
-
-    if (currentTab === "reports") {
-      toast.error("Exportação de relatório será conectada depois.");
-    }
+  if (currentTab === "devices") {
+    setDeviceModalOpen(true);
+    return;
   }
 
+  if (currentTab === "courses") {
+    navigate("/create-courses");
+    return;
+  }
+
+  if (currentTab === "ai") {
+    openAiPromptModal(null);
+    return;
+  }
+
+  if (currentTab === "enrollments") {
+    void loadDashboardData();
+  }
+}
   const header = getHeaderInfo();
 
   const totalStudents = users.filter(
@@ -319,7 +311,7 @@ export default function AdminDashboard() {
 
 
   return (
-    <div className="space-y-6 sm:space-y-8">
+    <div className="w-full min-w-0 space-y-6 sm:space-y-8">
     <DashboardHeader
       title={header.title}
       subtitle={header.subtitle}
@@ -338,9 +330,36 @@ export default function AdminDashboard() {
 
 
       {loading ? (
-        <div className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-8 sm:p-10 text-center text-gray-500 dark:text-gray-400 cursor-pointer">
-          Carregando dashboard...
-        </div>
+        <div
+        className="
+          w-full
+
+          rounded-2xl
+          sm:rounded-3xl
+
+          border
+          border-gray-200
+          dark:border-white/10
+
+          bg-white
+          dark:bg-[#091a2c]
+
+          p-8
+          sm:p-10
+
+          text-center
+
+          text-gray-500
+          dark:text-gray-400
+
+          shadow-2xl
+          dark:shadow-sm
+
+          animate-pulse
+        "
+      >
+        Carregando dashboard...
+      </div>
       ) : (
         <>
           {currentTab === "overview" && (

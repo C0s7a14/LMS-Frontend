@@ -1,22 +1,26 @@
-import type {
-  LucideIcon,
+import {
+  ArrowRight,
+  type LucideIcon,
 } from "lucide-react";
 
-import CompanyIconBox from "../../../../components/ui/CompanyIconBox";
+import PlatformIconBox from "./PlatformIconBox";
 
-interface QuickSummaryProps {
+interface PlatformActionButtonProps {
   icon: LucideIcon;
+
   title: string;
-  value: number;
+
+  subtitle: string;
+
   onClick: () => void;
 }
 
-export default function QuickSummary({
+export default function PlatformActionButton({
   icon,
   title,
-  value,
+  subtitle,
   onClick,
-}: QuickSummaryProps) {
+}: PlatformActionButtonProps) {
   return (
     <button
       type="button"
@@ -24,7 +28,7 @@ export default function QuickSummary({
       className="
         w-full
         min-w-0
-        min-h-[88px]
+        min-h-[104px]
 
         bg-white
         dark:bg-[#091a2c]
@@ -36,19 +40,21 @@ export default function QuickSummary({
         rounded-2xl
 
         p-4
-        sm:p-5
 
-        flex
+        grid
+        grid-cols-[auto_minmax(0,1fr)_auto]
+
         items-center
-        justify-between
 
         gap-3
-        sm:gap-4
 
         text-left
 
         shadow-2xl
         dark:shadow-sm
+
+        hover:bg-gray-50
+        dark:hover:bg-white/5
 
         hover:-translate-y-1
         hover:shadow-[0_18px_40px_rgba(15,23,42,0.16)]
@@ -59,25 +65,24 @@ export default function QuickSummary({
         cursor-pointer
       "
     >
+      <PlatformIconBox
+        icon={icon}
+        size="sm"
+        variant="gradient"
+      />
+
       <div
         className="
           min-w-0
+          min-h-[58px]
 
           flex
-          items-center
-          gap-3
+          flex-col
+          justify-center
         "
       >
-        <CompanyIconBox
-          icon={icon}
-          size="sm"
-          variant="gradient"
-        />
-
-        <span
+        <h3
           className="
-            min-w-0
-
             font-bold
 
             text-sm
@@ -87,28 +92,37 @@ export default function QuickSummary({
             dark:text-white
 
             leading-snug
-            break-words
           "
         >
           {title}
-        </span>
+        </h3>
+
+        <p
+          className="
+            mt-1
+
+            text-xs
+            sm:text-sm
+
+            text-gray-500
+            dark:text-gray-400
+
+            leading-snug
+          "
+        >
+          {subtitle}
+        </p>
       </div>
 
-      <strong
+      <ArrowRight
+        size={20}
         className="
           shrink-0
 
-          text-xl
-          sm:text-2xl
-
-          font-bold
-
-          text-[#080E2F]
-          dark:text-white
+          text-blue-600
+          dark:text-blue-400
         "
-      >
-        {value}
-      </strong>
+      />
     </button>
   );
 }

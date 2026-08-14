@@ -362,15 +362,23 @@ function SummaryCard({
   return (
     <div
       className="
+        w-full
+        min-w-0
+
         rounded-2xl
+        sm:rounded-3xl
+
         border
-        border-gray-300
-        bg-white
-        p-5
+        border-gray-200
         dark:border-white/10
+
+        bg-white
         dark:bg-[#11172D]
+
+        p-4
+        sm:p-5
+
         shadow-2xl
-        dark:shadow-blue-300
         dark:shadow-sm
       "
     >
@@ -379,14 +387,16 @@ function SummaryCard({
           flex
           items-start
           justify-between
+
           gap-4
         "
       >
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p
             className="
               text-sm
               font-medium
+
               text-gray-500
               dark:text-gray-400
             "
@@ -397,11 +407,17 @@ function SummaryCard({
           <p
             className="
               mt-2
-              truncate
-              text-2xl
+
+              text-xl
+              sm:text-2xl
+
               font-bold
+
               text-[#080E2F]
               dark:text-white
+
+              leading-tight
+              break-words
             "
           >
             {value}
@@ -411,10 +427,14 @@ function SummaryCard({
             <p
               className="
                 mt-2
-                truncate
+
                 text-xs
+
                 text-gray-400
                 dark:text-gray-500
+
+                leading-relaxed
+                break-words
               "
             >
               {subtitle}
@@ -425,15 +445,20 @@ function SummaryCard({
         <div
           className="
             flex
+
             h-11
             w-11
+
             shrink-0
+
             items-center
             justify-center
+
             rounded-xl
-            bg-blue-500/10
-            text-blue-600
-            dark:text-blue-400
+
+            bg-[color-mix(in_srgb,var(--company-primary)_10%,transparent)]
+
+            text-[var(--company-primary)]
           "
         >
           <Icon size={21} />
@@ -450,29 +475,41 @@ function ResourceCard({
   resource: AdminResourceType;
 }) {
   const Icon = getResourceIcon(
-    resource.id
+    resource.id,
   );
 
   return (
     <div
       className="
+        w-full
+        min-w-0
+
         rounded-2xl
+        sm:rounded-3xl
+
         border
-        border-gray-300
-        bg-white
-        p-5
-        shadow-2xl
-        dark:shadow-blue-300
-        dark:shadow-sm
+        border-gray-200
         dark:border-white/10
+
+        bg-white
         dark:bg-[#11172D]
+
+        p-4
+        sm:p-5
+
+        shadow-2xl
+        dark:shadow-sm
       "
     >
       <div
         className="
           flex
-          items-start
-          justify-between
+          flex-col
+
+          sm:flex-row
+          sm:items-start
+          sm:justify-between
+
           gap-4
         "
       >
@@ -480,22 +517,27 @@ function ResourceCard({
           className="
             flex
             min-w-0
-            items-center
+            items-start
             gap-3
           "
         >
           <div
             className="
               flex
+
               h-11
               w-11
+
               shrink-0
+
               items-center
               justify-center
+
               rounded-xl
-              bg-blue-500/10
-              text-blue-600
-              dark:text-blue-400
+
+              bg-[color-mix(in_srgb,var(--company-primary)_10%,transparent)]
+
+              text-[var(--company-primary)]
             "
           >
             <Icon size={21} />
@@ -505,8 +547,11 @@ function ResourceCard({
             <h3
               className="
                 font-bold
+
                 text-[#080E2F]
                 dark:text-white
+
+                break-words
               "
             >
               {resource.name}
@@ -515,9 +560,14 @@ function ResourceCard({
             <p
               className="
                 mt-1
+
                 text-sm
+
                 text-gray-500
                 dark:text-gray-400
+
+                leading-relaxed
+                break-words
               "
             >
               {resource.description}
@@ -527,19 +577,24 @@ function ResourceCard({
 
         <span
           className={`
+            w-fit
             shrink-0
+
             rounded-full
+
             px-3
             py-1
+
             text-xs
             font-semibold
+
             ${getStatusClasses(
-              resource.status
+              resource.status,
             )}
           `}
         >
           {getStatusLabel(
-            resource.status
+            resource.status,
           )}
         </span>
       </div>
@@ -548,76 +603,30 @@ function ResourceCard({
         <div
           className="
             mt-5
+
             grid
-            gap-3
+            grid-cols-1
             sm:grid-cols-2
+
+            gap-3
           "
         >
           {resource.details.model && (
-            <div
-              className="
-                rounded-xl
-                bg-gray-50
-                p-3
-                dark:bg-white/5
-              "
-            >
-              <p
-                className="
-                  text-xs
-                  text-gray-500
-                  dark:text-gray-400
-                "
-              >
-                Modelo
-              </p>
-
-              <p
-                className="
-                  mt-1
-                  truncate
-                  text-sm
-                  font-semibold
-                  text-[#080E2F]
-                  dark:text-white
-                "
-              >
-                {resource.details.model}
-              </p>
-            </div>
+            <ResourceDetail
+              label="Modelo"
+              value={
+                resource.details.model
+              }
+            />
           )}
 
           {resource.details.voice && (
-            <div
-              className="
-                rounded-xl
-                bg-gray-50
-                p-3
-                dark:bg-white/5
-              "
-            >
-              <p
-                className="
-                  text-xs
-                  text-gray-500
-                  dark:text-gray-400
-                "
-              >
-                Voz TTS
-              </p>
-
-              <p
-                className="
-                  mt-1
-                  text-sm
-                  font-semibold
-                  text-[#080E2F]
-                  dark:text-white
-                "
-              >
-                {resource.details.voice}
-              </p>
-            </div>
+            <ResourceDetail
+              label="Voz TTS"
+              value={
+                resource.details.voice
+              }
+            />
           )}
         </div>
       )}
@@ -625,7 +634,55 @@ function ResourceCard({
   );
 }
 
+function ResourceDetail({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div
+      className="
+        min-w-0
 
+        rounded-xl
+
+        bg-gray-50
+        dark:bg-white/5
+
+        p-3
+      "
+    >
+      <p
+        className="
+          text-xs
+
+          text-gray-500
+          dark:text-gray-400
+        "
+      >
+        {label}
+      </p>
+
+      <p
+        className="
+          mt-1
+
+          text-sm
+          font-semibold
+
+          text-[#080E2F]
+          dark:text-white
+
+          break-words
+        "
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
 
 export default function TokensResourcesTab() {
   const [activeTab, setActiveTab] =
@@ -697,17 +754,26 @@ export default function TokensResourcesTab() {
 
 
   return (
-    <section className="space-y-6">
+   <section
+  className="
+    w-full
+    min-w-0
+
+    space-y-6
+    sm:space-y-8
+  "
+>
 
      {/* CARDS DE NAVEGAÇÃO */}
 <div
   className="
     grid
     grid-cols-1
-    gap-4
+
     sm:grid-cols-2
     xl:grid-cols-4
-    
+
+    gap-4
   "
 >
   {SUB_TABS.map((tab) => {
@@ -725,56 +791,77 @@ export default function TokensResourcesTab() {
         }
         className={`
           group
+
           relative
+
+          min-w-0
+          min-h-[160px]
+
           flex
-          min-h-[170px]
           flex-col
           items-center
           justify-center
-          rounded-3xl
+
+          rounded-2xl
+          sm:rounded-3xl
+
           border
-          border-gray-300
+
           bg-white
-          px-5
-          py-6
+          dark:bg-[#11172D]
+
+          px-4
+          sm:px-5
+
+          py-5
+          sm:py-6
+
           text-center
+
           shadow-2xl
-          dark:shadow-none
+          dark:shadow-sm
+
           transition-all
           duration-200
-          dark:bg-[#11172D]
 
           ${
             active
               ? `
-                border-blue-500
-                shadow-md
-                ring-1
-                ring-blue-500/20
-                dark:border-blue-500
-              `
+                  border-[var(--company-primary)]
+
+                  bg-[color-mix(in_srgb,var(--company-primary)_4%,white)]
+
+                  dark:bg-[color-mix(in_srgb,var(--company-primary)_6%,#11172D)]
+
+                  ring-2
+                  ring-[color-mix(in_srgb,var(--company-primary)_18%,transparent)]
+                `
               : `
-                border-gray-200
-                hover:-translate-y-0.5
-                hover:border-blue-300
-                hover:shadow-md
-                dark:border-white/10
-                dark:hover:border-blue-500/40
-              `
+                  border-gray-200
+                  dark:border-white/10
+
+                  hover:border-[color-mix(in_srgb,var(--company-primary)_40%,transparent)]
+                `
           }
         `}
       >
         <div
           className={`
             flex
+
             h-12
             w-12
+
             items-center
             justify-center
+
             rounded-2xl
+
             transition-transform
             duration-200
+
             group-hover:scale-105
+
             ${tab.iconClasses}
           `}
         >
@@ -784,10 +871,14 @@ export default function TokensResourcesTab() {
         <h3
           className="
             mt-4
+
             text-base
             font-semibold
+
             text-[#080E2F]
             dark:text-white
+
+            break-words
           "
         >
           {tab.label}
@@ -796,131 +887,192 @@ export default function TokensResourcesTab() {
         <p
           className="
             mt-2
+
             text-sm
+
             text-gray-500
             dark:text-gray-400
+
+            leading-relaxed
+            break-words
           "
         >
           {tab.description}
         </p>
 
+        {active && (
+          <div
+            className="
+              absolute
+
+              bottom-0
+              left-1/2
+
+              h-1
+              w-12
+
+              -translate-x-1/2
+
+              rounded-t-full
+
+              bg-[var(--company-primary)]
+            "
+          />
+        )}
       </button>
     );
   })}
 </div>
 
 
-      {/* CONTROLES */}
-      <div
-        className="
-          flex
-          flex-col
-          gap-3
-          sm:flex-row
-          sm:items-center
-          sm:justify-end
-        "
-      >
-        <select
-          value={days}
-         onChange={(event) => {
-          const selectedDays =
-            Number(event.target.value);
+     {/* CONTROLES */}
+<div
+  className="
+    flex
+    flex-col
 
-          setDays(selectedDays);
-          setCostDays(selectedDays);
-          setAudioDays(selectedDays);
-          setCourseDays(selectedDays);
-        }}
-                  className="
-            rounded-xl
-            border
-            border-gray-200
-            bg-white
-            px-4
-            py-2.5
-            text-sm
-            font-semibold
-          text-[#080E2F]
-            shadow-xl
-          dark:shadow-blue-300
-            dark:shadow-sm
-            outline-none
-            dark:border-white/10
-            dark:bg-[#11172D]
-            dark:text-white
-            cursor-pointer
-          "
-        >
-          <option value={7}>
-            Últimos 7 dias
-          </option>
+    sm:flex-row
+    sm:items-center
+    sm:justify-end
 
-          <option value={30}>
-            Últimos 30 dias
-          </option>
+    gap-3
+  "
+>
+  <select
+    value={days}
+    onChange={(event) => {
+      const selectedDays =
+        Number(
+          event.target.value,
+        );
 
-          <option value={90}>
-            Últimos 90 dias
-          </option>
+      setDays(selectedDays);
+      setCostDays(selectedDays);
+      setAudioDays(selectedDays);
+      setCourseDays(selectedDays);
+    }}
+    className="
+      w-full
+      sm:w-auto
 
-          <option value={365}>
-            Últimos 365 dias
-          </option>
-        </select>
+      rounded-xl
 
-        <button
-          type="button"
-          onClick={() =>
-            void handleRefresh()
-          }
-          disabled={
-            resourcesLoading ||
-            analyticsLoading ||
-            costLoading      ||
-            audioLoading     ||
-            courseLoading
-          }
-          className="
-            inline-flex
-            items-center
-            justify-center
-            gap-2
-            rounded-xl
-            border
-            border-gray-200
-            bg-white
-            px-4
-            py-2.5
-            text-sm
-            shadow-xl
-          dark:shadow-blue-300
-            dark:shadow-sm
-            font-semibold
-            text-[#080E2F]
-            disabled:opacity-50
-            dark:border-white/10
-            dark:bg-[#11172D]
-            dark:text-white
-            cursor-pointer
-          "
-        >
-          <RefreshCw
-            size={16}
-                    className={
-          resourcesLoading ||
-          analyticsLoading ||
-          costLoading      ||
-          audioLoading
-            ? "animate-spin"
-            : ""
-        }
-        />
+      border
+      border-gray-200
+      dark:border-white/10
 
-          Atualizar
-        </button>
-      </div>
+      bg-white
+      dark:bg-[#11172D]
 
+      px-4
+      py-2.5
+
+      text-sm
+      font-semibold
+
+      text-[#080E2F]
+      dark:text-white
+
+      shadow-xl
+      dark:shadow-sm
+
+      outline-none
+
+      focus:border-[var(--company-primary)]
+      focus:ring-4
+      focus:ring-[color-mix(in_srgb,var(--company-primary)_10%,transparent)]
+
+      cursor-pointer
+
+      transition-all
+    "
+  >
+    <option value={7}>
+      Últimos 7 dias
+    </option>
+
+    <option value={30}>
+      Últimos 30 dias
+    </option>
+
+    <option value={90}>
+      Últimos 90 dias
+    </option>
+
+    <option value={365}>
+      Últimos 365 dias
+    </option>
+  </select>
+
+  <button
+    type="button"
+    onClick={() =>
+      void handleRefresh()
+    }
+    disabled={
+      resourcesLoading ||
+      analyticsLoading ||
+      costLoading ||
+      audioLoading ||
+      courseLoading
+    }
+    className="
+      w-full
+      sm:w-auto
+
+      inline-flex
+      items-center
+      justify-center
+
+      gap-2
+
+      rounded-xl
+
+      border
+      border-gray-200
+      dark:border-white/10
+
+      bg-white
+      dark:bg-[#11172D]
+
+      px-4
+      py-2.5
+
+      text-sm
+      font-semibold
+
+      text-[#080E2F]
+      dark:text-white
+
+      shadow-xl
+      dark:shadow-sm
+
+      hover:border-[color-mix(in_srgb,var(--company-primary)_40%,transparent)]
+
+      hover:text-[var(--company-primary)]
+
+      transition-all
+
+      disabled:opacity-50
+      disabled:cursor-not-allowed
+    "
+  >
+    <RefreshCw
+      size={16}
+      className={
+        resourcesLoading ||
+        analyticsLoading ||
+        costLoading ||
+        audioLoading ||
+        courseLoading
+          ? "animate-spin"
+          : ""
+      }
+    />
+
+    Atualizar
+  </button>
+</div>
 
       {/* TOKENS */}
       {activeTab === "tokens" && (
@@ -1022,7 +1174,6 @@ export default function TokensResourcesTab() {
                   bg-white
                   p-5
                   shadow-2xl
-                dark:shadow-blue-300
                   dark:shadow-sm
                   dark:border-white/10
                   dark:bg-[#11172D]
@@ -1160,10 +1311,10 @@ export default function TokensResourcesTab() {
                                   height: `${height}%`,
                                 }}
                                 className="
-                                  w-full
-                                  rounded-t-lg
-                                  bg-blue-500
-                                "
+                                w-full
+                                rounded-t-lg
+                                bg-[var(--company-primary)]
+                              "
                               />
                             </div>
 
@@ -1196,7 +1347,6 @@ export default function TokensResourcesTab() {
                   bg-white
                   p-5
                   shadow-2xl
-                dark:shadow-blue-300
                   dark:shadow-sm
                   dark:border-white/10
                   dark:bg-[#11172D]
@@ -1331,7 +1481,6 @@ export default function TokensResourcesTab() {
                   bg-white
                   p-5
                   shadow-2xl
-                dark:shadow-blue-300
                   dark:shadow-sm
                 dark:border-white/10
                 dark:bg-[#11172D]
@@ -1352,9 +1501,8 @@ export default function TokensResourcesTab() {
                       items-center
                       justify-center
                       rounded-xl
-                      bg-blue-500/10
-                      text-blue-600
-                      dark:text-blue-400
+                     bg-[color-mix(in_srgb,var(--company-primary)_10%,transparent)]
+                      text-[var(--company-primary)]
                     "
                   >
                     <KeyRound size={19} />
@@ -1404,7 +1552,6 @@ export default function TokensResourcesTab() {
                           border-gray-300
                           p-4
                           shadow-2xl
-                        dark:shadow-blue-300
                           dark:shadow-sm
                           dark:border-white/10
                         "
@@ -1563,7 +1710,6 @@ export default function TokensResourcesTab() {
               bg-gray-50/50
               p-5
               shadow-2xl
-            dark:shadow-blue-300
               dark:shadow-sm
             dark:border-white/10
             dark:bg-white/[0.02]
@@ -1738,7 +1884,6 @@ export default function TokensResourcesTab() {
               px-5
               py-4
               shadow-2xl
-            dark:shadow-red-300
               dark:shadow-sm
               text-sm
             text-orange-700
@@ -1766,7 +1911,6 @@ export default function TokensResourcesTab() {
             bg-white
             p-5
             shadow-2xl
-          dark:shadow-blue-300
             dark:shadow-sm
           dark:border-white/10
           dark:bg-[#11172D]
@@ -1942,7 +2086,6 @@ export default function TokensResourcesTab() {
             bg-white
             p-5
             shadow-2xl
-          dark:shadow-blue-300
             dark:shadow-sm
           dark:border-white/10
           dark:bg-[#11172D]
@@ -2041,12 +2184,15 @@ export default function TokensResourcesTab() {
                           </p>
                         </div>
 
-                        <div
-                          className="
-                            min-w-[180px]
-                            md:text-right
-                          "
-                        >
+                       <div
+                            className="
+                              w-full
+
+                              md:w-auto
+                              md:min-w-[180px]
+                              md:text-right
+                            "
+                          >
                           <p
                             className="
                               font-bold
@@ -2097,7 +2243,7 @@ export default function TokensResourcesTab() {
                           className="
                             h-full
                             rounded-full
-                            bg-blue-500
+                           bg-green-500
                           "
                         />
                       </div>
@@ -2119,7 +2265,6 @@ export default function TokensResourcesTab() {
             bg-white
             p-5
             shadow-2xl
-            dark:shadow-blue-300
             dark:shadow-sm
             dark:border-white/10
             dark:bg-[#11172D]
@@ -2166,7 +2311,6 @@ export default function TokensResourcesTab() {
                     border-gray-300
                     p-4
                     shadow-xl
-                  dark:shadow-blue-300
                     dark:shadow-sm
                   dark:border-white/10
                   "
@@ -2453,7 +2597,6 @@ export default function TokensResourcesTab() {
             bg-white
             p-5
             shadow-2xl
-          dark:shadow-blue-300
             dark:shadow-sm
             dark:border-white/10
             dark:bg-[#11172D]
@@ -2537,7 +2680,6 @@ export default function TokensResourcesTab() {
             bg-white
             p-5
             shadow-2xl
-            dark:shadow-blue-300
             dark:shadow-sm
             dark:border-white/10
             dark:bg-[#11172D]
@@ -2694,7 +2836,6 @@ export default function TokensResourcesTab() {
             bg-white
             p-5
             shadow-2xl
-            dark:shadow-blue-300
             dark:shadow-sm
             dark:border-white/10
             dark:bg-[#11172D]
@@ -2742,7 +2883,6 @@ export default function TokensResourcesTab() {
                     border-gray-300
                     p-4
                     shadow-2xl
-                 dark:shadow-blue-300
                    dark:shadow-sm
                     dark:border-white/10
                   "
@@ -2845,7 +2985,6 @@ export default function TokensResourcesTab() {
             bg-white
             p-5
             shadow-2xl
-            dark:shadow-blue-300
             dark:shadow-sm
             dark:border-white/10
             dark:bg-[#11172D]
@@ -3071,7 +3210,6 @@ export default function TokensResourcesTab() {
               px-5
               py-4
               shadow-2xl
-            dark:shadow-orange-300
               dark:shadow-sm
               text-sm
               text-orange-700
@@ -3109,7 +3247,6 @@ export default function TokensResourcesTab() {
               bg-white
               p-5
               shadow-2xl
-              dark:shadow-blue-300
               dark:shadow-sm
               dark:border-white/10
               dark:bg-[#11172D]
@@ -3162,7 +3299,6 @@ export default function TokensResourcesTab() {
               bg-white
               p-5
               shadow-2xl
-              dark:shadow-blue-300
               dark:shadow-sm
               dark:border-white/10
               dark:bg-[#11172D]
@@ -3222,7 +3358,6 @@ export default function TokensResourcesTab() {
             bg-white
             p-5
             shadow-2xl
-          dark:shadow-blue-300
             dark:shadow-sm
             dark:border-white/10
             dark:bg-[#11172D]
@@ -3395,7 +3530,6 @@ export default function TokensResourcesTab() {
             bg-white
             p-5
             shadow-2xl
-          dark:shadow-blue-300
             dark:shadow-sm
             dark:border-white/10
             dark:bg-[#11172D]
@@ -3545,7 +3679,6 @@ export default function TokensResourcesTab() {
             bg-white
             p-5
             shadow-2xl
-          dark:shadow-blue-300
             dark:shadow-sm
             dark:border-white/10
             dark:bg-[#11172D]
@@ -3603,7 +3736,6 @@ export default function TokensResourcesTab() {
                       border-gray-300
                       p-4
                       shadow-2xl
-                    dark:shadow-blue-300
                       dark:shadow-sm
                       dark:border-white/10
                     "
@@ -3677,14 +3809,22 @@ export default function TokensResourcesTab() {
                       </div>
 
                       <div
-                        className="
-                          grid
-                          grid-cols-2
-                          gap-3
-                          sm:grid-cols-4
-                          lg:min-w-[500px]
-                        "
-                      >
+                          className="
+                            w-full
+                            min-w-0
+
+                            grid
+                            grid-cols-2
+
+                            gap-3
+
+                            sm:grid-cols-4
+
+                            lg:flex-1
+
+                            xl:min-w-[500px]
+                          "
+                        >
                         <div
                           className="
                             rounded-xl

@@ -1,8 +1,10 @@
-import { useEffect, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useState,
+  type FormEvent,
+} from "react";
+
 import axios from "axios";
-import { api } from "../../services/api";
-import { useTranslation } from "react-i18next";
-import toast from "react-hot-toast";
 
 import {
   AlertTriangle,
@@ -10,9 +12,13 @@ import {
   Building2,
   Camera,
   CheckCircle2,
+  Globe2,
   KeyRound,
+  Languages,
+  Loader2,
   Lock,
   Mail,
+  MapPin,
   Moon,
   Palette,
   Phone,
@@ -24,377 +30,1145 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-type AppearanceType = "light" | "dark" | "system";
+import {
+  useTranslation,
+} from "react-i18next";
+
+import toast from "react-hot-toast";
+
+import {
+  api,
+} from "../../services/api";
+
+import {
+  useCompany,
+} from "../../contexts/CompanyContext";
+
+type AppearanceType =
+  | "light"
+  | "dark"
+  | "system";
 
 interface UserData {
   id?: number;
   name?: string;
   email?: string;
-  role?: "student" | "client" | "admin";
+
+  role?:
+    | "student"
+    | "client"
+    | "admin";
 }
 
 interface UserProfile {
   id: number;
   user_id: number;
+
   foto_url: string | null;
+
   telefone: string | null;
+
   cidade: string | null;
   estado: string | null;
   pais: string | null;
-  idioma_preferido: string | null;
+
+  idioma_preferido:
+    | string
+    | null;
+
   empresa: string | null;
-  aceita_contato_profissional: number | boolean;
-  interesse_freelancer: number | boolean;
-  interesse_contratacao: number | boolean;
-  interesse_parceria: number | boolean;
-  conta_verificada: number | boolean;
-  verificado_em: string | null;
+
+  aceita_contato_profissional:
+    | number
+    | boolean;
+
+  interesse_freelancer:
+    | number
+    | boolean;
+
+  interesse_contratacao:
+    | number
+    | boolean;
+
+  interesse_parceria:
+    | number
+    | boolean;
+
+  conta_verificada:
+    | number
+    | boolean;
+
+  verificado_em:
+    | string
+    | null;
+
   name: string;
   email: string;
-  role: "student" | "client" | "admin";
+
+  role:
+    | "student"
+    | "client"
+    | "admin";
+}
+
+function getUserFromStorage(): UserData {
+  return JSON.parse(
+    localStorage.getItem(
+      "user",
+    ) || "{}",
+  );
 }
 
 export default function Settings() {
+  const {
+    t,
+    i18n,
+  } = useTranslation();
 
-  const { t, i18n } = useTranslation();
+  const {
+    company: tenantCompany,
+  } = useCompany();
 
-  const user: UserData = JSON.parse(
-    localStorage.getItem("user") || "{}"
+  const user =
+    getUserFromStorage();
+
+  const [
+    name,
+    setName,
+  ] = useState(
+    user?.name || "",
   );
 
-  const [name, setName] = useState(user?.name || "");
-  const [email, setEmail] = useState(user?.email || "");
-  const [phone, setPhone] = useState("");
-  const [company, setCompany] = useState("Sirros Academy");
-  const [cidade, setCidade] = useState("");
-  const [estado, setEstado] = useState("");
-  const [pais, setPais] = useState("Brasil");
-  const [idiomaPreferido, setIdiomaPreferido] = useState("pt-BR");
+  const [
+    email,
+    setEmail,
+  ] = useState(
+    user?.email || "",
+  );
 
-  const [aceitaContatoProfissional, setAceitaContatoProfissional] =
-    useState(false);
+  const [
+    phone,
+    setPhone,
+  ] = useState("");
 
-  const [interesseFreelancer, setInteresseFreelancer] =
-    useState(false);
+  const [
+    organization,
+    setOrganization,
+  ] = useState("");
 
-  const [interesseContratacao, setInteresseContratacao] =
-    useState(false);
+  const [
+    cidade,
+    setCidade,
+  ] = useState("");
 
-  const [interesseParceria, setInteresseParceria] =
-    useState(false);
+  const [
+    estado,
+    setEstado,
+  ] = useState("");
 
-  const [contaVerificada, setContaVerificada] = useState(false);
-  const [, setLoadingProfile] = useState(true);
+  const [
+    pais,
+    setPais,
+  ] = useState(
+    "Brasil",
+  );
 
-  const [appearance, setAppearance] =
-    useState<AppearanceType>("system");
+  const [
+    idiomaPreferido,
+    setIdiomaPreferido,
+  ] = useState(
+    "pt-BR",
+  );
 
-  const [emailNotifications, setEmailNotifications] =
-    useState(true);
+  const [
+    aceitaContatoProfissional,
+    setAceitaContatoProfissional,
+  ] = useState(false);
 
-  const [courseNotifications, setCourseNotifications] =
-    useState(true);
+  const [
+    interesseFreelancer,
+    setInteresseFreelancer,
+  ] = useState(false);
 
-  const [certificateNotifications, setCertificateNotifications] =
-    useState(true);
+  const [
+    interesseContratacao,
+    setInteresseContratacao,
+  ] = useState(false);
 
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [
+    interesseParceria,
+    setInteresseParceria,
+  ] = useState(false);
 
-  const [savingProfile, setSavingProfile] = useState(false);
-  const [savingPassword, setSavingPassword] = useState(false);
+  const [
+    contaVerificada,
+    setContaVerificada,
+  ] = useState(false);
 
-  
-  function getRoleLabel(role?: UserData["role"]) {
-    if (role === "admin") {
+  const [
+    loadingProfile,
+    setLoadingProfile,
+  ] = useState(true);
+
+  const [
+    appearance,
+    setAppearance,
+  ] =
+    useState<AppearanceType>(
+      "system",
+    );
+
+  const [
+    emailNotifications,
+    setEmailNotifications,
+  ] = useState(true);
+
+  const [
+    courseNotifications,
+    setCourseNotifications,
+  ] = useState(true);
+
+  const [
+    certificateNotifications,
+    setCertificateNotifications,
+  ] = useState(true);
+
+  const [
+    currentPassword,
+    setCurrentPassword,
+  ] = useState("");
+
+  const [
+    newPassword,
+    setNewPassword,
+  ] = useState("");
+
+  const [
+    confirmPassword,
+    setConfirmPassword,
+  ] = useState("");
+
+  const [
+    savingProfile,
+    setSavingProfile,
+  ] = useState(false);
+
+  const [
+    savingPassword,
+    setSavingPassword,
+  ] = useState(false);
+
+  const environmentName =
+    tenantCompany
+      ?.configuracao
+      ?.nomeAmbiente ||
+    tenantCompany
+      ?.nomeFantasia ||
+    "Plataforma de Treinamento";
+
+  function getRoleLabel(
+    role?: UserData["role"],
+  ) {
+    if (
+      role === "admin"
+    ) {
       return "Administrador";
     }
 
-    if (role === "client") {
+    if (
+      role === "client"
+    ) {
       return "Cliente";
     }
 
     return "Aluno";
   }
 
-  function getInitials(value: string) {
-    if (!value.trim()) {
+  function getInitials(
+    value: string,
+  ) {
+    if (
+      !value.trim()
+    ) {
       return "U";
     }
 
     return value
       .split(" ")
-      .map((part) => part[0])
+      .filter(Boolean)
+      .map(
+        (
+          part,
+        ) =>
+          part[0],
+      )
       .join("")
       .slice(0, 2)
       .toUpperCase();
   }
 
   useEffect(() => {
-  async function loadProfile() {
-    try {
-      setLoadingProfile(true);
+    async function loadProfile() {
+      try {
+        setLoadingProfile(
+          true,
+        );
 
-      const response = await api.get<UserProfile>("/users/me/profile");
+        const response =
+          await api.get<UserProfile>(
+            "/users/me/profile",
+          );
 
-      const profile = response.data;
+        const profile =
+          response.data;
 
-      setName(profile.name || "");
-      setEmail(profile.email || "");
-      setPhone(profile.telefone || "");
-      setCompany(profile.empresa || "");
-      setCidade(profile.cidade || "");
-      setEstado(profile.estado || "");
-      setPais(profile.pais || "Brasil");
+        setName(
+          profile.name || "",
+        );
 
-      const profileLanguage = profile.idioma_preferido || "pt-BR";
+        setEmail(
+          profile.email || "",
+        );
 
-      setIdiomaPreferido(profileLanguage);
-      i18n.changeLanguage(profileLanguage);
+        setPhone(
+          profile.telefone || "",
+        );
 
-      setAceitaContatoProfissional(
-        Boolean(profile.aceita_contato_profissional)
+        setOrganization(
+          profile.empresa || "",
+        );
+
+        setCidade(
+          profile.cidade || "",
+        );
+
+        setEstado(
+          profile.estado || "",
+        );
+
+        setPais(
+          profile.pais ||
+            "Brasil",
+        );
+
+        const profileLanguage =
+          profile.idioma_preferido ||
+          "pt-BR";
+
+        setIdiomaPreferido(
+          profileLanguage,
+        );
+
+        void i18n.changeLanguage(
+          profileLanguage,
+        );
+
+        setAceitaContatoProfissional(
+          Boolean(
+            profile.aceita_contato_profissional,
+          ),
+        );
+
+        setInteresseFreelancer(
+          Boolean(
+            profile.interesse_freelancer,
+          ),
+        );
+
+        setInteresseContratacao(
+          Boolean(
+            profile.interesse_contratacao,
+          ),
+        );
+
+        setInteresseParceria(
+          Boolean(
+            profile.interesse_parceria,
+          ),
+        );
+
+        setContaVerificada(
+          Boolean(
+            profile.conta_verificada,
+          ),
+        );
+
+        const updatedUser = {
+          ...getUserFromStorage(),
+
+          name:
+            profile.name,
+
+          email:
+            profile.email,
+
+          role:
+            profile.role,
+
+          foto_url:
+            profile.foto_url,
+
+          conta_verificada:
+            Boolean(
+              profile.conta_verificada,
+            ),
+
+          idioma_preferido:
+            profile.idioma_preferido,
+        };
+
+        localStorage.setItem(
+          "user",
+          JSON.stringify(
+            updatedUser,
+          ),
+        );
+      } catch (error) {
+        console.log(
+          error,
+        );
+
+        toast.error(
+          "Erro ao carregar perfil",
+        );
+      } finally {
+        setLoadingProfile(
+          false,
+        );
+      }
+    }
+
+    void loadProfile();
+  }, [
+    i18n,
+  ]);
+
+  async function handleSaveProfile(
+    event: FormEvent,
+  ) {
+    event.preventDefault();
+
+    if (
+      !phone.trim()
+    ) {
+      toast.error(
+        "O telefone é obrigatório para verificar a conta",
       );
 
-      setInteresseFreelancer(Boolean(profile.interesse_freelancer));
-      setInteresseContratacao(Boolean(profile.interesse_contratacao));
-      setInteresseParceria(Boolean(profile.interesse_parceria));
-      setContaVerificada(Boolean(profile.conta_verificada));
+      return;
+    }
+
+    if (
+      !cidade.trim()
+    ) {
+      toast.error(
+        "A cidade é obrigatória para verificar a conta",
+      );
+
+      return;
+    }
+
+    if (
+      !estado.trim()
+    ) {
+      toast.error(
+        "O estado é obrigatório para verificar a conta",
+      );
+
+      return;
+    }
+
+    if (
+      !pais.trim()
+    ) {
+      toast.error(
+        "O país é obrigatório para verificar a conta",
+      );
+
+      return;
+    }
+
+    if (
+      !idiomaPreferido.trim()
+    ) {
+      toast.error(
+        "O idioma preferido é obrigatório",
+      );
+
+      return;
+    }
+
+    try {
+      setSavingProfile(
+        true,
+      );
+
+      const response =
+        await api.patch(
+          "/users/me/profile",
+          {
+            telefone:
+              phone,
+
+            cidade,
+            estado,
+            pais,
+
+            idioma_preferido:
+              idiomaPreferido,
+
+            empresa:
+              organization,
+
+            aceita_contato_profissional:
+              aceitaContatoProfissional,
+
+            interesse_freelancer:
+              interesseFreelancer,
+
+            interesse_contratacao:
+              interesseContratacao,
+
+            interesse_parceria:
+              interesseParceria,
+          },
+        );
+
+      const profile:
+        UserProfile =
+        response.data.profile;
+
+      setContaVerificada(
+        Boolean(
+          profile.conta_verificada,
+        ),
+      );
 
       const updatedUser = {
-        ...user,
-        name: profile.name,
-        email: profile.email,
-        role: profile.role,
-        foto_url: profile.foto_url,
-        conta_verificada: Boolean(profile.conta_verificada),
-        idioma_preferido: profile.idioma_preferido,
+        ...getUserFromStorage(),
+
+        name:
+          profile.name,
+
+        email:
+          profile.email,
+
+        role:
+          profile.role,
+
+        foto_url:
+          profile.foto_url,
+
+        conta_verificada:
+          Boolean(
+            profile.conta_verificada,
+          ),
+
+        idioma_preferido:
+          profile.idioma_preferido,
       };
 
-      localStorage.setItem("user", JSON.stringify(updatedUser));
+      localStorage.setItem(
+        "user",
+        JSON.stringify(
+          updatedUser,
+        ),
+      );
+
+      void i18n.changeLanguage(
+        profile.idioma_preferido ||
+          idiomaPreferido,
+      );
+
+      window.dispatchEvent(
+        new Event(
+          "user-profile-updated",
+        ),
+      );
+
+      toast.success(
+        response.data
+          .message ||
+          "Perfil atualizado com sucesso",
+      );
     } catch (error) {
-      console.log(error);
-      toast.error("Erro ao carregar perfil");
+      if (
+        axios.isAxiosError(
+          error,
+        )
+      ) {
+        toast.error(
+          error.response?.data
+            ?.error ||
+            error.response?.data
+              ?.message ||
+            "Erro ao salvar perfil",
+        );
+
+        return;
+      }
+
+      toast.error(
+        "Erro inesperado ao salvar perfil",
+      );
     } finally {
-      setLoadingProfile(false);
+      setSavingProfile(
+        false,
+      );
     }
   }
 
-  loadProfile();
-}, []);
+  async function handleChangePassword(
+    event: FormEvent,
+  ) {
+    event.preventDefault();
 
-async function handleSaveProfile(e: FormEvent) {
-  e.preventDefault();
-
-  if (!phone.trim()) {
-    toast.error("O telefone é obrigatório para verificar a conta");
-    return;
-  }
-
-  if (!cidade.trim()) {
-    toast.error("A cidade é obrigatória para verificar a conta");
-    return;
-  }
-
-  if (!estado.trim()) {
-    toast.error("O estado é obrigatório para verificar a conta");
-    return;
-  }
-
-  if (!pais.trim()) {
-    toast.error("O país é obrigatório para verificar a conta");
-    return;
-  }
-
-  if (!idiomaPreferido.trim()) {
-    toast.error("O idioma preferido é obrigatório");
-    return;
-  }
-
-  try {
-    setSavingProfile(true);
-
-    const response = await api.patch("/users/me/profile", {
-      telefone: phone,
-      cidade,
-      estado,
-      pais,
-      idioma_preferido: idiomaPreferido,
-      empresa: company,
-      aceita_contato_profissional: aceitaContatoProfissional,
-      interesse_freelancer: interesseFreelancer,
-      interesse_contratacao: interesseContratacao,
-      interesse_parceria: interesseParceria,
-    });
-
-    const profile: UserProfile = response.data.profile;
-
-    setContaVerificada(Boolean(profile.conta_verificada));
-
-    const updatedUser = {
-      ...user,
-      name: profile.name,
-      email: profile.email,
-      role: profile.role,
-      foto_url: profile.foto_url,
-      conta_verificada: Boolean(profile.conta_verificada),
-      idioma_preferido: profile.idioma_preferido,
-    };
-
-   localStorage.setItem("user", JSON.stringify(updatedUser));
-
-    i18n.changeLanguage(profile.idioma_preferido || idiomaPreferido);
-
-    window.dispatchEvent(new Event("user-profile-updated"));
-
-    toast.success(response.data.message || "Perfil atualizado com sucesso");
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
+    if (
+      !currentPassword.trim()
+    ) {
       toast.error(
-        error.response?.data?.error ||
-          error.response?.data?.message ||
-          "Erro ao salvar perfil"
+        "Digite sua senha atual",
       );
 
       return;
     }
 
-    toast.error("Erro inesperado ao salvar perfil");
-  } finally {
-    setSavingProfile(false);
-  }
-}
+    if (
+      !newPassword.trim()
+    ) {
+      toast.error(
+        "Digite a nova senha",
+      );
 
-  async function handleChangePassword(e: FormEvent) {
-    e.preventDefault();
-
-    if (!currentPassword.trim()) {
-      toast.error("Digite sua senha atual");
       return;
     }
 
-    if (!newPassword.trim()) {
-      toast.error("Digite a nova senha");
+    if (
+      newPassword.length <
+      6
+    ) {
+      toast.error(
+        "A nova senha precisa ter pelo menos 6 caracteres",
+      );
+
       return;
     }
 
-    if (newPassword.length < 6) {
-      toast.error("A nova senha precisa ter pelo menos 6 caracteres");
-      return;
-    }
+    if (
+      newPassword !==
+      confirmPassword
+    ) {
+      toast.error(
+        "As senhas não coincidem",
+      );
 
-    if (newPassword !== confirmPassword) {
-      toast.error("As senhas não coincidem");
       return;
     }
 
     try {
-      setSavingPassword(true);
+      setSavingPassword(
+        true,
+      );
+
+      /*
+        Fluxo existente mantido.
+        A integração real da troca
+        de senha será revisada
+        posteriormente.
+      */
 
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
 
-      toast.success("Senha atualizada com sucesso");
+      toast.success(
+        "Senha atualizada com sucesso",
+      );
     } catch (error) {
-      console.log(error);
-      toast.error("Erro ao atualizar senha");
+      console.log(
+        error,
+      );
+
+      toast.error(
+        "Erro ao atualizar senha",
+      );
     } finally {
-      setSavingPassword(false);
+      setSavingPassword(
+        false,
+      );
     }
   }
 
+  if (
+    loadingProfile
+  ) {
+    return (
+      <div
+        className="
+          min-h-[60vh]
+
+          flex
+          flex-col
+          items-center
+          justify-center
+
+          gap-3
+
+          text-gray-500
+          dark:text-gray-300
+        "
+      >
+        <Loader2
+          className="
+            w-8
+            h-8
+
+            animate-spin
+
+            text-[var(--company-primary)]
+          "
+        />
+
+        <span>
+          Carregando configurações...
+        </span>
+      </div>
+    );
+  }
+
   return (
-    <main className="space-y-6">
-      {/* Header */}
-      <section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 lg:p-8 shadow-2xl dark:shadow-sm dark:shadow-blue-500/30">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-blue-500/10 text-blue-500 dark:text-blue-400 px-4 py-2 text-sm font-semibold mb-4">
-              <Palette size={18} />
-              Configurações da plataforma
+    <main
+      className="
+        w-full
+        min-w-0
+
+        space-y-6
+        sm:space-y-8
+      "
+    >
+      {/* HEADER */}
+      <section
+        className="
+          rounded-2xl
+          sm:rounded-3xl
+
+          border
+          border-gray-200
+          dark:border-white/10
+
+          bg-white
+          dark:bg-[#091a2c]
+
+          p-4
+          sm:p-5
+          lg:p-8
+
+          shadow-2xl
+          dark:shadow-sm
+        "
+      >
+        <div
+          className="
+            flex
+            flex-col
+
+            gap-5
+            sm:gap-6
+
+            lg:flex-row
+            lg:items-center
+            lg:justify-between
+          "
+        >
+          <div className="min-w-0">
+            <div
+              className="
+                mb-4
+
+                inline-flex
+                items-center
+
+                gap-2
+
+                rounded-full
+
+                border
+                border-[color-mix(in_srgb,var(--company-primary)_20%,transparent)]
+
+                bg-[color-mix(in_srgb,var(--company-primary)_8%,transparent)]
+
+                px-4
+                py-2
+
+                text-sm
+                font-semibold
+
+                text-[var(--company-primary)]
+              "
+            >
+              <Palette
+                size={18}
+              />
+
+              Configurações da
+              plataforma
             </div>
 
-            <h1 className="text-3xl lg:text-4xl font-bold text-[#080E2F] dark:text-white">
-             {t("settings.title")}
+            <h1
+              className="
+                text-2xl
+                sm:text-3xl
+                lg:text-4xl
+
+                font-bold
+
+                text-[#080E2F]
+                dark:text-white
+
+                leading-tight
+              "
+            >
+              {t(
+                "settings.title",
+              )}
             </h1>
 
-            <p className="text-gray-500 dark:text-gray-400 mt-2 text-base lg:text-lg">
-              {t("settings.subtitle")}
+            <p
+              className="
+                mt-2
+
+                max-w-3xl
+
+                text-sm
+                sm:text-base
+                lg:text-lg
+
+                text-gray-500
+                dark:text-gray-400
+
+                leading-relaxed
+              "
+            >
+              {t(
+                "settings.subtitle",
+              )}
             </p>
           </div>
 
-          <div className="flex items-center gap-4 bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 rounded-3xl p-4 shadow-xl dark:shadow-sm dark:shadow-blue-500/20">
-            <div className="w-16 h-16 rounded-2xl bg-blue-500 text-white flex items-center justify-center font-bold text-xl shadow-xl">
-              {getInitials(name)}
+          <div
+            className="
+              w-full
+
+              sm:w-auto
+
+              flex
+              items-center
+
+              gap-4
+
+              rounded-2xl
+              sm:rounded-3xl
+
+              border
+              border-gray-200
+              dark:border-white/10
+
+              bg-gray-50
+              dark:bg-[#0d2238]
+
+              p-4
+
+              shadow-xl
+              dark:shadow-sm
+            "
+          >
+            <div
+              className="
+                w-14
+                h-14
+
+                sm:w-16
+                sm:h-16
+
+                rounded-2xl
+
+                bg-gradient-to-br
+                from-[var(--company-primary)]
+                to-[var(--company-secondary)]
+
+                text-white
+
+                flex
+                items-center
+                justify-center
+
+                shrink-0
+
+                text-lg
+                sm:text-xl
+
+                font-bold
+
+                shadow-xl
+              "
+            >
+              {getInitials(
+                name,
+              )}
             </div>
 
-            <div>
-              <h2 className="text-lg font-bold text-[#080E2F] dark:text-white">
-                {name || "Usuário"}
+            <div className="min-w-0">
+              <h2
+                className="
+                  text-base
+                  sm:text-lg
+
+                  font-bold
+
+                  text-[#080E2F]
+                  dark:text-white
+
+                  break-words
+                "
+              >
+                {name ||
+                  "Usuário"}
               </h2>
 
-              <p className="text-gray-500 dark:text-gray-400 text-sm">
-                {getRoleLabel(user?.role)}
+              <p
+                className="
+                  mt-0.5
+
+                  text-sm
+
+                  text-gray-500
+                  dark:text-gray-400
+                "
+              >
+                {getRoleLabel(
+                  user?.role,
+                )}
+              </p>
+
+              <p
+                className="
+                  mt-1
+
+                  text-xs
+
+                  text-[var(--company-primary)]
+
+                  break-words
+                "
+              >
+                {environmentName}
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      <div className="grid grid-cols-1 2xl:grid-cols-[1fr_420px] gap-6">
-        {/* Coluna principal */}
-        <div className="space-y-6">
-          {/* Perfil */}
-          <section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-2xl dark:shadow-sm dark:shadow-blue-500/30">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-500 dark:text-blue-400 flex items-center justify-center">
-                <UserRound size={28} />
-              </div>
+      <div
+        className="
+          grid
+          grid-cols-1
 
-              <div>
-                <h2 className="text-xl font-bold text-[#080E2F] dark:text-white">
-                  {t("settings.profileData")}
-                </h2>
+          gap-6
 
-                <p className="text-gray-500 dark:text-gray-400 text-sm">
-                  {t("settings.profileDescription")}
-                </p>
-              </div>
-            </div>
+          2xl:grid-cols-[minmax(0,1fr)_400px]
+        "
+      >
+        {/* COLUNA PRINCIPAL */}
+        <div
+          className="
+            min-w-0
 
-            <form onSubmit={handleSaveProfile} className="space-y-5">
-              <div className="flex flex-col md:flex-row gap-5 items-start">
-                <div className="w-28 h-28 rounded-3xl bg-blue-500 text-white flex items-center justify-center text-3xl font-bold shadow-2xl dark:shadow-sm dark:shadow-blue-500/30">
-                  {getInitials(name)}
+            space-y-6
+          "
+        >
+          {/* PERFIL */}
+          <section
+            className="
+              rounded-2xl
+              sm:rounded-3xl
+
+              border
+              border-gray-200
+              dark:border-white/10
+
+              bg-white
+              dark:bg-[#091a2c]
+
+              p-4
+              sm:p-5
+              lg:p-6
+
+              shadow-2xl
+              dark:shadow-sm
+            "
+          >
+            <SectionHeader
+              icon={
+                UserRound
+              }
+              title={t(
+                "settings.profileData",
+              )}
+              subtitle={t(
+                "settings.profileDescription",
+              )}
+            />
+
+            <form
+              onSubmit={
+                handleSaveProfile
+              }
+              className="
+                mt-6
+
+                space-y-6
+              "
+            >
+              {/* AVATAR */}
+              <div
+                className="
+                  flex
+                  flex-col
+
+                  gap-4
+                  sm:gap-5
+
+                  sm:flex-row
+                  sm:items-center
+                "
+              >
+                <div
+                  className="
+                    w-24
+                    h-24
+
+                    sm:w-28
+                    sm:h-28
+
+                    rounded-2xl
+                    sm:rounded-3xl
+
+                    bg-gradient-to-br
+                    from-[var(--company-primary)]
+                    to-[var(--company-secondary)]
+
+                    text-white
+
+                    flex
+                    items-center
+                    justify-center
+
+                    shrink-0
+
+                    text-2xl
+                    sm:text-3xl
+
+                    font-bold
+
+                    shadow-2xl
+                    dark:shadow-sm
+                  "
+                >
+                  {getInitials(
+                    name,
+                  )}
                 </div>
 
-                <div className="flex-1">
+                <div className="min-w-0">
                   <button
                     type="button"
                     onClick={() =>
-                      toast.error("Upload de avatar será conectado depois")
+                      toast.error(
+                        "Upload de avatar será conectado depois",
+                      )
                     }
-                    className="border border-gray-200 dark:border-white/10 rounded-2xl px-5 py-3 font-semibold text-blue-500 dark:text-blue-400 flex items-center gap-2 hover:bg-blue-500/10 transition-all"
+                    className="
+                      w-full
+                      sm:w-auto
+
+                      rounded-2xl
+
+                      border
+                      border-[color-mix(in_srgb,var(--company-primary)_25%,transparent)]
+
+                      bg-[color-mix(in_srgb,var(--company-primary)_5%,transparent)]
+
+                      px-5
+                      py-3
+
+                      font-semibold
+
+                      text-[var(--company-primary)]
+
+                      flex
+                      items-center
+                      justify-center
+
+                      gap-2
+
+                      transition-all
+
+                      hover:bg-[color-mix(in_srgb,var(--company-primary)_10%,transparent)]
+                    "
                   >
-                    <Camera size={20} />
+                    <Camera
+                      size={20}
+                    />
+
                     Alterar foto
                   </button>
 
-                  <p className="text-gray-500 dark:text-gray-400 mt-3 text-sm">
-                    Use uma imagem clara para identificar seu perfil na plataforma.
+                  <p
+                    className="
+                      mt-3
+
+                      max-w-xl
+
+                      text-sm
+
+                      text-gray-500
+                      dark:text-gray-400
+
+                      leading-relaxed
+                    "
+                  >
+                    Use uma imagem
+                    clara para
+                    identificar seu
+                    perfil na
+                    plataforma.
                   </p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              {/* CAMPOS */}
+              <div
+                className="
+                  grid
+                  grid-cols-1
+
+                  lg:grid-cols-2
+
+                  gap-5
+                "
+              >
                 <InputField
                   label="Nome"
-                  icon={UserRound}
+                  icon={
+                    UserRound
+                  }
                   type="text"
-                  value={name}
-                  onChange={setName}
+                  value={
+                    name
+                  }
+                  onChange={
+                    setName
+                  }
                   placeholder="Digite seu nome"
                 />
 
@@ -402,8 +1176,12 @@ async function handleSaveProfile(e: FormEvent) {
                   label="E-mail"
                   icon={Mail}
                   type="email"
-                  value={email}
-                  onChange={setEmail}
+                  value={
+                    email
+                  }
+                  onChange={
+                    setEmail
+                  }
                   placeholder="Digite seu e-mail"
                 />
 
@@ -411,153 +1189,366 @@ async function handleSaveProfile(e: FormEvent) {
                   label="Telefone"
                   icon={Phone}
                   type="text"
-                  value={phone}
-                  onChange={setPhone}
+                  value={
+                    phone
+                  }
+                  onChange={
+                    setPhone
+                  }
                   placeholder="Digite seu telefone"
                 />
 
                 <InputField
                   label="Empresa / Organização"
-                  icon={Building2}
+                  icon={
+                    Building2
+                  }
                   type="text"
-                  value={company}
-                  onChange={setCompany}
+                  value={
+                    organization
+                  }
+                  onChange={
+                    setOrganization
+                  }
                   placeholder="Digite a organização"
                 />
 
                 <InputField
-                label="Cidade"
-                icon={Building2}
-                type="text"
-                value={cidade}
-                onChange={setCidade}
-                placeholder="Digite sua cidade"
-              />
+                  label="Cidade"
+                  icon={
+                    MapPin
+                  }
+                  type="text"
+                  value={
+                    cidade
+                  }
+                  onChange={
+                    setCidade
+                  }
+                  placeholder="Digite sua cidade"
+                />
 
-              <InputField
-                label="Estado"
-                icon={Building2}
-                type="text"
-                value={estado}
-                onChange={setEstado}
-                placeholder="Ex: RS"
-              />
+                <InputField
+                  label="Estado"
+                  icon={
+                    MapPin
+                  }
+                  type="text"
+                  value={
+                    estado
+                  }
+                  onChange={
+                    setEstado
+                  }
+                  placeholder="Ex: RS"
+                />
 
-              <InputField
-                label="País"
-                icon={Building2}
-                type="text"
-                value={pais}
-                onChange={setPais}
-                placeholder="Digite seu país"
-              />
+                <InputField
+                  label="País"
+                  icon={
+                    Globe2
+                  }
+                  type="text"
+                  value={
+                    pais
+                  }
+                  onChange={
+                    setPais
+                  }
+                  placeholder="Digite seu país"
+                />
 
-              <div className="flex flex-col gap-2">
-          <label className="text-sm font-semibold text-[#080E2F] dark:text-gray-300">
-            {t("settings.language")}
-          </label>
+                {/* IDIOMA */}
+                <div
+                  className="
+                    flex
+                    flex-col
 
-          <div className="relative">
-            <UserRound
-              size={20}
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500"
-            />
+                    gap-2
+                  "
+                >
+                  <label
+                    className="
+                      text-sm
+                      font-semibold
 
-          <div className="flex flex-col gap-2">
-          <label className="text-sm font-semibold text-[#080E2F] dark:text-gray-300">
-            {t("settings.language")}
-          </label>
+                      text-[#080E2F]
+                      dark:text-gray-300
+                    "
+                  >
+                    {t(
+                      "settings.language",
+                    )}
+                  </label>
 
-          <div className="relative">
-            <UserRound
-              size={20}
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500"
-            />
+                  <div className="relative">
+                    <Languages
+                      size={20}
+                      className="
+                        absolute
 
-            <select
-              value={idiomaPreferido}
-              onChange={(event) => setIdiomaPreferido(event.target.value)}
-              className="w-full bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white rounded-2xl pl-12 pr-4 py-4 outline-none focus:border-blue-500 shadow-md shadow-slate-300/40 dark:shadow-sm dark:shadow-blue-500/30 transition-all"
-            >
-              <option value="pt-BR">{t("settings.portuguese")}</option>
-              <option value="en-US">{t("settings.english")}</option>
-              <option value="es-ES">{t("settings.spanish")}</option>
-            </select>
-          </div>
-        </div>
-        </div>
-      </div>
+                        left-4
+                        top-1/2
+
+                        -translate-y-1/2
+
+                        text-[var(--company-primary)]
+
+                        pointer-events-none
+                      "
+                    />
+
+                    <select
+                      value={
+                        idiomaPreferido
+                      }
+                      onChange={(
+                        event,
+                      ) =>
+                        setIdiomaPreferido(
+                          event
+                            .target
+                            .value,
+                        )
+                      }
+                      className="
+                        w-full
+
+                        appearance-none
+
+                        rounded-2xl
+
+                        border
+                        border-gray-200
+                        dark:border-white/10
+
+                        bg-gray-50
+                        dark:bg-[#0d2238]
+
+                        py-4
+                        pl-12
+                        pr-4
+
+                        text-[#080E2F]
+                        dark:text-white
+
+                        outline-none
+
+                        shadow-xl
+                        dark:shadow-sm
+
+                        transition-all
+
+                        focus:border-[var(--company-primary)]
+
+                        focus:ring-4
+                        focus:ring-[color-mix(in_srgb,var(--company-primary)_10%,transparent)]
+                      "
+                    >
+                      <option value="pt-BR">
+                        {t(
+                          "settings.portuguese",
+                        )}
+                      </option>
+
+                      <option value="en-US">
+                        {t(
+                          "settings.english",
+                        )}
+                      </option>
+
+                      <option value="es-ES">
+                        {t(
+                          "settings.spanish",
+                        )}
+                      </option>
+                    </select>
+                  </div>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <ToggleRow
-                title="Aceito contato profissional"
-                subtitle="Permitir que a Sirros entre em contato para oportunidades"
-                checked={aceitaContatoProfissional}
-                onChange={() =>
-                  setAceitaContatoProfissional(!aceitaContatoProfissional)
-                }
-              />
+              {/* PREFERÊNCIAS PROFISSIONAIS */}
+              <div
+                className="
+                  grid
+                  grid-cols-1
 
-              <ToggleRow
-                title="Interesse em freelancer"
-                subtitle="Tenho interesse em atuar como freelancer"
-                checked={interesseFreelancer}
-                onChange={() => setInteresseFreelancer(!interesseFreelancer)}
-              />
+                  lg:grid-cols-2
 
-              <ToggleRow
-                title="Interesse em contratação"
-                subtitle="Tenho interesse em oportunidades de contratação"
-                checked={interesseContratacao}
-                onChange={() => setInteresseContratacao(!interesseContratacao)}
-              />
+                  gap-4
+                "
+              >
+                <ToggleRow
+                  title="Aceito contato profissional"
+                  subtitle="Permitir contato sobre oportunidades profissionais"
+                  checked={
+                    aceitaContatoProfissional
+                  }
+                  onChange={() =>
+                    setAceitaContatoProfissional(
+                      !aceitaContatoProfissional,
+                    )
+                  }
+                />
 
-              <ToggleRow
-                title="Interesse em parceria"
-                subtitle="Tenho interesse em parcerias técnicas"
-                checked={interesseParceria}
-                onChange={() => setInteresseParceria(!interesseParceria)}
-              />
-            </div>
+                <ToggleRow
+                  title="Interesse em freelancer"
+                  subtitle="Tenho interesse em atuar como freelancer"
+                  checked={
+                    interesseFreelancer
+                  }
+                  onChange={() =>
+                    setInteresseFreelancer(
+                      !interesseFreelancer,
+                    )
+                  }
+                />
+
+                <ToggleRow
+                  title="Interesse em contratação"
+                  subtitle="Tenho interesse em oportunidades de contratação"
+                  checked={
+                    interesseContratacao
+                  }
+                  onChange={() =>
+                    setInteresseContratacao(
+                      !interesseContratacao,
+                    )
+                  }
+                />
+
+                <ToggleRow
+                  title="Interesse em parceria"
+                  subtitle="Tenho interesse em parcerias profissionais"
+                  checked={
+                    interesseParceria
+                  }
+                  onChange={() =>
+                    setInteresseParceria(
+                      !interesseParceria,
+                    )
+                  }
+                />
+              </div>
 
               <button
                 type="submit"
-                disabled={savingProfile}
-                className="bg-blue-500 hover:bg-blue-600 text-white rounded-2xl px-6 py-4 font-semibold flex items-center justify-center gap-2 transition-all shadow-xl dark:shadow-sm dark:shadow-blue-500/40 disabled:opacity-60 disabled:cursor-not-allowed"
+                disabled={
+                  savingProfile
+                }
+                className="
+                  w-full
+                  sm:w-auto
+
+                  min-h-[52px]
+
+                  rounded-2xl
+
+                  bg-gradient-to-r
+                  from-[var(--company-primary)]
+                  to-[var(--company-secondary)]
+
+                  px-6
+                  py-3.5
+
+                  font-semibold
+
+                  text-white
+
+                  flex
+                  items-center
+                  justify-center
+
+                  gap-2
+
+                  shadow-2xl
+                  dark:shadow-sm
+
+                  transition-all
+
+                  hover:opacity-95
+
+                  disabled:opacity-60
+                  disabled:cursor-not-allowed
+                "
               >
-                <Save size={22} />
-                {savingProfile ? "Salvando..." : "Salvar alterações"}
+                {savingProfile ? (
+                  <Loader2
+                    size={21}
+                    className="animate-spin"
+                  />
+                ) : (
+                  <Save
+                    size={21}
+                  />
+                )}
+
+                {savingProfile
+                  ? "Salvando..."
+                  : "Salvar alterações"}
               </button>
             </form>
           </section>
 
-          {/* Segurança */}
-          <section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-2xl dark:shadow-sm dark:shadow-blue-500/30">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-500 dark:text-blue-400 flex items-center justify-center">
-                <Lock size={28} />
-              </div>
+          {/* SEGURANÇA */}
+          <section
+            className="
+              rounded-2xl
+              sm:rounded-3xl
 
-              <div>
-                <h2 className="text-xl font-bold text-[#080E2F] dark:text-white">
-                  Segurança
-                </h2>
+              border
+              border-gray-200
+              dark:border-white/10
 
-                <p className="text-gray-500 dark:text-gray-400 text-sm">
-                  Altere sua senha de acesso.
-                </p>
-              </div>
-            </div>
+              bg-white
+              dark:bg-[#091a2c]
 
-            <form onSubmit={handleChangePassword} className="space-y-5">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+              p-4
+              sm:p-5
+              lg:p-6
+
+              shadow-2xl
+              dark:shadow-sm
+            "
+          >
+            <SectionHeader
+              icon={Lock}
+              title="Segurança"
+              subtitle="Altere sua senha de acesso."
+            />
+
+            <form
+              onSubmit={
+                handleChangePassword
+              }
+              className="
+                mt-6
+
+                space-y-5
+              "
+            >
+              <div
+                className="
+                  grid
+                  grid-cols-1
+
+                  lg:grid-cols-3
+
+                  gap-5
+                "
+              >
                 <InputField
                   label="Senha atual"
-                  icon={KeyRound}
+                  icon={
+                    KeyRound
+                  }
                   type="password"
-                  value={currentPassword}
-                  onChange={setCurrentPassword}
+                  value={
+                    currentPassword
+                  }
+                  onChange={
+                    setCurrentPassword
+                  }
                   placeholder="Senha atual"
                 />
 
@@ -565,194 +1556,479 @@ async function handleSaveProfile(e: FormEvent) {
                   label="Nova senha"
                   icon={Lock}
                   type="password"
-                  value={newPassword}
-                  onChange={setNewPassword}
+                  value={
+                    newPassword
+                  }
+                  onChange={
+                    setNewPassword
+                  }
                   placeholder="Nova senha"
                 />
 
                 <InputField
                   label="Confirmar senha"
-                  icon={ShieldCheck}
+                  icon={
+                    ShieldCheck
+                  }
                   type="password"
-                  value={confirmPassword}
-                  onChange={setConfirmPassword}
+                  value={
+                    confirmPassword
+                  }
+                  onChange={
+                    setConfirmPassword
+                  }
                   placeholder="Confirmar senha"
                 />
               </div>
 
               <button
                 type="submit"
-                disabled={savingPassword}
-                className="bg-blue-500 hover:bg-blue-600 text-white rounded-2xl px-6 py-4 font-semibold flex items-center justify-center gap-2 transition-all shadow-xl dark:shadow-sm dark:shadow-blue-500/40 disabled:opacity-60 disabled:cursor-not-allowed"
+                disabled={
+                  savingPassword
+                }
+                className="
+                  w-full
+                  sm:w-auto
+
+                  min-h-[52px]
+
+                  rounded-2xl
+
+                  bg-gradient-to-r
+                  from-[var(--company-primary)]
+                  to-[var(--company-secondary)]
+
+                  px-6
+                  py-3.5
+
+                  font-semibold
+
+                  text-white
+
+                  flex
+                  items-center
+                  justify-center
+
+                  gap-2
+
+                  shadow-2xl
+                  dark:shadow-sm
+
+                  transition-all
+
+                  hover:opacity-95
+
+                  disabled:opacity-60
+                  disabled:cursor-not-allowed
+                "
               >
-                <ShieldCheck size={22} />
-                {savingPassword ? "Atualizando..." : "Atualizar senha"}
+                {savingPassword ? (
+                  <Loader2
+                    size={21}
+                    className="animate-spin"
+                  />
+                ) : (
+                  <ShieldCheck
+                    size={21}
+                  />
+                )}
+
+                {savingPassword
+                  ? "Atualizando..."
+                  : "Atualizar senha"}
               </button>
             </form>
           </section>
         </div>
 
-        {/* Coluna lateral */}
-        <aside className="space-y-6">
-          {/* Aparência */}
-          <section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-2xl dark:shadow-sm dark:shadow-blue-500/30">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-500 dark:text-blue-400 flex items-center justify-center">
-                <Palette size={28} />
-              </div>
+        {/* COLUNA LATERAL */}
+        <aside
+          className="
+            min-w-0
 
-              <div>
-                <h2 className="text-xl font-bold text-[#080E2F] dark:text-white">
-                  Aparência
-                </h2>
+            space-y-6
+          "
+        >
+          {/* APARÊNCIA */}
+          <section
+            className="
+              rounded-2xl
+              sm:rounded-3xl
 
-                <p className="text-gray-500 dark:text-gray-400 text-sm">
-                  Escolha o modo visual.
-                </p>
-              </div>
-            </div>
+              border
+              border-gray-200
+              dark:border-white/10
 
-            <div className="space-y-3">
+              bg-white
+              dark:bg-[#091a2c]
+
+              p-4
+              sm:p-5
+              lg:p-6
+
+              shadow-2xl
+              dark:shadow-sm
+            "
+          >
+            <SectionHeader
+              icon={
+                Palette
+              }
+              title="Aparência"
+              subtitle="Escolha o modo visual."
+            />
+
+            <div
+              className="
+                mt-5
+
+                space-y-3
+              "
+            >
               <AppearanceButton
-                active={appearance === "light"}
+                active={
+                  appearance ===
+                  "light"
+                }
                 icon={Sun}
                 title="Modo claro"
                 subtitle="Interface clara"
-                onClick={() => setAppearance("light")}
+                onClick={() =>
+                  setAppearance(
+                    "light",
+                  )
+                }
               />
 
               <AppearanceButton
-                active={appearance === "dark"}
+                active={
+                  appearance ===
+                  "dark"
+                }
                 icon={Moon}
                 title="Modo escuro"
                 subtitle="Interface escura"
-                onClick={() => setAppearance("dark")}
+                onClick={() =>
+                  setAppearance(
+                    "dark",
+                  )
+                }
               />
 
               <AppearanceButton
-                active={appearance === "system"}
-                icon={Palette}
+                active={
+                  appearance ===
+                  "system"
+                }
+                icon={
+                  Palette
+                }
                 title="Sistema"
                 subtitle="Segue o dispositivo"
-                onClick={() => setAppearance("system")}
+                onClick={() =>
+                  setAppearance(
+                    "system",
+                  )
+                }
               />
             </div>
 
-            <div className="mt-5 rounded-2xl bg-blue-500/10 border border-blue-500/20 p-4">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                A troca real do tema será conectada depois ao seu contexto de dark mode.
+            <div
+              className="
+                mt-5
+
+                rounded-2xl
+
+                border
+                border-[color-mix(in_srgb,var(--company-primary)_20%,transparent)]
+
+                bg-[color-mix(in_srgb,var(--company-primary)_6%,transparent)]
+
+                p-4
+              "
+            >
+              <p
+                className="
+                  text-sm
+
+                  text-gray-500
+                  dark:text-gray-400
+
+                  leading-relaxed
+                "
+              >
+                A aplicação dessa
+                preferência ao tema da
+                plataforma será
+                integrada posteriormente.
               </p>
             </div>
           </section>
 
-          {/* Notificações */}
-          <section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-2xl dark:shadow-sm dark:shadow-blue-500/30">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-500 dark:text-blue-400 flex items-center justify-center">
-                <Bell size={28} />
-              </div>
+          {/* NOTIFICAÇÕES */}
+          <section
+            className="
+              rounded-2xl
+              sm:rounded-3xl
 
-              <div>
-                <h2 className="text-xl font-bold text-[#080E2F] dark:text-white">
-                  Notificações
-                </h2>
+              border
+              border-gray-200
+              dark:border-white/10
 
-                <p className="text-gray-500 dark:text-gray-400 text-sm">
-                  Controle seus avisos.
-                </p>
-              </div>
-            </div>
+              bg-white
+              dark:bg-[#091a2c]
 
-            <div className="space-y-4">
+              p-4
+              sm:p-5
+              lg:p-6
+
+              shadow-2xl
+              dark:shadow-sm
+            "
+          >
+            <SectionHeader
+              icon={Bell}
+              title="Notificações"
+              subtitle="Controle seus avisos."
+            />
+
+            <div
+              className="
+                mt-5
+
+                space-y-4
+              "
+            >
               <ToggleRow
                 title="Notificações por e-mail"
                 subtitle="Receber avisos importantes"
-                checked={emailNotifications}
+                checked={
+                  emailNotifications
+                }
                 onChange={() =>
-                  setEmailNotifications(!emailNotifications)
+                  setEmailNotifications(
+                    !emailNotifications,
+                  )
                 }
               />
 
               <ToggleRow
                 title="Atualizações de cursos"
                 subtitle="Novas aulas e módulos"
-                checked={courseNotifications}
+                checked={
+                  courseNotifications
+                }
                 onChange={() =>
-                  setCourseNotifications(!courseNotifications)
+                  setCourseNotifications(
+                    !courseNotifications,
+                  )
                 }
               />
 
               <ToggleRow
                 title="Certificados"
                 subtitle="Avisos de emissão e validade"
-                checked={certificateNotifications}
+                checked={
+                  certificateNotifications
+                }
                 onChange={() =>
-                  setCertificateNotifications(!certificateNotifications)
+                  setCertificateNotifications(
+                    !certificateNotifications,
+                  )
                 }
               />
             </div>
           </section>
 
-          {/* Conta */}
-          <section className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-2xl dark:shadow-sm dark:shadow-blue-500/30">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-12 h-12 rounded-2xl bg-green-500/10 text-green-500 flex items-center justify-center">
-                <CheckCircle2 size={28} />
+          {/* CONTA */}
+          <section
+            className="
+              rounded-2xl
+              sm:rounded-3xl
+
+              border
+              border-gray-200
+              dark:border-white/10
+
+              bg-white
+              dark:bg-[#091a2c]
+
+              p-4
+              sm:p-5
+              lg:p-6
+
+              shadow-2xl
+              dark:shadow-sm
+            "
+          >
+            <div
+              className="
+                flex
+                items-start
+
+                gap-3
+
+                mb-5
+              "
+            >
+              <div
+                className={`
+                  w-12
+                  h-12
+
+                  rounded-2xl
+
+                  flex
+                  items-center
+                  justify-center
+
+                  shrink-0
+
+                  ${
+                    contaVerificada
+                      ? `
+                          bg-green-500/10
+
+                          text-green-500
+                        `
+                      : `
+                          bg-yellow-500/10
+
+                          text-yellow-500
+                        `
+                  }
+                `}
+              >
+                {contaVerificada ? (
+                  <CheckCircle2
+                    size={27}
+                  />
+                ) : (
+                  <AlertTriangle
+                    size={27}
+                  />
+                )}
               </div>
 
-              <div>
-                <h2 className="text-xl font-bold text-[#080E2F] dark:text-white">
+              <div className="min-w-0">
+                <h2
+                  className="
+                    text-lg
+                    sm:text-xl
+
+                    font-bold
+
+                    text-[#080E2F]
+                    dark:text-white
+                  "
+                >
                   Status da conta
                 </h2>
 
-                <p className="text-gray-500 dark:text-gray-400 text-sm">
+                <p
+                  className="
+                    mt-1
+
+                    text-sm
+
+                    text-gray-500
+                    dark:text-gray-400
+
+                    leading-relaxed
+                  "
+                >
                   {contaVerificada
-                  ? "Sua conta está verificada."
-                  : "Complete seu perfil para liberar todos os recursos."}
+                    ? "Sua conta está verificada."
+                    : "Complete seu perfil para liberar todos os recursos."}
                 </p>
               </div>
             </div>
 
             <div className="space-y-3">
-              <div className="flex items-center justify-between gap-4 rounded-2xl bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 p-4">
-                <span className="text-gray-500 dark:text-gray-400">
-                  Perfil
-                </span>
+              <StatusRow
+                label="Perfil"
+                value={getRoleLabel(
+                  user?.role,
+                )}
+              />
 
-                <strong className="text-[#080E2F] dark:text-white">
-                  {getRoleLabel(user?.role)}
-                </strong>
-              </div>
-
-              <div className="flex items-center justify-between gap-4 rounded-2xl bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 p-4">
-                <span className="text-gray-500 dark:text-gray-400">
-                  Segurança
-                </span>
-
-                <span
-                className={`font-semibold ${
-                  contaVerificada ? "text-green-500" : "text-yellow-500"
-                }`}
-              >
-                {contaVerificada ? "Conta verificada" : "Pendente"}
-              </span>
-              </div>
+              <StatusRow
+                label="Segurança"
+                value={
+                  contaVerificada
+                    ? "Conta verificada"
+                    : "Pendente"
+                }
+                status={
+                  contaVerificada
+                    ? "success"
+                    : "warning"
+                }
+              />
             </div>
 
-            <div className="mt-5 rounded-2xl bg-red-500/10 border border-red-500/20 p-4">
-              <div className="flex items-start gap-3">
+            {/* ZONA DE PERIGO */}
+            <div
+              className="
+                mt-5
+
+                rounded-2xl
+
+                border
+                border-red-500/20
+
+                bg-red-500/10
+
+                p-4
+              "
+            >
+              <div
+                className="
+                  flex
+                  items-start
+
+                  gap-3
+                "
+              >
                 <AlertTriangle
                   size={22}
-                  className="text-red-500 shrink-0 mt-0.5"
+                  className="
+                    mt-0.5
+
+                    shrink-0
+
+                    text-red-500
+                  "
                 />
 
-                <div>
-                  <h3 className="font-bold text-red-500">
+                <div className="min-w-0">
+                  <h3
+                    className="
+                      font-bold
+
+                      text-red-500
+                    "
+                  >
                     Zona de perigo
                   </h3>
 
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    A exclusão de conta será implementada apenas com confirmação segura.
+                  <p
+                    className="
+                      mt-1
+
+                      text-sm
+
+                      text-gray-500
+                      dark:text-gray-400
+
+                      leading-relaxed
+                    "
+                  >
+                    A exclusão de conta
+                    será disponibilizada
+                    apenas com um fluxo
+                    seguro de
+                    confirmação.
                   </p>
                 </div>
               </div>
@@ -760,18 +2036,127 @@ async function handleSaveProfile(e: FormEvent) {
               <button
                 type="button"
                 onClick={() =>
-                  toast.error("Exclusão de conta será conectada depois")
+                  toast.error(
+                    "Exclusão de conta será conectada depois",
+                  )
                 }
-                className="mt-4 w-full rounded-2xl bg-red-500/10 text-red-500 px-5 py-3 font-semibold flex items-center justify-center gap-2 hover:bg-red-500/20 transition-all"
+                className="
+                  mt-4
+
+                  w-full
+
+                  rounded-2xl
+
+                  bg-red-500/10
+
+                  px-5
+                  py-3
+
+                  font-semibold
+
+                  text-red-500
+
+                  flex
+                  items-center
+                  justify-center
+
+                  gap-2
+
+                  transition-all
+
+                  hover:bg-red-500/20
+                "
               >
-                <Trash2 size={20} />
-                Solicitar exclusão da conta
+                <Trash2
+                  size={20}
+                />
+
+                Solicitar exclusão da
+                conta
               </button>
             </div>
           </section>
         </aside>
       </div>
     </main>
+  );
+}
+
+function SectionHeader({
+  icon: Icon,
+  title,
+  subtitle,
+}: {
+  icon: LucideIcon;
+  title: string;
+  subtitle: string;
+}) {
+  return (
+    <div
+      className="
+        flex
+        items-start
+
+        gap-3
+      "
+    >
+      <div
+        className="
+          w-11
+          h-11
+
+          sm:w-12
+          sm:h-12
+
+          rounded-2xl
+
+          bg-[color-mix(in_srgb,var(--company-primary)_10%,transparent)]
+
+          text-[var(--company-primary)]
+
+          flex
+          items-center
+          justify-center
+
+          shrink-0
+        "
+      >
+        <Icon
+          size={26}
+        />
+      </div>
+
+      <div className="min-w-0">
+        <h2
+          className="
+            text-lg
+            sm:text-xl
+
+            font-bold
+
+            text-[#080E2F]
+            dark:text-white
+          "
+        >
+          {title}
+        </h2>
+
+        <p
+          className="
+            mt-1
+
+            text-sm
+
+            text-gray-500
+            dark:text-gray-400
+
+            leading-relaxed
+          "
+        >
+          {subtitle}
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -787,27 +2172,103 @@ function InputField({
   icon: LucideIcon;
   type: string;
   value: string;
-  onChange: (value: string) => void;
+
+  onChange:
+    (
+      value: string,
+    ) => void;
+
   placeholder: string;
 }) {
   return (
-    <div className="flex flex-col gap-2">
-      <label className="text-sm font-semibold text-[#080E2F] dark:text-gray-300">
+    <div
+      className="
+        min-w-0
+
+        flex
+        flex-col
+
+        gap-2
+      "
+    >
+      <label
+        className="
+          text-sm
+          font-semibold
+
+          text-[#080E2F]
+          dark:text-gray-300
+        "
+      >
         {label}
       </label>
 
       <div className="relative">
         <Icon
           size={20}
-          className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500"
+          className="
+            absolute
+
+            left-4
+            top-1/2
+
+            -translate-y-1/2
+
+            text-[var(--company-primary)]
+
+            pointer-events-none
+          "
         />
 
         <input
           type={type}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          className="w-full bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl pl-12 pr-4 py-4 outline-none focus:border-blue-500 shadow-md shadow-slate-300/40 dark:shadow-sm dark:shadow-blue-500/30 transition-all"
+          onChange={(
+            event,
+          ) =>
+            onChange(
+              event.target
+                .value,
+            )
+          }
+          placeholder={
+            placeholder
+          }
+          className="
+            w-full
+            min-w-0
+
+            rounded-2xl
+
+            border
+            border-gray-200
+            dark:border-white/10
+
+            bg-gray-50
+            dark:bg-[#0d2238]
+
+            py-4
+            pl-12
+            pr-4
+
+            text-[#080E2F]
+            dark:text-white
+
+            placeholder:text-gray-400
+            dark:placeholder:text-gray-500
+
+            outline-none
+
+            shadow-xl
+            dark:shadow-sm
+
+            transition-all
+
+            focus:border-[var(--company-primary)]
+
+            focus:ring-4
+            focus:ring-[color-mix(in_srgb,var(--company-primary)_10%,transparent)]
+          "
         />
       </div>
     </div>
@@ -822,40 +2283,97 @@ function AppearanceButton({
   onClick,
 }: {
   active: boolean;
+
   icon: LucideIcon;
+
   title: string;
   subtitle: string;
+
   onClick: () => void;
 }) {
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={
+        onClick
+      }
       className={`
         w-full
-        text-left
+
         rounded-2xl
+
         border
+
         p-4
+
+        text-left
+
         flex
         items-center
+
         gap-3
+
         transition-all
+
         ${
           active
-            ? "border-blue-500 bg-blue-500/10 text-blue-500 dark:text-blue-400"
-            : "border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#0d2238] text-gray-600 dark:text-gray-300 hover:border-blue-500/50"
+            ? `
+                border-[var(--company-primary)]
+
+                bg-[color-mix(in_srgb,var(--company-primary)_8%,transparent)]
+
+                text-[var(--company-primary)]
+              `
+            : `
+                border-gray-200
+                dark:border-white/10
+
+                bg-gray-50
+                dark:bg-[#0d2238]
+
+                text-gray-600
+                dark:text-gray-300
+
+                hover:border-[color-mix(in_srgb,var(--company-primary)_40%,transparent)]
+              `
         }
       `}
     >
-      <div className="w-11 h-11 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
-        <Icon size={22} />
+      <div
+        className="
+          w-11
+          h-11
+
+          rounded-xl
+
+          bg-[color-mix(in_srgb,var(--company-primary)_10%,transparent)]
+
+          flex
+          items-center
+          justify-center
+
+          shrink-0
+        "
+      >
+        <Icon
+          size={22}
+        />
       </div>
 
-      <div>
-        <h3 className="font-bold">{title}</h3>
+      <div className="min-w-0">
+        <h3 className="font-bold">
+          {title}
+        </h3>
 
-        <p className="text-sm opacity-80">
+        <p
+          className="
+            mt-0.5
+
+            text-sm
+
+            opacity-80
+          "
+        >
           {subtitle}
         </p>
       </div>
@@ -872,20 +2390,70 @@ function ToggleRow({
   title: string;
   subtitle: string;
   checked: boolean;
+
   onChange: () => void;
 }) {
   return (
     <button
       type="button"
-      onClick={onChange}
-      className="w-full flex items-center justify-between gap-4 rounded-2xl bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 p-4 text-left hover:border-blue-500/50 transition-all"
+      onClick={
+        onChange
+      }
+      role="switch"
+      aria-checked={
+        checked
+      }
+      className="
+        w-full
+
+        rounded-2xl
+
+        border
+        border-gray-200
+        dark:border-white/10
+
+        bg-gray-50
+        dark:bg-[#0d2238]
+
+        p-4
+
+        flex
+        items-center
+        justify-between
+
+        gap-4
+
+        text-left
+
+        transition-all
+
+        hover:border-[color-mix(in_srgb,var(--company-primary)_40%,transparent)]
+      "
     >
-      <div>
-        <h3 className="font-bold text-[#080E2F] dark:text-white">
+      <div className="min-w-0">
+        <h3
+          className="
+            font-bold
+
+            text-[#080E2F]
+            dark:text-white
+          "
+        >
           {title}
         </h3>
 
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+        <p
+          className="
+            mt-1
+
+            text-sm
+
+            text-gray-500
+            dark:text-gray-400
+
+            leading-relaxed
+          "
+        >
           {subtitle}
         </p>
       </div>
@@ -894,24 +2462,124 @@ function ToggleRow({
         className={`
           w-14
           h-8
+
           rounded-full
+
           p-1
-          transition-all
+
           shrink-0
-          ${checked ? "bg-blue-500" : "bg-gray-300 dark:bg-[#132d46]"}
+
+          transition-all
+
+          ${
+            checked
+              ? `
+                  bg-[var(--company-primary)]
+                `
+              : `
+                  bg-gray-300
+                  dark:bg-[#132d46]
+                `
+          }
         `}
       >
         <div
           className={`
             w-6
             h-6
+
             rounded-full
+
             bg-white
+
+            shadow-md
+
             transition-all
-            ${checked ? "translate-x-6" : "translate-x-0"}
+
+            ${
+              checked
+                ? "translate-x-6"
+                : "translate-x-0"
+            }
           `}
         />
       </div>
     </button>
+  );
+}
+
+function StatusRow({
+  label,
+  value,
+  status,
+}: {
+  label: string;
+  value: string;
+
+  status?:
+    | "success"
+    | "warning";
+}) {
+  return (
+    <div
+      className="
+        rounded-2xl
+
+        border
+        border-gray-200
+        dark:border-white/10
+
+        bg-gray-50
+        dark:bg-[#0d2238]
+
+        p-4
+
+        flex
+        items-center
+        justify-between
+
+        gap-4
+      "
+    >
+      <span
+        className="
+          text-sm
+
+          text-gray-500
+          dark:text-gray-400
+        "
+      >
+        {label}
+      </span>
+
+      <strong
+        className={`
+          text-right
+
+          text-sm
+
+          ${
+            status ===
+            "success"
+              ? `
+                  text-green-600
+                  dark:text-green-400
+                `
+              : status ===
+                  "warning"
+                ? `
+                    text-yellow-600
+                    dark:text-yellow-400
+                  `
+                : `
+                    text-[#080E2F]
+                    dark:text-white
+                  `
+          }
+        `}
+      >
+        {value}
+      </strong>
+    </div>
   );
 }

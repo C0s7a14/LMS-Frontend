@@ -9,13 +9,11 @@ import type {
   ActiveUserTodayType,
 } from "../../../../types/userActivity.types";
 
-
 interface ActiveUsersTodayViewProps {
   users: ActiveUserTodayType[];
   loading: boolean;
   search: string;
 }
-
 
 function getRoleLabel(
   role: ActiveUserTodayType["role"],
@@ -30,7 +28,6 @@ function getRoleLabel(
 
   return "Administrador";
 }
-
 
 function getRoleClasses(
   role: ActiveUserTodayType["role"],
@@ -58,7 +55,6 @@ function getRoleClasses(
   `;
 }
 
-
 function formatActivity(
   value: string,
 ) {
@@ -82,13 +78,11 @@ function formatActivity(
   );
 }
 
-
 export default function ActiveUsersTodayView({
   users,
   loading,
   search,
 }: ActiveUsersTodayViewProps) {
-
   const filteredUsers =
     useMemo(() => {
       const term =
@@ -119,35 +113,71 @@ export default function ActiveUsersTodayView({
       );
     }, [users, search]);
 
-
   return (
     <TableCard title="Usuários Ativos Hoje">
-
       {loading ? (
         <div
           className="
             py-12
+
+            flex
+            flex-col
+            items-center
+            justify-center
+
             text-center
+
+            text-sm
             text-gray-500
             dark:text-gray-400
           "
         >
+          <div
+            className="
+              w-8
+              h-8
+
+              mb-3
+
+              rounded-full
+
+              border-2
+              border-gray-200
+              dark:border-white/10
+
+              border-t-[var(--company-primary)]
+
+              animate-spin
+            "
+          />
+
           Carregando usuários ativos...
         </div>
       ) : (
         <>
           {/* DESKTOP */}
-          <div className="hidden lg:block w-full">
+          <div
+            className="
+              hidden
+              xl:block
 
+              w-full
+              min-w-[760px]
+            "
+          >
             <div
               className="
                 grid
                 grid-cols-[1.4fr_1.5fr_0.8fr_0.8fr]
+
                 gap-4
+
                 pb-3
+
                 border-b
                 border-gray-200
                 dark:border-white/10
+
                 text-sm
                 text-gray-500
                 dark:text-gray-400
@@ -156,9 +186,10 @@ export default function ActiveUsersTodayView({
               <span>Usuário</span>
               <span>Email</span>
               <span>Perfil</span>
-              <span>Última atividade</span>
+              <span>
+                Última atividade
+              </span>
             </div>
-
 
             {filteredUsers.length > 0 ? (
               filteredUsers.map(
@@ -168,31 +199,45 @@ export default function ActiveUsersTodayView({
                     className="
                       grid
                       grid-cols-[1.4fr_1.5fr_0.8fr_0.8fr]
+
                       gap-4
+
                       items-center
+
                       py-4
+
                       border-b
                       border-gray-200
                       dark:border-white/10
+
                       last:border-b-0
                     "
                   >
+                    {/* Usuário */}
+                    <div
+                      className="
+                        flex
+                        items-center
+                        gap-3
 
-                    <div className="flex items-center gap-3 min-w-0">
+                        min-w-0
+                      "
+                    >
                       <Avatar
-                        name={
-                          user.name
-                        }
+                        name={user.name}
                       />
 
                       <div className="min-w-0">
                         <p
                           className="
                             font-semibold
+
                             text-[#080E2F]
                             dark:text-white
+
                             truncate
                           "
+                          title={user.name}
                         >
                           {user.name}
                         </p>
@@ -209,28 +254,38 @@ export default function ActiveUsersTodayView({
                       </div>
                     </div>
 
-
+                    {/* Email */}
                     <p
                       className="
+                        min-w-0
+
                         text-sm
                         text-gray-600
                         dark:text-gray-400
+
                         truncate
                       "
+                      title={user.email}
                     >
                       {user.email}
                     </p>
 
-
+                    {/* Perfil */}
                     <div>
                       <span
                         className={`
                           inline-flex
+
                           rounded-full
+
                           px-3
                           py-1
+
                           text-xs
                           font-semibold
+
+                          whitespace-nowrap
+
                           ${getRoleClasses(
                             user.role,
                           )}
@@ -242,11 +297,12 @@ export default function ActiveUsersTodayView({
                       </span>
                     </div>
 
-
+                    {/* Última atividade */}
                     <div>
                       <p
                         className="
                           font-semibold
+
                           text-[#080E2F]
                           dark:text-white
                         "
@@ -266,57 +322,72 @@ export default function ActiveUsersTodayView({
                         Hoje
                       </p>
                     </div>
-
                   </div>
                 ),
               )
             ) : (
-              <div
-                className="
-                  py-12
-                  text-center
-                  text-gray-500
-                  dark:text-gray-400
-                "
-              >
-                Nenhum usuário ativo encontrado.
-              </div>
+              <EmptyState />
             )}
-
           </div>
 
+          {/* MOBILE / TABLET */}
+          <div
+            className="
+              xl:hidden
 
-          {/* MOBILE */}
-          <div className="lg:hidden space-y-3">
-
+              space-y-3
+            "
+          >
             {filteredUsers.length > 0 ? (
               filteredUsers.map(
                 (user) => (
                   <div
                     key={user.id}
                     className="
+                      w-full
+                      min-w-0
+
                       rounded-2xl
+
                       border
                       border-gray-200
                       dark:border-white/10
+
                       p-4
+
+                      shadow-lg
+                      dark:shadow-none
                     "
                   >
+                    {/* Identificação */}
+                    <div
+                      className="
+                        flex
+                        items-center
+                        gap-3
 
-                    <div className="flex items-center gap-3">
+                        min-w-0
+                      "
+                    >
                       <Avatar
-                        name={
-                          user.name
-                        }
+                        name={user.name}
                       />
 
-                      <div className="min-w-0 flex-1">
+                      <div
+                        className="
+                          min-w-0
+                          flex-1
+                        "
+                      >
                         <p
                           className="
                             font-bold
+
                             text-[#080E2F]
                             dark:text-white
-                            truncate
+
+                            leading-snug
+                            break-words
                           "
                         >
                           {user.name}
@@ -324,10 +395,13 @@ export default function ActiveUsersTodayView({
 
                         <p
                           className="
+                            mt-0.5
+
                             text-sm
                             text-gray-500
                             dark:text-gray-400
-                            truncate
+
+                            break-all
                           "
                         >
                           {user.email}
@@ -335,14 +409,29 @@ export default function ActiveUsersTodayView({
                       </div>
                     </div>
 
+                    {/* Informações */}
+                    <div
+                      className="
+                        grid
+                        grid-cols-1
 
-                    <div className="grid grid-cols-2 gap-3 mt-4">
+                        xs:grid-cols-2
+                        sm:grid-cols-2
 
+                        gap-3
+
+                        mt-4
+                      "
+                    >
                       <div
                         className="
+                          min-w-0
+
                           rounded-xl
+
                           bg-gray-50
                           dark:bg-white/5
+
                           p-3
                         "
                       >
@@ -359,12 +448,17 @@ export default function ActiveUsersTodayView({
                         <span
                           className={`
                             inline-flex
+
                             mt-2
+
                             rounded-full
+
                             px-2.5
                             py-1
+
                             text-xs
                             font-semibold
+
                             ${getRoleClasses(
                               user.role,
                             )}
@@ -376,12 +470,13 @@ export default function ActiveUsersTodayView({
                         </span>
                       </div>
 
-
                       <div
                         className="
                           rounded-xl
+
                           bg-gray-50
                           dark:bg-white/5
+
                           p-3
                         "
                       >
@@ -395,42 +490,71 @@ export default function ActiveUsersTodayView({
                           Última atividade
                         </p>
 
-                        <p
+                        <div
                           className="
-                            mt-1
-                            font-bold
-                            text-[#080E2F]
-                            dark:text-white
+                            mt-2
+
+                            flex
+                            items-center
+                            gap-2
                           "
                         >
-                          {formatActivity(
-                            user.last_activity_at,
-                          )}
-                        </p>
+                          <span
+                            className="
+                              w-2
+                              h-2
+
+                              rounded-full
+
+                              bg-green-500
+
+                              shrink-0
+                            "
+                          />
+
+                          <p
+                            className="
+                              font-bold
+
+                              text-[#080E2F]
+                              dark:text-white
+                            "
+                          >
+                            {formatActivity(
+                              user.last_activity_at,
+                            )}
+                          </p>
+                        </div>
                       </div>
-
                     </div>
-
                   </div>
                 ),
               )
             ) : (
-              <div
-                className="
-                  py-10
-                  text-center
-                  text-gray-500
-                  dark:text-gray-400
-                "
-              >
-                Nenhum usuário ativo encontrado.
-              </div>
+              <EmptyState />
             )}
-
           </div>
         </>
       )}
-
     </TableCard>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div
+      className="
+        py-10
+        sm:py-12
+
+        text-center
+
+        text-sm
+        text-gray-500
+        dark:text-gray-400
+      "
+    >
+      Nenhum usuário ativo encontrado.
+    </div>
   );
 }

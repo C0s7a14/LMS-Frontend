@@ -1,13 +1,10 @@
 import {
-  Search,
-  Grid3X3,
-  List,
-  Star,
-  BookOpen,
   ArrowRight,
   Cpu,
+  Grid3X3,
+  List,
   Plus,
-  Send,
+  Search,
 } from "lucide-react";
 
 import {
@@ -15,726 +12,1098 @@ import {
   useState,
 } from "react";
 
-import { useNavigate } from "react-router-dom";
-import { api } from "../../services/api";
+import {
+  useNavigate,
+} from "react-router-dom";
+
 import toast from "react-hot-toast";
 
+import {
+  api,
+} from "../../services/api";
+
 import DeviceModal from "../../components/modals/DeviceModal";
-import CoursePreviewModal from "../../components/modals/CoursePreviewModal";
-import StudentCourseCatalog from "./StudentCourseCatalog";
-
-
-import axios from "axios";
-
 
 interface DeviceType {
   id: number;
   nome: string;
+
   modelo?: string;
   tipo?: string;
   descricao?: string;
+
   imagem_url?: string;
   criado_em?: string;
+
   course_id?: number | null;
-  course_title?: string | null;
-  enrollment_request_id?: number | null;
-  enrollment_status?: "pendente" | "aprovada" | "rejeitada" | "cancelada" | null;
-  enrollment_requested_at?: string | null;
 }
-
-interface CourseModule {
-  id: number;
-  titulo: string;
-  ordem: number;
-  total_aulas: number;
-}
-
-interface CoursePreview {
-  id: number;
-  titulo: string;
-  descricao: string;
-  status: string;
-  dispositivo_id: number;
-  dispositivo_nome: string;
-  dispositivo_modelo?: string | null;
-  dispositivo_imagem_url?: string | null;
-  total_modulos: number;
-  total_aulas: number;
-  modulos: CourseModule[];
-}
-
 
 export default function Device() {
-  const [devices, setDevices] = useState<DeviceType[]>([]);
-  const [search, setSearch] = useState("");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [loading, setLoading] = useState(true);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [previewModalOpen, setPreviewModalOpen] = useState(false);
-  const [selectedCourse, setSelectedCourse] = useState<CoursePreview | null>(null);
-  const [loadingPreview, setLoadingPreview] = useState(false);
-  const [requestingEnrollment, setRequestingEnrollment] = useState(false);
-  const [selectedEnrollmentStatus, setSelectedEnrollmentStatus] = useState<
-  DeviceType["enrollment_status"]>(null);
+  const navigate =
+    useNavigate();
 
+  const [
+    devices,
+    setDevices,
+  ] = useState<DeviceType[]>([]);
 
+  const [
+    search,
+    setSearch,
+  ] = useState("");
 
-  const navigate = useNavigate();
+  const [
+    viewMode,
+    setViewMode,
+  ] = useState<
+    "grid" | "list"
+  >("grid");
 
-  const storedUser = localStorage.getItem("user");
-  const user = storedUser ? JSON.parse(storedUser) : null;
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
 
-  const userRole = user?.role;
-  const isAdmin = userRole === "admin";
-  const isClient = userRole === "client" || userRole === "cliente";
-  const isStudent = userRole === "student" || userRole === "aluno";
+  const [
+    modalOpen,
+    setModalOpen,
+  ] = useState(false);
 
-
-
- async function getDevices() {
-  try {
-    setLoading(true);
-
-   const endpoint = isClient
-    ? "/client/devices"
-    : "/devices";
-
-    const response = await api.get<DeviceType[]>(endpoint);
-
-    setDevices(response.data);
-  } catch (error) {
-    console.log(error);
-    toast.error("Erro ao buscar dispositivos");
-  } finally {
-    setLoading(false);
-  }
-}
-
-async function handleOpenCoursePreview(device: DeviceType) {
-  const courseId = device.course_id;
-
-  if (!courseId) {
-    toast.error("Este curso ainda não está disponível.");
-    return;
-  }
-
-  try {
-    setPreviewModalOpen(true);
-    setLoadingPreview(true);
-    setSelectedCourse(null);
-    setSelectedEnrollmentStatus(device.enrollment_status ?? null);
-
-    const response = await api.get<CoursePreview>(
-      `/student/courses/${courseId}/preview`
+  const storedUser =
+    localStorage.getItem(
+      "user",
     );
 
-    setSelectedCourse(response.data);
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      toast.error(
-        error.response?.data?.error || "Erro ao carregar prévia do curso."
+  const user =
+    storedUser
+      ? JSON.parse(
+          storedUser,
+        )
+      : null;
+
+  const userRole =
+    user?.role;
+
+  const isAdmin =
+    userRole === "admin";
+
+  const isClient =
+    userRole === "client" ||
+    userRole === "cliente";
+
+  async function getDevices() {
+    try {
+      setLoading(true);
+
+      const endpoint =
+        isClient
+          ? "/client/devices"
+          : "/devices";
+
+      const response =
+        await api.get<
+          DeviceType[]
+        >(endpoint);
+
+      setDevices(
+        response.data,
       );
+    } catch (error) {
+      console.log(error);
 
-      return;
-    }
-
-    toast.error("Erro inesperado ao carregar prévia do curso.");
-  } finally {
-    setLoadingPreview(false);
-  }
-}
-
-
-async function handleRequestEnrollment() {
-  if (!selectedCourse?.id) {
-    toast.error("Curso não selecionado.");
-    return;
-  }
-
-  try {
-    setRequestingEnrollment(true);
-
-    const response = await api.post(
-      `/student/courses/${selectedCourse.id}/enrollment-request`,
-      {
-        mensagem: "Tenho interesse em realizar este treinamento.",
-      }
-    );
-
-    toast.success(
-      response.data?.message ||
-        "Solicitação de matrícula enviada com sucesso."
-    );
-
-    setSelectedEnrollmentStatus("pendente");
-
-setDevices((prevDevices) =>
-  prevDevices.map((device) =>
-    device.course_id === selectedCourse.id
-      ? {
-          ...device,
-          enrollment_status: "pendente",
-        }
-      : device
-  )
-);
-  
-    setPreviewModalOpen(false);
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
       toast.error(
-        error.response?.data?.error ||
-          "Erro ao solicitar matrícula."
+        "Erro ao buscar dispositivos",
       );
-
-      return;
+    } finally {
+      setLoading(false);
     }
-
-    toast.error("Erro inesperado ao solicitar matrícula.");
-  } finally {
-    setRequestingEnrollment(false);
   }
-}
-
-async function handleRequestEnrollmentByCourseId(courseId?: number | null) {
-  if (!courseId) {
-    toast.error("Este curso ainda não está disponível.");
-    return;
-  }
-
-  try {
-    setRequestingEnrollment(true);
-
-    const response = await api.post(
-      `/student/courses/${courseId}/enrollment-request`,
-      {
-        mensagem: "Tenho interesse em realizar este treinamento.",
-      }
-    );
-
-    toast.success(
-      response.data?.message ||
-        "Solicitação de matrícula enviada com sucesso."
-    );
-
-    setDevices((prevDevices) =>
-  prevDevices.map((device) =>
-    device.course_id === courseId
-      ? {
-          ...device,
-          enrollment_status: "pendente",
-        }
-      : device
-  )
-);
-
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      toast.error(
-        error.response?.data?.error ||
-          "Erro ao solicitar matrícula."
-      );
-
-      return;
-    }
-
-    toast.error("Erro inesperado ao solicitar matrícula.");
-  } finally {
-    setRequestingEnrollment(false);
-  }
-}
-
-function getEnrollmentButtonText(status?: string | null) {
-  if (status === "pendente") {
-    return "Solicitação pendente";
-  }
-
-  if (status === "aprovada") {
-    return "Acessar curso";
-  }
-
-  if (status === "rejeitada") {
-    return "Solicitação rejeitada";
-  }
-
-  return "Matricular-se";
-}
-
-function getEnrollmentButtonClass(status?: string | null) {
-  if (status === "pendente") {
-    return "bg-yellow-500 hover:bg-yellow-600 text-white";
-  }
-
-  if (status === "aprovada") {
-    return "bg-green-500 hover:bg-green-600 text-white";
-  }
-
-  if (status === "rejeitada") {
-    return "bg-red-500 hover:bg-red-600 text-white";
-  }
-
-  return "bg-blue-500 hover:bg-blue-600 text-white";
-}
-
-function isEnrollmentButtonDisabled(status?: string | null) {
-  return status === "pendente" || status === "rejeitada";
-}
-
-function handleEnrollmentButtonClick(device: DeviceType) {
-  if (device.enrollment_status === "pendente") {
-    toast("Sua solicitação está aguardando aprovação do administrador.");
-    return;
-  }
-
-  if (device.enrollment_status === "aprovada") {
-    if (device.course_id) {
-      navigate(`/courses/${device.course_id}`);
-      return;
-    }
-
-    toast.error("Curso não encontrado.");
-    return;
-  }
-
-  if (device.enrollment_status === "rejeitada") {
-    toast.error("Sua solicitação para este curso foi rejeitada.");
-    return;
-  }
-
-  handleRequestEnrollmentByCourseId(device.course_id);
-}
-
 
   useEffect(() => {
-  if (isStudent) {
-    return;
-  }
+    void getDevices();
+  }, []);
 
-  getDevices();
-}, []);
+  const searchLower =
+    search
+      .trim()
+      .toLowerCase();
 
-  const filteredDevices = devices.filter((device) => {
-  const searchLower = search.toLowerCase();
+  const filteredDevices =
+    devices.filter(
+      (device) => {
+        if (!searchLower) {
+          return true;
+        }
 
-    if (isStudent && !device.course_id) {
-      return false;
+        return (
+          device.nome
+            ?.toLowerCase()
+            .includes(
+              searchLower,
+            ) ||
+          device.modelo
+            ?.toLowerCase()
+            .includes(
+              searchLower,
+            ) ||
+          device.tipo
+            ?.toLowerCase()
+            .includes(
+              searchLower,
+            ) ||
+          device.descricao
+            ?.toLowerCase()
+            .includes(
+              searchLower,
+            )
+        );
+      },
+    );
+
+  const pageTitle =
+    isClient
+      ? "Meus Dispositivos"
+      : "Dispositivos";
+
+  const pageSubtitle =
+    isClient
+      ? "Acesse os dispositivos vinculados à sua empresa."
+      : "Gerencie os dispositivos cadastrados na plataforma.";
+
+  const emptyTitle =
+    searchLower
+      ? "Nenhum dispositivo encontrado"
+      : isClient
+        ? "Nenhum dispositivo vinculado"
+        : "Nenhum dispositivo cadastrado";
+
+  const emptyDescription =
+    searchLower
+      ? "Nenhum dispositivo corresponde à busca realizada."
+      : isClient
+        ? "Nenhum dispositivo foi vinculado à sua conta ainda."
+        : "Cadastre dispositivos para eles aparecerem aqui.";
+
+  function handleOpenDevice(
+    device: DeviceType,
+  ) {
+    if (isClient) {
+      navigate(
+        `/devices/${device.id}`,
+      );
+
+      return;
     }
 
-    return (
-      device.nome?.toLowerCase().includes(searchLower) ||
-      device.modelo?.toLowerCase().includes(searchLower) ||
-      device.tipo?.toLowerCase().includes(searchLower) ||
-      device.course_title?.toLowerCase().includes(searchLower)
+    /*
+      Mantém o comportamento
+      legado do Admin por enquanto.
+    */
+    if (device.course_id) {
+      navigate(
+        `/courses/${device.course_id}`,
+      );
+
+      return;
+    }
+
+    navigate(
+      "/Dashboard",
     );
-  });
-
-  const pageTitle = isClient
-  ? "Meus Dispositivos SIRROS"
-  : isStudent
-  ? "Cursos disponíveis"
-  : "Dispositivos SIRROS";
-
-const pageSubtitle = isClient
-  ? "Acesse os dispositivos vinculados à sua empresa."
-  : isStudent
-  ? "Escolha um curso disponível, veja a prévia e solicite matrícula."
-  : "Gerencie os dispositivos cadastrados na plataforma.";
-
-const searchPlaceholder = isStudent
-  ? "Buscar cursos..."
-  : "Buscar dispositivos...";
-
-const emptyTitle = isStudent
-  ? "Nenhum curso disponível"
-  : "Nenhum dispositivo encontrado";
-
-const emptyDescription = isClient
-  ? "Nenhum dispositivo foi vinculado à sua conta ainda."
-  : isStudent
-  ? "Nenhum curso publicado foi vinculado aos dispositivos no momento."
-  : "Cadastre dispositivos para eles aparecerem aqui.";
-
-  if (isStudent) {
-  return <StudentCourseCatalog />;
-}
+  }
 
   return (
-    <main className="min-h-screen bg-gray-50 dark:bg-[#071827] px-6 py-8 lg:px-12 transition-colors">
-      <div className="max-w-[1500px] mx-auto">
+    <main
+      className="
+        w-full
+        min-w-0
 
-        {/* Header */}
-        <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between mb-10">
-          <div>
-          <h1 className="text-3xl lg:text-4xl font-bold text-[#080E2F] dark:text-white">
+        space-y-6
+        sm:space-y-8
+      "
+    >
+      {/* HEADER */}
+      <div
+        className="
+          flex
+          flex-col
+
+          gap-5
+          lg:gap-6
+
+          xl:flex-row
+          xl:items-end
+          xl:justify-between
+        "
+      >
+        <div className="min-w-0">
+          <h1
+            className="
+              text-2xl
+              sm:text-3xl
+              lg:text-4xl
+
+              font-bold
+
+              text-[#080E2F]
+              dark:text-white
+
+              leading-tight
+            "
+          >
             {pageTitle}
           </h1>
 
-          <p className="text-gray-500 dark:text-gray-400 mt-2 text-base lg:text-lg">
+          <p
+            className="
+              mt-2
+
+              max-w-3xl
+
+              text-sm
+              sm:text-base
+              lg:text-lg
+
+              text-gray-500
+              dark:text-gray-400
+
+              leading-relaxed
+            "
+          >
             {pageSubtitle}
           </p>
+
+          <div
+            className="
+              mt-4
+
+              inline-flex
+              items-center
+
+              gap-2
+
+              rounded-2xl
+
+              border
+              border-[color-mix(in_srgb,var(--company-primary)_20%,transparent)]
+
+              bg-[color-mix(in_srgb,var(--company-primary)_8%,transparent)]
+
+              px-4
+              py-2
+
+              text-sm
+              font-semibold
+
+              text-[var(--company-primary)]
+            "
+          >
+            <Cpu
+              size={18}
+              className="shrink-0"
+            />
+
+            {filteredDevices.length}{" "}
+            dispositivo
+            {filteredDevices.length !==
+            1
+              ? "s"
+              : ""}
+          </div>
+        </div>
+
+        <div
+          className="
+            w-full
+
+            flex
+            flex-col
+
+            gap-3
+
+            sm:flex-row
+            sm:items-center
+
+            xl:w-auto
+          "
+        >
+          {/* BUSCA */}
+          <div
+            className="
+              relative
+
+              w-full
+
+              sm:flex-1
+              xl:w-[360px]
+
+              rounded-2xl
+
+              shadow-2xl
+              dark:shadow-sm
+            "
+          >
+            <Search
+              size={20}
+              className="
+                absolute
+
+                left-4
+                top-1/2
+
+                -translate-y-1/2
+
+                text-gray-400
+
+                pointer-events-none
+              "
+            />
+
+            <input
+              type="search"
+              placeholder="Buscar dispositivos..."
+              value={search}
+              onChange={(event) =>
+                setSearch(
+                  event.target
+                    .value,
+                )
+              }
+              className="
+                w-full
+                min-w-0
+
+                rounded-2xl
+
+                border
+                border-gray-200
+                dark:border-white/10
+
+                bg-white
+                dark:bg-[#091a2c]
+
+                py-3.5
+                sm:py-4
+
+                pl-12
+                pr-4
+
+                text-sm
+                sm:text-base
+
+                text-[#080E2F]
+                dark:text-white
+
+                placeholder:text-gray-400
+                dark:placeholder:text-gray-500
+
+                outline-none
+
+                focus:border-[var(--company-primary)]
+
+                focus:ring-4
+                focus:ring-[color-mix(in_srgb,var(--company-primary)_10%,transparent)]
+
+                transition-all
+              "
+            />
           </div>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+          {/* NOVO DISPOSITIVO - ADMIN */}
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() =>
+                setModalOpen(
+                  true,
+                )
+              }
+              className="
+                min-h-[52px]
 
-            {/* Search */}
-            <div className="relative w-full sm:w-[360px]">
-              <Search
-                size={22}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                rounded-2xl
+
+                bg-gradient-to-r
+                from-[var(--company-primary)]
+                to-[var(--company-secondary)]
+
+                px-5
+
+                flex
+                items-center
+                justify-center
+
+                gap-2
+
+                font-semibold
+
+                text-white
+
+                shadow-2xl
+                dark:shadow-sm
+
+                transition-all
+
+                hover:opacity-95
+              "
+            >
+              <Plus size={20} />
+
+              Novo Dispositivo
+            </button>
+          )}
+
+          {/* VISUALIZAÇÃO */}
+          <div
+            className="
+              hidden
+              sm:flex
+
+              shrink-0
+
+              rounded-2xl
+
+              border
+              border-gray-200
+              dark:border-white/10
+
+              bg-white
+              dark:bg-[#091a2c]
+
+              p-1
+
+              shadow-2xl
+              dark:shadow-sm
+            "
+          >
+            <button
+              type="button"
+              onClick={() =>
+                setViewMode(
+                  "grid",
+                )
+              }
+              aria-label="Visualizar dispositivos em grade"
+              className={`
+                w-11
+                h-11
+
+                lg:w-12
+                lg:h-12
+
+                rounded-xl
+
+                flex
+                items-center
+                justify-center
+
+                transition-all
+
+                ${
+                  viewMode ===
+                  "grid"
+                    ? `
+                        bg-[color-mix(in_srgb,var(--company-primary)_12%,transparent)]
+
+                        text-[var(--company-primary)]
+                      `
+                    : `
+                        text-gray-500
+                        dark:text-gray-400
+
+                        hover:bg-gray-100
+                        dark:hover:bg-white/5
+                      `
+                }
+              `}
+            >
+              <Grid3X3
+                size={21}
               />
+            </button>
 
-              <input
-                type="text"
-                placeholder={searchPlaceholder}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+            <button
+              type="button"
+              onClick={() =>
+                setViewMode(
+                  "list",
+                )
+              }
+              aria-label="Visualizar dispositivos em lista"
+              className={`
+                w-11
+                h-11
+
+                lg:w-12
+                lg:h-12
+
+                rounded-xl
+
+                flex
+                items-center
+                justify-center
+
+                transition-all
+
+                ${
+                  viewMode ===
+                  "list"
+                    ? `
+                        bg-[color-mix(in_srgb,var(--company-primary)_12%,transparent)]
+
+                        text-[var(--company-primary)]
+                      `
+                    : `
+                        text-gray-500
+                        dark:text-gray-400
+
+                        hover:bg-gray-100
+                        dark:hover:bg-white/5
+                      `
+                }
+              `}
+            >
+              <List size={23} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* LOADING */}
+      {loading && (
+        <div
+          className="
+            rounded-2xl
+            sm:rounded-3xl
+
+            border
+            border-gray-200
+            dark:border-white/10
+
+            bg-white
+            dark:bg-[#091a2c]
+
+            p-10
+
+            text-center
+
+            text-gray-500
+            dark:text-gray-400
+
+            shadow-2xl
+            dark:shadow-sm
+
+            animate-pulse
+          "
+        >
+          Carregando
+          dispositivos...
+        </div>
+      )}
+
+      {/* EMPTY */}
+      {!loading &&
+        filteredDevices.length ===
+          0 && (
+          <div
+            className="
+              rounded-2xl
+              sm:rounded-3xl
+
+              border
+              border-gray-200
+              dark:border-white/10
+
+              bg-white
+              dark:bg-[#091a2c]
+
+              px-5
+              py-10
+              sm:p-12
+
+              text-center
+
+              shadow-2xl
+              dark:shadow-sm
+            "
+          >
+            <div
+              className="
+                w-16
+                h-16
+
+                rounded-2xl
+
+                bg-[color-mix(in_srgb,var(--company-primary)_12%,transparent)]
+
+                flex
+                items-center
+                justify-center
+
+                mx-auto
+                mb-4
+              "
+            >
+              <Cpu
+                size={34}
                 className="
-                  w-full
-                  bg-white
-                  dark:bg-[#091a2c]
-                  border
-                  border-gray-200
-                  dark:border-white/10
-                  rounded-2xl
-                  py-4
-                  pl-12
-                  pr-4
-                  text-[#080E2F]
-                  dark:text-white
-                  placeholder:text-gray-400
-                  dark:placeholder:text-gray-500
-                  outline-none
-                  focus:border-blue-500
-                  transition-all
-                  shadow-2xl
-                  dark:shadow-sm dark:shadow-blue-500
+                  text-[var(--company-primary)]
                 "
               />
             </div>
 
-            {/* Botão Novo Dispositivo */}
-           {isAdmin && (
-            <button
-              onClick={() => setModalOpen(true)}
+            <h2
               className="
-                bg-blue-500
-                hover:bg-blue-600
-                text-white
-                h-16
-                px-5
-                py-4
-                rounded-2xl
-                font-semibold
-                transition-all
-                flex
-                items-center
-                justify-center
-                gap-2
-                shadow-2xl
-                dark:shadow-sm
-                dark:shadow-blue-500
+                text-lg
+                sm:text-xl
+
+                font-bold
+
+                text-[#080E2F]
+                dark:text-white
               "
             >
-              <Plus size={20} />
-              Novo Dispositivo
-            </button>
-          )}
-            {/* View buttons */}
-            <div className="hidden sm:flex bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-2xl p-1 shadow-2xl  dark:shadow-sm dark:shadow-blue-500">
-              <button
-                onClick={() => setViewMode("grid")}
-                className={`
-                  w-12
-                  h-12
-                  rounded-xl
-                  flex
-                  items-center
-                  justify-center
-                  transition-all
-                  cursor-pointer
-                  ${
-                    viewMode === "grid"
-                      ? "bg-blue-500/20 text-blue-500 dark:text-blue-400"
-                      : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5"
-                  }
-                `}
-              >
-                <Grid3X3 size={22} />
-              </button>
+              {emptyTitle}
+            </h2>
 
-              <button
-                onClick={() => setViewMode("list")}
-                className={`
-                  w-12
-                  h-12
-                  rounded-xl
-                  flex
-                  items-center
-                  justify-center
-                  transition-all
-                  cursor-pointer
-                  ${
-                    viewMode === "list"
-                      ? "bg-blue-500/20 text-blue-500 dark:text-blue-400"
-                      : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5"
-                  }
-                `}
-              >
-                <List size={24} />
-              </button>
-            </div>
-          </div>
-        </div>
+            <p
+              className="
+                mt-2
 
-        {/* Loading */}
-       {loading && (
-          <div className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-10 text-center text-gray-500 dark:text-gray-400 ">
-            {isStudent ? "Carregando cursos disponíveis..." : "Carregando dispositivos..."}
+                max-w-lg
+                mx-auto
+
+                text-sm
+                sm:text-base
+
+                text-gray-500
+                dark:text-gray-400
+
+                leading-relaxed
+              "
+            >
+              {emptyDescription}
+            </p>
           </div>
         )}
 
-        {/* Empty */}
-        {!loading && filteredDevices.length === 0 && (
-          <div className="bg-white dark:bg-[#091a2c] border border-gray-200 dark:border-white/10 rounded-3xl p-10 text-center ">
-            <div className="w-16 h-16 rounded-2xl bg-blue-500/20 flex items-center justify-center mx-auto mb-4">
-              <Cpu size={36} className="text-blue-500 dark:text-blue-400" />
-            </div>
-
-            <h2 className="text-xl font-bold text-[#080E2F] dark:text-white">
-            {emptyTitle}
-          </h2>
-
-          <p className="text-gray-500 dark:text-gray-400 mt-2">
-            {emptyDescription}
-          </p>
-          </div>
-        )}
-
-        {/* Devices */}
-        {!loading && filteredDevices.length > 0 && (
+      {/* DEVICES */}
+      {!loading &&
+        filteredDevices.length >
+          0 && (
           <div
             className={
               viewMode === "grid"
-                ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-7"
-                : "flex flex-col gap-5"
+                ? `
+                    grid
+                    grid-cols-1
+
+                    lg:grid-cols-2
+                    2xl:grid-cols-3
+
+                    gap-5
+                    sm:gap-6
+                    2xl:gap-7
+                  `
+                : `
+                    flex
+                    flex-col
+
+                    gap-5
+                  `
             }
           >
-            {filteredDevices.map((device) => (
-              <div
-                key={device.id}
-                className={`
-                  bg-white
-                  dark:bg-[#091a2c]
-                  border
-                  border-gray-200
-                  dark:border-white/10
-                  rounded-3xl
-                  hover:border-blue-500/40
-                  hover:-translate-y-1
-                  transition-all
-                  overflow-hidden
-                  shadow-2xl dark:shadow-sm dark:shadow-blue-500
-                  ${
-                    viewMode === "list"
-                      ? "flex flex-col md:flex-row md:items-center"
-                      : ""
-                  }
-                `}
-              >
-                {/* Área da imagem */}
-                <div
+            {filteredDevices.map(
+              (device) => (
+                <article
+                  key={device.id}
                   className={`
-                    relative
-                    p-6
-                    bg-gray-100
-                    dark:bg-[#0d2238]
+                    w-full
+                    min-w-0
+
+                    overflow-hidden
+
+                    rounded-2xl
+                    sm:rounded-3xl
+
+                    border
+                    border-gray-200
+                    dark:border-white/10
+
+                    bg-white
+                    dark:bg-[#091a2c]
+
+                    shadow-2xl
+                    dark:shadow-sm
+
+                    transition-all
+                    duration-200
+
+                    hover:border-[color-mix(in_srgb,var(--company-primary)_35%,transparent)]
+
                     ${
-                      viewMode === "list"
-                        ? "md:w-72 h-56 md:h-48"
-                        : "h-64"
+                      viewMode ===
+                      "list"
+                        ? `
+                            flex
+                            flex-col
+
+                            xl:flex-row
+                          `
+                        : ""
                     }
                   `}
                 >
-                  <div className="absolute top-5 left-5 z-10 bg-blue-500/20 text-blue-500 dark:text-blue-400 px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-medium ">
-                    <Star size={16} fill="currentColor" />
-                    {isStudent ? "Curso disponível" : device.tipo || "Dispositivo"}
-                  </div>
+                  {/* IMAGEM */}
+                  <div
+                    className={`
+                      relative
 
-                  <button className="absolute top-5 right-5 z-10 text-gray-400 hover:text-blue-400 transition-all">
-                    <Star size={24} />
-                  </button>
+                      shrink-0
 
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-44 h-44 rounded-full bg-blue-500/10 blur-sm" />
-                  </div>
+                      overflow-hidden
 
-                  <div className="relative z-10 h-full flex items-center justify-center">
-                    {device.imagem_url ? (
-                      <img
-                        src={device.imagem_url}
-                        alt={device.nome}
-                        className="max-h-44 max-w-[85%] object-contain drop-shadow-xl"
+                      bg-gray-100
+                      dark:bg-[#0d2238]
+
+                      ${
+                        viewMode ===
+                        "list"
+                          ? `
+                              h-56
+                              sm:h-64
+
+                              xl:h-auto
+                              xl:min-h-[260px]
+                              xl:w-[320px]
+                            `
+                          : `
+                              h-52
+                              sm:h-60
+                              xl:h-64
+                            `
+                      }
+                    `}
+                  >
+                    {/* TIPO */}
+                    <div
+                      className="
+                        absolute
+
+                        top-3
+                        left-3
+
+                        sm:top-5
+                        sm:left-5
+
+                        z-10
+
+                        inline-flex
+                        items-center
+
+                        gap-2
+
+                        rounded-xl
+
+                        border
+                        border-[color-mix(in_srgb,var(--company-primary)_18%,transparent)]
+
+                        bg-[color-mix(in_srgb,var(--company-primary)_12%,white)]
+
+                        dark:bg-[color-mix(in_srgb,var(--company-primary)_15%,#091a2c)]
+
+                        px-3
+                        py-2
+
+                        text-xs
+                        sm:text-sm
+
+                        font-semibold
+
+                        text-[var(--company-primary)]
+
+                        shadow-lg
+                      "
+                    >
+                      <Cpu
+                        size={15}
                       />
-                    ) : (
-                      <div className="w-36 h-36 rounded-3xl bg-blue-500/20 flex items-center justify-center">
-                        <Cpu
-                          size={70}
-                          className="text-blue-500 dark:text-blue-400"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
 
-                {/* Info */}
-                <div className="p-6 flex-1">
-                  <h2 className="text-2xl font-bold text-[#080E2F] dark:text-white mb-2">
-                    {isStudent ? device.course_title || "Curso vinculado" : device.nome}
-                  </h2>
+                      {device.tipo ||
+                        "Dispositivo"}
+                    </div>
 
-                  <p className="text-gray-500 dark:text-gray-400 leading-relaxed min-h-[52px]">
-                    {isStudent
-                      ? device.descricao ||
-                        "Curso técnico vinculado a um dispositivo SIRROS. Veja a prévia e solicite matrícula para iniciar seus estudos."
-                      : device.descricao ||
-                        "Dispositivo SIRROS para treinamentos e cursos da plataforma."}
-                  </p>  
+                    {/* FUNDO */}
+                    <div
+                      className="
+                        absolute
+                        inset-0
 
-                  {isStudent ? (
-                    <p className="text-sm text-blue-500 dark:text-blue-400 font-medium mt-3">
-                      Dispositivo: {device.nome}
-                    </p>
-                  ) : (
-                    device.modelo && (
-                      <p className="text-sm text-blue-500 dark:text-blue-400 font-medium mt-3">
-                        Modelo: {device.modelo}
-                      </p>
-                    )
-                  )}
+                        flex
+                        items-center
+                        justify-center
+                      "
+                    >
+                      <div
+                        className="
+                          w-40
+                          h-40
 
-                  <div className="border-t border-gray-200 dark:border-white/10 mt-5 pt-4">
-                    {isStudent ? (
-                      <div className="flex flex-col sm:flex-row gap-3">
-                        <button
-                          onClick={() => handleEnrollmentButtonClick(device)}
-                          disabled={
-                            requestingEnrollment ||
-                            isEnrollmentButtonDisabled(device.enrollment_status)
+                          sm:w-44
+                          sm:h-44
+
+                          rounded-full
+
+                          bg-[color-mix(in_srgb,var(--company-primary)_10%,transparent)]
+
+                          blur-sm
+                        "
+                      />
+                    </div>
+
+                    {/* IMAGEM */}
+                    <div
+                      className="
+                        relative
+
+                        z-10
+
+                        h-full
+
+                        flex
+                        items-center
+                        justify-center
+
+                        p-5
+                        sm:p-6
+                      "
+                    >
+                      {device.imagem_url ? (
+                        <img
+                          src={
+                            device.imagem_url
                           }
-                          className={`
-                            flex-1
-                            ${getEnrollmentButtonClass(device.enrollment_status)}
-                            font-bold
-                            px-4
-                            py-3
-                            rounded-xl
-                            transition-all
-                            cursor-pointer
-                            flex
-                            items-center
-                            justify-center
-                            gap-2
-                            disabled:opacity-70
-                            disabled:cursor-not-allowed
-                          `}
-                        >
-                          <Send size={18} />
-                          {getEnrollmentButtonText(device.enrollment_status)}
-                        </button>
-
-                        <button
-                          onClick={() => handleOpenCoursePreview(device)}
+                          alt={
+                            device.nome
+                          }
                           className="
-                            flex-1
-                            bg-blue-500/10
-                            hover:bg-blue-500/20
-                            text-blue-500
-                            dark:text-blue-400
-                            font-bold
-                            px-4
-                            py-3
-                            rounded-xl
-                            transition-all
-                            cursor-pointer
+                            max-h-44
+                            max-w-[90%]
+
+                            object-contain
+
+                            drop-shadow-xl
+                          "
+                        />
+                      ) : (
+                        <div
+                          className="
+                            w-28
+                            h-28
+
+                            sm:w-36
+                            sm:h-36
+
+                            rounded-3xl
+
+                            bg-[color-mix(in_srgb,var(--company-primary)_12%,transparent)]
+
                             flex
                             items-center
                             justify-center
-                            gap-2
                           "
                         >
-                          <BookOpen size={18} />
-                          Ver prévia
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3 text-blue-500 dark:text-blue-400">
-                          <BookOpen size={24} />
-
-                          <span className="text-gray-500 dark:text-gray-400 font-medium">
-                            {isClient ? "Acessar dispositivo" : "Ver cursos"}
-                          </span>
+                          <Cpu
+                            size={62}
+                            className="
+                              text-[var(--company-primary)]
+                            "
+                          />
                         </div>
+                      )}
+                    </div>
+                  </div>
 
-                        <button
-                          onClick={() => {
-                            if (isClient) {
-                              navigate(`/devices/${device.id}`);
-                              return;
-                            }
+                  {/* CONTEÚDO */}
+                  <div
+                    className="
+                      min-w-0
+                      flex-1
 
-                            if (device.course_id) {
-                              navigate(`/courses/${device.course_id}`);
-                              return;
-                            }
+                      p-4
+                      sm:p-5
+                      lg:p-6
 
-                            navigate("/courses");
-                          }}
+                      flex
+                      flex-col
+                    "
+                  >
+                    <h2
+                      className="
+                        text-xl
+                        sm:text-2xl
+
+                        font-bold
+
+                        text-[#080E2F]
+                        dark:text-white
+
+                        leading-tight
+                        break-words
+                      "
+                    >
+                      {device.nome}
+                    </h2>
+
+                    <p
+                      className="
+                        mt-3
+
+                        text-sm
+                        sm:text-base
+
+                        text-gray-500
+                        dark:text-gray-400
+
+                        leading-relaxed
+                        break-words
+                      "
+                    >
+                      {device.descricao ||
+                        "Dispositivo disponível para treinamentos e suporte técnico da plataforma."}
+                    </p>
+
+                    {device.modelo && (
+                      <div
+                        className="
+                          mt-4
+
+                          inline-flex
+                          items-center
+
+                          gap-2
+
+                          w-fit
+                          max-w-full
+
+                          rounded-xl
+
+                          bg-[color-mix(in_srgb,var(--company-primary)_8%,transparent)]
+
+                          px-3
+                          py-2
+
+                          text-sm
+                          font-medium
+
+                          text-[var(--company-primary)]
+                        "
+                      >
+                        <span>
+                          Modelo:
+                        </span>
+
+                        <span
                           className="
-                            w-12
-                            h-12
-                            rounded-xl
-                            bg-blue-500/20
-                            text-blue-500
-                            dark:text-blue-400
-                            flex
-                            items-center
-                            justify-center
-                            hover:bg-blue-500
-                            hover:text-white
-                            transition-all
-                            cursor-pointer
+                            break-all
+                            font-semibold
                           "
                         >
-                          <ArrowRight size={24} />
-                        </button>
+                          {
+                            device.modelo
+                          }
+                        </span>
                       </div>
                     )}
+
+                    {/* AÇÃO */}
+                    <div
+                      className="
+                        mt-auto
+                        pt-5
+                      "
+                    >
+                      <div
+                        className="
+                          border-t
+                          border-gray-200
+                          dark:border-white/10
+
+                          pt-4
+                        "
+                      >
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleOpenDevice(
+                              device,
+                            )
+                          }
+                          className="
+                            w-full
+
+                            min-h-[48px]
+
+                            rounded-xl
+
+                            bg-gradient-to-r
+                            from-[var(--company-primary)]
+                            to-[var(--company-secondary)]
+
+                            px-4
+                            py-3
+
+                            flex
+                            items-center
+                            justify-between
+
+                            gap-3
+
+                            font-bold
+
+                            text-white
+
+                            shadow-xl
+
+                            transition-all
+
+                            hover:opacity-95
+                          "
+                        >
+                          <span>
+                            {isClient
+                              ? "Acessar dispositivo"
+                              : "Abrir dispositivo"}
+                          </span>
+
+                          <ArrowRight
+                            size={20}
+                            className="shrink-0"
+                          />
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-            ))}
+                </article>
+              ),
+            )}
           </div>
         )}
-      
-        <CoursePreviewModal
-        isOpen={previewModalOpen}
-        course={selectedCourse}
-        loading={loadingPreview}
-        requesting={requestingEnrollment}
-        enrollmentStatus={selectedEnrollmentStatus}
-        onClose={() => setPreviewModalOpen(false)}
-        onRequestEnrollment={handleRequestEnrollment}
-      />
 
-        {isAdmin && (
-          <DeviceModal
-            isOpen={modalOpen}
-            onClose={() => setModalOpen(false)}
-            onSuccess={getDevices}
-          />
-        )}
-      </div>
+      {/* MODAL ADMIN */}
+      {isAdmin && (
+        <DeviceModal
+          isOpen={
+            modalOpen
+          }
+          onClose={() =>
+            setModalOpen(false)
+          }
+          onSuccess={
+            getDevices
+          }
+        />
+      )}
     </main>
   );
 }

@@ -2,26 +2,34 @@ import type {
   LucideIcon,
 } from "lucide-react";
 
-import CompanyIconBox from "../../../../components/ui/CompanyIconBox";
+import PlatformIconBox from "./PlatformIconBox";
 
-interface QuickSummaryProps {
+interface PlatformQuickSummaryProps {
   icon: LucideIcon;
+
   title: string;
+
   value: number;
-  onClick: () => void;
+
+  onClick?: () => void;
 }
 
-export default function QuickSummary({
+export default function PlatformQuickSummary({
   icon,
   title,
   value,
   onClick,
-}: QuickSummaryProps) {
+}: PlatformQuickSummaryProps) {
   return (
     <button
       type="button"
-      onClick={onClick}
-      className="
+      onClick={
+        onClick
+      }
+      disabled={
+        !onClick
+      }
+      className={`
         w-full
         min-w-0
         min-h-[88px]
@@ -50,14 +58,23 @@ export default function QuickSummary({
         shadow-2xl
         dark:shadow-sm
 
-        hover:-translate-y-1
-        hover:shadow-[0_18px_40px_rgba(15,23,42,0.16)]
-
         transition-all
         duration-200
 
-        cursor-pointer
-      "
+        ${
+          onClick
+            ? `
+                cursor-pointer
+
+                hover:-translate-y-1
+
+                hover:shadow-[0_18px_40px_rgba(15,23,42,0.16)]
+              `
+            : `
+                cursor-default
+              `
+        }
+      `}
     >
       <div
         className="
@@ -68,7 +85,7 @@ export default function QuickSummary({
           gap-3
         "
       >
-        <CompanyIconBox
+        <PlatformIconBox
           icon={icon}
           size="sm"
           variant="gradient"

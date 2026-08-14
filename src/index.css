@@ -2,12 +2,29 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-body {
-  min-height: 100vh;
-  margin: 0;
+:root {
+  /*
+    Identidade padrão da plataforma.
+
+    Essas cores aparecem:
+    - antes do login
+    - quando a empresa não possui cores configuradas
+    - depois do logout
+  */
+  --company-primary: #3b82f6;
+  --company-secondary: #9333ea;
+  --company-accent: #2563eb;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
 }
 
 body {
+  min-height: 100vh;
+  margin: 0;
   background: #f8fafc;
 }
 
