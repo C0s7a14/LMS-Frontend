@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {useNavigate, useSearchParams,} from "react-router-dom";
-import toast from "react-hot-toast";
 import type { AdminTab } from "./types/adminDashboard.types";
 import { isValidAdminTab } from "./constants/adminDashboard.constants";
 

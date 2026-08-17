@@ -27,12 +27,13 @@ import {
 } from "../../services/certificateService";
 
 interface ValidatedCertificate {
+  found?: boolean;
   isValid?: boolean;
   validation_code: string;
   curso_titulo: string;
   student_name: string;
   emitido_em: string;
-  validade: string;
+  validade_ate: string;
   status_certificado:
     | "valido"
     | "expirado"
@@ -89,10 +90,7 @@ export default function CertificateDetails() {
             certificateId,
           );
 
-        if (
-          data.isValid === false &&
-          !data.validation_code
-        ) {
+        if (data.found === false) {
           setError(true);
           return;
         }
@@ -387,7 +385,7 @@ export default function CertificateDetails() {
 
   const formattedValidDate =
     formatCertificateDate(
-      certificate.validade,
+      certificate.validade_ate,
     );
 
   const formattedRevokedDate =

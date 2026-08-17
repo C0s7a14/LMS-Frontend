@@ -12,7 +12,6 @@ import {
   Bot,
   BotMessageSquare,
   Brain,
-  CheckCircle2,
   Cpu,
   FileText,
   Loader2,
