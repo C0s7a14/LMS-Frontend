@@ -46,6 +46,13 @@ export default function useAdminUsers({
     setUnlinkingClientDeviceId,
   ] = useState<number | null>(null);
 
+  const [
+  disconnectingUserId,
+  setDisconnectingUserId,
+] = useState<number | null>(
+  null
+);
+
   function getAuthConfig() {
     const token = localStorage.getItem("token");
 
@@ -229,6 +236,81 @@ export default function useAdminUsers({
     }
   }
 
+  async function handleDisconnectUser(
+  user: UserType
+) {
+  if (
+    user.vinculo_status ===
+    "desligado"
+  ) {
+    toast.error(
+      "Este usuário já está desligado."
+    );
+
+    return;
+  }
+
+  const confirmed =
+    window.confirm(
+      `Deseja realmente desligar "${user.name}" desta empresa?`
+    );
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    setDisconnectingUserId(
+      user.id
+    );
+
+    const config =
+      getAuthConfig();
+
+    if (!config) {
+      return;
+    }
+
+    await axios.delete(
+      `http://localhost:3333/users/${user.id}`,
+      config
+    );
+
+    toast.success(
+      "Usuário desligado da empresa."
+    );
+
+    await refreshDashboard();
+  } catch (error) {
+    console.log(error);
+
+    if (
+      axios.isAxiosError(
+        error
+      )
+    ) {
+      toast.error(
+        error.response
+          ?.data?.error ||
+          error.response
+            ?.data
+            ?.message ||
+          "Erro ao desligar usuário."
+      );
+
+      return;
+    }
+
+    toast.error(
+      "Erro inesperado ao desligar usuário."
+    );
+  } finally {
+    setDisconnectingUserId(
+      null
+    );
+  }
+}
+
   function closeClientDevicesModal() {
     setSelectedClientUser(null);
     setClientDevices([]);
@@ -248,6 +330,8 @@ export default function useAdminUsers({
     openClientDevicesModal,
     handleLinkDeviceToClient,
     handleUnlinkDeviceFromClient,
+    disconnectingUserId,
+    handleDisconnectUser,
     closeClientDevicesModal,
   };
 }

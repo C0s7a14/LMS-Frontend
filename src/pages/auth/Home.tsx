@@ -14,7 +14,6 @@ import {
   GraduationCap,
   Loader2,
   TrendingUp,
-  LibraryBig,
 } from "lucide-react";
 
 import StatsCard from "../../components/StatsCard";

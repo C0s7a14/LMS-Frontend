@@ -127,8 +127,8 @@ export default function useAdminCourses({
         return;
       }
 
-      await axios.patch(
-        `http://localhost:3333/admin/courses/${editingCourse.id}`,
+     await axios.put(
+  `http://localhost:3333/courses/${editingCourse.id}`,
         {
           titulo: editCourseForm.titulo,
           descricao: editCourseForm.descricao,

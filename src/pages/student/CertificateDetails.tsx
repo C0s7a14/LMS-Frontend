@@ -27,10 +27,19 @@ import {
 } from "../../services/certificateService";
 
 interface ValidatedCertificate {
+  found?: boolean;
+  isValid?: boolean;
   validation_code: string;
   curso_titulo: string;
   student_name: string;
   emitido_em: string;
+  validade_ate: string;
+  status_certificado:
+    | "valido"
+    | "expirado"
+    | "revogado";
+  revogado_em: string | null;
+  motivo_revogacao: string | null;
   workload: string;
 }
 
@@ -81,9 +90,7 @@ export default function CertificateDetails() {
             certificateId,
           );
 
-        if (
-          data.isValid === false
-        ) {
+        if (data.found === false) {
           setError(true);
           return;
         }
@@ -371,38 +378,65 @@ export default function CertificateDetails() {
     );
   }
 
-  const issueDate =
-    new Date(
+  const formattedIssueDate =
+    formatCertificateDate(
       certificate.emitido_em,
     );
 
-  const validDate =
-    new Date(
-      issueDate,
+  const formattedValidDate =
+    formatCertificateDate(
+      certificate.validade_ate,
     );
 
-  validDate.setFullYear(
-    validDate.getFullYear() +
-      1,
-  );
+  const formattedRevokedDate =
+    formatCertificateDate(
+      certificate.revogado_em,
+    );
 
-  const formattedIssueDate =
-    Number.isNaN(
-      issueDate.getTime(),
-    )
-      ? "Não informada"
-      : issueDate.toLocaleDateString(
-          "pt-BR",
-        );
+  const statusConfig =
+    certificate.status_certificado ===
+    "revogado"
+      ? {
+          title:
+            "CERTIFICADO REVOGADO",
+          description:
+            "Este certificado é autêntico, mas foi revogado pela instituição emissora e não possui mais validade.",
+          bannerClass:
+            "bg-red-600 dark:bg-red-700",
+          descriptionClass:
+            "text-red-50",
+          icon: ShieldAlert,
+          tone: "danger" as const,
+        }
+      : certificate.status_certificado ===
+          "expirado"
+        ? {
+            title:
+              "CERTIFICADO EXPIRADO",
+            description:
+              "Este certificado é autêntico, mas seu período de validade já terminou. Ele permanece disponível como histórico.",
+            bannerClass:
+              "bg-amber-500 dark:bg-amber-600",
+            descriptionClass:
+              "text-amber-50",
+            icon: Clock3,
+            tone: "warning" as const,
+          }
+        : {
+            title:
+              "CERTIFICADO VÁLIDO E AUTÊNTICO",
+            description:
+              "Este documento foi verificado eletronicamente e consta como válido no sistema da instituição emissora.",
+            bannerClass:
+              "bg-green-600 dark:bg-green-700",
+            descriptionClass:
+              "text-green-50",
+            icon: BadgeCheck,
+            tone: "success" as const,
+          };
 
-  const formattedValidDate =
-    Number.isNaN(
-      validDate.getTime(),
-    )
-      ? "Não informada"
-      : validDate.toLocaleDateString(
-          "pt-BR",
-        );
+  const StatusIcon =
+    statusConfig.icon;
 
   return (
     <main
@@ -437,12 +471,9 @@ export default function CertificateDetails() {
       >
         {/* STATUS */}
         <section
-          className="
+          className={`
             rounded-2xl
             sm:rounded-3xl
-
-            bg-green-600
-            dark:bg-green-700
 
             p-5
             sm:p-6
@@ -462,7 +493,9 @@ export default function CertificateDetails() {
             text-white
 
             shadow-2xl
-          "
+
+            ${statusConfig.bannerClass}
+          `}
         >
           <div
             className="
@@ -476,7 +509,7 @@ export default function CertificateDetails() {
               shrink-0
             "
           >
-            <BadgeCheck
+            <StatusIcon
               size={38}
               className="
                 text-white
@@ -503,28 +536,23 @@ export default function CertificateDetails() {
                 tracking-wide
               "
             >
-              CERTIFICADO VÁLIDO E
-              AUTÊNTICO
+              {statusConfig.title}
             </h1>
 
             <p
-              className="
+              className={`
                 mt-2
 
                 text-sm
                 sm:text-base
                 lg:text-lg
 
-                text-green-50
-
                 leading-relaxed
-              "
+
+                ${statusConfig.descriptionClass}
+              `}
             >
-              Este documento foi
-              verificado eletronicamente
-              e consta como válido no
-              sistema da instituição
-              emissora.
+              {statusConfig.description}
             </p>
           </div>
         </section>
@@ -650,12 +678,46 @@ export default function CertificateDetails() {
 
               <CertificateDetailRow
                 icon={BadgeCheck}
-                label="Válido até"
+                label={
+                  certificate.status_certificado ===
+                  "revogado"
+                    ? "Validade original"
+                    : "Válido até"
+                }
                 value={
                   formattedValidDate
                 }
-                success
+                tone={
+                  certificate.status_certificado ===
+                  "revogado"
+                    ? "default"
+                    : statusConfig.tone
+                }
               />
+
+              {certificate.status_certificado ===
+                "revogado" && (
+                <>
+                  <CertificateDetailRow
+                    icon={Calendar}
+                    label="Revogado em"
+                    value={
+                      formattedRevokedDate
+                    }
+                    tone="danger"
+                  />
+
+                  <CertificateDetailRow
+                    icon={ShieldAlert}
+                    label="Motivo da revogação"
+                    value={
+                      certificate.motivo_revogacao ||
+                      "Não informado"
+                    }
+                    tone="danger"
+                  />
+                </>
+              )}
 
               <CertificateDetailRow
                 icon={Clock3}
@@ -808,16 +870,23 @@ export default function CertificateDetails() {
             dark:shadow-sm
           "
         >
-          <BadgeCheck
+          <StatusIcon
             size={22}
-            className="
+            className={`
               mt-0.5
 
               shrink-0
 
-              text-green-600
-              dark:text-green-400
-            "
+              ${
+                certificate.status_certificado ===
+                "revogado"
+                  ? "text-red-600 dark:text-red-400"
+                  : certificate.status_certificado ===
+                      "expirado"
+                    ? "text-amber-600 dark:text-amber-400"
+                    : "text-green-600 dark:text-green-400"
+              }
+            `}
           />
 
           <p
@@ -831,11 +900,13 @@ export default function CertificateDetails() {
               leading-relaxed
             "
           >
-            A autenticidade deste
-            certificado foi confirmada
-            através do código de
-            validação registrado na
-            plataforma.
+            {certificate.status_certificado ===
+            "revogado"
+              ? "A autenticidade deste certificado foi confirmada, mas sua revogação está registrada na plataforma."
+              : certificate.status_certificado ===
+                  "expirado"
+                ? "A autenticidade deste certificado foi confirmada. O documento permanece registrado como histórico, embora sua validade tenha expirado."
+                : "A autenticidade deste certificado foi confirmada através do código de validação registrado na plataforma."}
           </p>
         </section>
       </div>
@@ -981,15 +1052,28 @@ interface CertificateDetailRowProps {
   label: string;
   value: string;
 
-  success?: boolean;
+  tone?:
+    | "default"
+    | "success"
+    | "warning"
+    | "danger";
 }
 
 function CertificateDetailRow({
   icon: Icon,
   label,
   value,
-  success = false,
+  tone = "default",
 }: CertificateDetailRowProps) {
+  const isSuccess =
+    tone === "success";
+
+  const isWarning =
+    tone === "warning";
+
+  const isDanger =
+    tone === "danger";
+
   return (
     <div
       className="
@@ -1034,10 +1118,18 @@ function CertificateDetailRow({
             shrink-0
 
             ${
-              success
+              isSuccess
                 ? `
                     bg-green-500/10
                   `
+                : isWarning
+                  ? `
+                      bg-amber-500/10
+                    `
+                  : isDanger
+                    ? `
+                        bg-red-500/10
+                      `
                 : `
                     bg-[color-mix(in_srgb,var(--company-primary)_8%,transparent)]
                   `
@@ -1047,11 +1139,21 @@ function CertificateDetailRow({
           <Icon
             size={20}
             className={
-              success
+              isSuccess
                 ? `
                     text-green-600
                     dark:text-green-400
                   `
+                : isWarning
+                  ? `
+                      text-amber-600
+                      dark:text-amber-400
+                    `
+                  : isDanger
+                    ? `
+                        text-red-600
+                        dark:text-red-400
+                      `
                 : `
                     text-[var(--company-primary)]
                   `
@@ -1078,11 +1180,21 @@ function CertificateDetailRow({
           break-words
 
           ${
-            success
+            isSuccess
               ? `
                   text-green-600
                   dark:text-green-400
                 `
+              : isWarning
+                ? `
+                    text-amber-600
+                    dark:text-amber-400
+                  `
+                : isDanger
+                  ? `
+                      text-red-600
+                      dark:text-red-400
+                    `
               : `
                   text-[#080E2F]
                   dark:text-white
@@ -1094,4 +1206,38 @@ function CertificateDetailRow({
       </strong>
     </div>
   );
+}
+
+function formatCertificateDate(
+  value: string | null,
+) {
+  if (!value) {
+    return "Não informada";
+  }
+
+  const dateOnlyMatch =
+    /^(\d{4})-(\d{2})-(\d{2})$/.exec(
+      value,
+    );
+
+  if (dateOnlyMatch) {
+    const [
+      ,
+      year,
+      month,
+      day,
+    ] = dateOnlyMatch;
+
+    return `${day}/${month}/${year}`;
+  }
+
+  const date = new Date(value);
+
+  return Number.isNaN(
+    date.getTime(),
+  )
+    ? "Não informada"
+    : date.toLocaleDateString(
+        "pt-BR",
+      );
 }

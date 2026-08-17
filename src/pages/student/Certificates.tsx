@@ -45,6 +45,14 @@ interface CertificateType {
   conclusionDate: string;
   validUntil: string;
 
+  status:
+    | "valido"
+    | "expirado"
+    | "revogado";
+
+  revokedAt: string | null;
+  revocationReason: string | null;
+
   score: number | null;
 
   workload: string;
@@ -63,7 +71,19 @@ interface CertificateApiType {
   curso_titulo?: string;
   curso_id?: number | string;
 
-  emitido_em?: string;
+  emitido_em?: string | null;
+  validade_ate?: string | null;
+
+  status_certificado?:
+    | "valido"
+    | "expirado"
+    | "revogado";
+
+  revogado_em?: string | null;
+
+  motivo_revogacao?:
+    | string
+    | null;
 
   nota_final?:
     | number
@@ -79,6 +99,29 @@ function getUserFromStorage() {
   return JSON.parse(
     localStorage.getItem("user") ||
       "{}",
+  );
+}
+
+function formatApiDate(
+  date?: string | null,
+) {
+  if (!date) {
+    return "Não informada";
+  }
+
+  const parsedDate =
+    new Date(date);
+
+  if (
+    Number.isNaN(
+      parsedDate.getTime(),
+    )
+  ) {
+    return "Não informada";
+  }
+
+  return parsedDate.toLocaleDateString(
+    "pt-BR",
   );
 }
 
@@ -151,23 +194,6 @@ export default function Certificates() {
             (
               cert,
             ) => {
-              const issueDate =
-                cert.emitido_em
-                  ? new Date(
-                      cert.emitido_em,
-                    )
-                  : new Date();
-
-              const validDate =
-                new Date(
-                  issueDate,
-                );
-
-              validDate.setFullYear(
-                validDate.getFullYear() +
-                  1,
-              );
-
               const parsedScore =
                 Number(
                   cert.nota_final,
@@ -200,14 +226,29 @@ export default function Certificates() {
                   }`,
 
                 conclusionDate:
-                  issueDate.toLocaleDateString(
-                    "pt-BR",
+                  formatApiDate(
+                    cert.emitido_em,
                   ),
 
                 validUntil:
-                  validDate.toLocaleDateString(
-                    "pt-BR",
+                  formatApiDate(
+                    cert.validade_ate,
                   ),
+
+                status:
+                  cert.status_certificado ||
+                  "valido",
+
+                revokedAt:
+                  cert.revogado_em
+                    ? formatApiDate(
+                        cert.revogado_em,
+                      )
+                    : null,
+
+                revocationReason:
+                  cert.motivo_revogacao ||
+                  null,
 
                 score,
 
@@ -245,7 +286,20 @@ export default function Certificates() {
   async function handleDownload(
     dbId: number,
     title: string,
+    status:
+      CertificateType["status"],
   ) {
+    if (
+      status ===
+      "revogado"
+    ) {
+      alert(
+        "Este certificado foi revogado e não pode mais ser baixado.",
+      );
+
+      return;
+    }
+
     try {
       const blob =
         await downloadCertificatePdf(
@@ -758,7 +812,9 @@ export default function Certificates() {
                 }
               `}
             >
-              <List size={23} />
+              <List
+                size={23}
+              />
             </button>
           </div>
         </div>
@@ -952,7 +1008,6 @@ export default function Certificates() {
               size={32}
               className="
                 mx-auto
-
                 text-[var(--company-primary)]
               "
             />
@@ -1108,31 +1163,50 @@ export default function Certificates() {
                   </h3>
                 </div>
 
-                <span
+                <div
                   className="
-                    w-fit
+                    flex
+                    flex-col
+
+                    items-start
+                    sm:items-end
+
+                    gap-2
+
                     shrink-0
-
-                    rounded-2xl
-
-                    bg-green-500/15
-
-                    px-4
-                    py-2
-
-                    text-sm
-                    font-semibold
-
-                    text-green-600
-                    dark:text-green-400
                   "
                 >
-                  Nota:{" "}
-                  {featuredCertificate.score ===
-                  null
-                    ? "Não informada"
-                    : `${featuredCertificate.score}%`}
-                </span>
+                  <span
+                    className="
+                      w-fit
+
+                      rounded-2xl
+
+                      bg-green-500/15
+
+                      px-4
+                      py-2
+
+                      text-sm
+                      font-semibold
+
+                      text-green-600
+                      dark:text-green-400
+                    "
+                  >
+                    Nota:{" "}
+                    {featuredCertificate.score ===
+                    null
+                      ? "Não informada"
+                      : `${featuredCertificate.score}%`}
+                  </span>
+
+                  <CertificateStatusBadge
+                    status={
+                      featuredCertificate.status
+                    }
+                  />
+                </div>
               </div>
 
               <div
@@ -1171,14 +1245,91 @@ export default function Certificates() {
                 />
 
                 <InfoItem
-                  icon={
-                    ShieldCheck
+                  icon={ShieldCheck}
+                  title="Validade"
+                  value={
+                    featuredCertificate.status ===
+                    "revogado"
+                      ? "Certificado revogado"
+                      : featuredCertificate.status ===
+                          "expirado"
+                        ? `Expirou em ${featuredCertificate.validUntil}`
+                        : `Válido até ${featuredCertificate.validUntil}`
                   }
-                  title="Validade: 1 ano"
-                  value={`Válido até ${featuredCertificate.validUntil}`}
-                  success
+                  success={
+                    featuredCertificate.status ===
+                    "valido"
+                  }
                 />
               </div>
+
+              {featuredCertificate.status ===
+                "revogado" && (
+                <div
+                  className="
+                    mt-4
+
+                    rounded-2xl
+
+                    border
+                    border-red-500/15
+
+                    bg-red-500/10
+
+                    p-4
+                  "
+                >
+                  <p
+                    className="
+                      text-sm
+                      font-semibold
+
+                      text-red-600
+                      dark:text-red-400
+                    "
+                  >
+                    Certificado revogado
+                  </p>
+
+                  {featuredCertificate.revokedAt && (
+                    <p
+                      className="
+                        mt-1
+
+                        text-sm
+
+                        text-red-600
+                        dark:text-red-300
+                      "
+                    >
+                      Revogado em{" "}
+                      {
+                        featuredCertificate.revokedAt
+                      }
+                    </p>
+                  )}
+
+                  {featuredCertificate.revocationReason && (
+                    <p
+                      className="
+                        mt-2
+
+                        text-sm
+
+                        text-red-600
+                        dark:text-red-300
+
+                        break-words
+                      "
+                    >
+                      Motivo:{" "}
+                      {
+                        featuredCertificate.revocationReason
+                      }
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div
                 className="
@@ -1240,28 +1391,28 @@ export default function Certificates() {
 
                 <button
                   type="button"
+                  disabled={
+                    featuredCertificate.status ===
+                    "revogado"
+                  }
                   onClick={() =>
                     void handleDownload(
                       featuredCertificate.dbId,
                       featuredCertificate.title,
+                      featuredCertificate.status,
                     )
                   }
-                  className="
+                  className={`
                     min-h-[50px]
 
                     rounded-2xl
 
                     border
-                    border-[color-mix(in_srgb,var(--company-primary)_35%,transparent)]
-
-                    bg-[color-mix(in_srgb,var(--company-primary)_5%,transparent)]
 
                     px-4
                     py-3
 
                     font-semibold
-
-                    text-[var(--company-primary)]
 
                     flex
                     items-center
@@ -1274,14 +1425,41 @@ export default function Certificates() {
 
                     transition-all
 
-                    hover:bg-[color-mix(in_srgb,var(--company-primary)_10%,transparent)]
-                  "
+                    ${
+                      featuredCertificate.status ===
+                      "revogado"
+                        ? `
+                            border-gray-200
+                            dark:border-white/10
+
+                            bg-gray-100
+                            dark:bg-white/5
+
+                            text-gray-400
+                            dark:text-gray-600
+
+                            cursor-not-allowed
+                          `
+                        : `
+                            border-[color-mix(in_srgb,var(--company-primary)_35%,transparent)]
+
+                            bg-[color-mix(in_srgb,var(--company-primary)_5%,transparent)]
+
+                            text-[var(--company-primary)]
+
+                            hover:bg-[color-mix(in_srgb,var(--company-primary)_10%,transparent)]
+                          `
+                    }
+                  `}
                 >
                   <Download
                     size={21}
                   />
 
-                  Baixar PDF
+                  {featuredCertificate.status ===
+                  "revogado"
+                    ? "Indisponível"
+                    : "Baixar PDF"}
                 </button>
 
                 <a
@@ -1509,36 +1687,99 @@ export default function Certificates() {
                               icon={
                                 ShieldCheck
                               }
-                              title="Validade: 1 ano"
-                              value={`Válido até ${certificate.validUntil}`}
-                              success
+                              title="Validade"
+                              value={
+                                certificate.status ===
+                                "revogado"
+                                  ? "Certificado revogado"
+                                  : certificate.status ===
+                                      "expirado"
+                                    ? `Expirou em ${certificate.validUntil}`
+                                    : `Válido até ${certificate.validUntil}`
+                              }
+                              success={
+                                certificate.status ===
+                                "valido"
+                              }
                             />
                           </div>
                         </div>
                       </div>
 
-                      <span
+                      <CertificateStatusBadge
+                        status={
+                          certificate.status
+                        }
+                      />
+                    </div>
+
+                    {certificate.status ===
+                      "revogado" && (
+                      <div
                         className="
-                          w-fit
-                          shrink-0
+                          mt-5
 
                           rounded-2xl
 
-                          bg-green-500/15
+                          border
+                          border-red-500/15
 
-                          px-4
-                          py-2
+                          bg-red-500/10
 
-                          text-sm
-                          font-semibold
-
-                          text-green-600
-                          dark:text-green-400
+                          p-4
                         "
                       >
-                        Emitido
-                      </span>
-                    </div>
+                        <p
+                          className="
+                            text-sm
+                            font-semibold
+
+                            text-red-600
+                            dark:text-red-400
+                          "
+                        >
+                          Certificado revogado
+                        </p>
+
+                        {certificate.revokedAt && (
+                          <p
+                            className="
+                              mt-1
+
+                              text-sm
+
+                              text-red-600
+                              dark:text-red-300
+                            "
+                          >
+                            Revogado em{" "}
+                            {
+                              certificate.revokedAt
+                            }
+                          </p>
+                        )}
+
+                        {certificate.revocationReason && (
+                          <p
+                            className="
+                              mt-2
+
+                              text-sm
+
+                              text-red-600
+                              dark:text-red-300
+
+                              break-words
+                            "
+                          >
+                            Motivo:{" "}
+                            {
+                              certificate.revocationReason
+                            }
+                          </p>
+                        )}
+                      </div>
+                    )}
 
                     <div
                       className="
@@ -1601,28 +1842,28 @@ export default function Certificates() {
 
                       <button
                         type="button"
+                        disabled={
+                          certificate.status ===
+                          "revogado"
+                        }
                         onClick={() =>
                           void handleDownload(
                             certificate.dbId,
                             certificate.title,
+                            certificate.status,
                           )
                         }
-                        className="
+                        className={`
                           min-h-[46px]
 
                           rounded-2xl
 
                           border
-                          border-[color-mix(in_srgb,var(--company-primary)_30%,transparent)]
-
-                          bg-[color-mix(in_srgb,var(--company-primary)_5%,transparent)]
 
                           px-4
                           py-3
 
                           font-semibold
-
-                          text-[var(--company-primary)]
 
                           flex
                           items-center
@@ -1632,14 +1873,41 @@ export default function Certificates() {
 
                           transition-all
 
-                          hover:bg-[color-mix(in_srgb,var(--company-primary)_10%,transparent)]
-                        "
+                          ${
+                            certificate.status ===
+                            "revogado"
+                              ? `
+                                  border-gray-200
+                                  dark:border-white/10
+
+                                  bg-gray-100
+                                  dark:bg-white/5
+
+                                  text-gray-400
+                                  dark:text-gray-600
+
+                                  cursor-not-allowed
+                                `
+                              : `
+                                  border-[color-mix(in_srgb,var(--company-primary)_30%,transparent)]
+
+                                  bg-[color-mix(in_srgb,var(--company-primary)_5%,transparent)]
+
+                                  text-[var(--company-primary)]
+
+                                  hover:bg-[color-mix(in_srgb,var(--company-primary)_10%,transparent)]
+                                `
+                          }
+                        `}
                       >
                         <Download
                           size={20}
                         />
 
-                        Baixar
+                        {certificate.status ===
+                        "revogado"
+                          ? "Indisponível"
+                          : "Baixar"}
                       </button>
 
                       <a
@@ -1741,40 +2009,131 @@ export default function Certificates() {
       )}
 
       <CertificateModal
-        isOpen={
-          isModalOpen
-        }
+        isOpen={isModalOpen}
         onClose={() =>
-          setIsModalOpen(
-            false,
-          )
+          setIsModalOpen(false)
         }
         certificateId={
-          selectedCert?.dbId ||
-          null
+          selectedCert?.dbId || null
         }
         certificateTitle={
-          selectedCert?.title ||
-          ""
+          selectedCert?.title || ""
         }
         studentName={
-          user?.name ||
-          "Aluno"
+          user?.name || "Aluno"
         }
         emitidoEm={
-          selectedCert?.conclusionDate ||
-          ""
+          selectedCert?.conclusionDate || ""
+        }
+        validUntil={
+          selectedCert?.validUntil || ""
+        }
+        status={
+          selectedCert?.status || "valido"
+        }
+        revokedAt={
+          selectedCert?.revokedAt || null
+        }
+        revocationReason={
+          selectedCert?.revocationReason || null
         }
         validationCode={
-          selectedCert?.id ||
-          ""
+          selectedCert?.id || ""
         }
         workload={
-          selectedCert?.workload ||
-          ""
+          selectedCert?.workload || ""
         }
       />
     </main>
+  );
+}
+
+function CertificateStatusBadge({
+  status,
+}: {
+  status:
+    CertificateType["status"];
+}) {
+  if (
+    status ===
+    "revogado"
+  ) {
+    return (
+      <span
+        className="
+          w-fit
+          shrink-0
+
+          rounded-2xl
+
+          bg-red-500/15
+
+          px-4
+          py-2
+
+          text-sm
+          font-semibold
+
+          text-red-600
+          dark:text-red-400
+        "
+      >
+        Revogado
+      </span>
+    );
+  }
+
+  if (
+    status ===
+    "expirado"
+  ) {
+    return (
+      <span
+        className="
+          w-fit
+          shrink-0
+
+          rounded-2xl
+
+          bg-yellow-500/15
+
+          px-4
+          py-2
+
+          text-sm
+          font-semibold
+
+          text-yellow-600
+          dark:text-yellow-400
+        "
+      >
+        Expirado
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className="
+        w-fit
+        shrink-0
+
+        rounded-2xl
+
+        bg-green-500/15
+
+        px-4
+        py-2
+
+        text-sm
+        font-semibold
+
+        text-green-600
+        dark:text-green-400
+      "
+    >
+      Válido
+    </span>
   );
 }
 

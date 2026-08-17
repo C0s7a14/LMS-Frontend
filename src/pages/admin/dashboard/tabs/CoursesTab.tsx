@@ -50,6 +50,21 @@ interface CoursesTabProps {
   editCourse: (course: CourseType) => void;
 }
 
+interface LinkedCourseDeviceType {
+  curso_id: number;
+  curso_titulo: string;
+
+  dispositivo_id: number;
+  empresa_id: number;
+
+  dispositivo_nome: string;
+  modelo?: string | null;
+  tipo?: string | null;
+  descricao?: string | null;
+  imagem_url?: string | null;
+  criado_em?: string;
+}
+
 export default function CoursesTab({
   courses,
   search,
@@ -89,6 +104,23 @@ export default function CoursesTab({
     setLinkingCourseDevice,
   ] = useState(false);
 
+  const [
+  linkedCourseDevices,
+  setLinkedCourseDevices,
+] = useState<LinkedCourseDeviceType[]>(
+  [],
+);
+
+const [
+  loadingCourseDevices,
+  setLoadingCourseDevices,
+] = useState(false);
+
+const [
+  unlinkingCourseDeviceId,
+  setUnlinkingCourseDeviceId,
+] = useState<number | null>(null);
+
   const term =
     search
       .toLowerCase()
@@ -111,6 +143,67 @@ export default function CoursesTab({
           .includes(term)
       );
     });
+
+
+    async function loadCourseDevices(
+  courseId: number,
+) {
+  try {
+    setLoadingCourseDevices(true);
+
+    const token =
+      localStorage.getItem("token");
+
+    if (!token) {
+      toast.error(
+        "Sessão expirada. Faça login novamente.",
+      );
+
+      return;
+    }
+
+    const response =
+      await axios.get<
+        LinkedCourseDeviceType[]
+      >(
+        `http://localhost:3333/devices/courses/${courseId}/devices`,
+        {
+          headers: {
+            Authorization:
+              `Bearer ${token}`,
+          },
+        },
+      );
+
+    setLinkedCourseDevices(
+      response.data,
+    );
+  } catch (error) {
+    console.log(error);
+
+    toast.error(
+      "Erro ao carregar dispositivos vinculados.",
+    );
+  } finally {
+    setLoadingCourseDevices(false);
+  }
+}
+
+async function openCourseDeviceManager(
+  course: CourseType,
+) {
+  setSelectedCourseForDevice(
+    course,
+  );
+
+  setSelectedCourseDeviceId("");
+
+  setLinkedCourseDevices([]);
+
+  await loadCourseDevices(
+    course.id,
+  );
+}
 
   async function handleLinkDeviceToCourse() {
     try {
@@ -152,13 +245,11 @@ export default function CoursesTab({
         "Dispositivo vinculado ao curso.",
       );
 
-      setSelectedCourseForDevice(
-        null,
-      );
-
       setSelectedCourseDeviceId("");
 
-      window.location.reload();
+    await loadCourseDevices(
+      selectedCourseForDevice.id,
+    );
     } catch (error) {
       console.log(error);
 
@@ -182,6 +273,78 @@ export default function CoursesTab({
       );
     }
   }
+
+  async function handleUnlinkDeviceFromCourse(
+  deviceId: number,
+) {
+  try {
+    if (!selectedCourseForDevice) {
+      return;
+    }
+
+    const confirmUnlink =
+      window.confirm(
+        "Deseja remover este dispositivo do curso?",
+      );
+
+    if (!confirmUnlink) {
+      return;
+    }
+
+    const token =
+      localStorage.getItem("token");
+
+    if (!token) {
+      toast.error(
+        "Sessão expirada. Faça login novamente.",
+      );
+
+      return;
+    }
+
+    setUnlinkingCourseDeviceId(
+      deviceId,
+    );
+
+    await axios.delete(
+      `http://localhost:3333/devices/courses/${selectedCourseForDevice.id}/devices/${deviceId}`,
+      {
+        headers: {
+          Authorization:
+            `Bearer ${token}`,
+        },
+      },
+    );
+
+    toast.success(
+      "Dispositivo removido do curso.",
+    );
+
+    await loadCourseDevices(
+      selectedCourseForDevice.id,
+    );
+  } catch (error) {
+    console.log(error);
+
+    if (axios.isAxiosError(error)) {
+      toast.error(
+        error.response?.data?.error ||
+          error.response?.data?.message ||
+          "Erro ao remover dispositivo do curso.",
+      );
+
+      return;
+    }
+
+    toast.error(
+      "Erro inesperado ao remover dispositivo do curso.",
+    );
+  } finally {
+    setUnlinkingCourseDeviceId(
+      null,
+    );
+  }
+}
 
   function getCourseStatus(
     course: CourseType,
@@ -292,6 +455,16 @@ export default function CoursesTab({
       hover:bg-[color-mix(in_srgb,var(--company-primary)_18%,transparent)]
     `;
   }
+
+  const availableCourseDevices =
+  devices.filter(
+    (device) =>
+      !linkedCourseDevices.some(
+        (linkedDevice) =>
+          linkedDevice.dispositivo_id ===
+          device.id,
+      ),
+  );
 
   return (
     <div
@@ -1112,17 +1285,13 @@ export default function CoursesTab({
               {/* Dispositivo */}
               <button
                 type="button"
-                onClick={() => {
-                  setSelectedCourseForDevice(
+               onClick={() => {
+                  void openCourseDeviceManager(
                     selectedCourseActions,
                   );
 
                   setSelectedCourseActions(
                     null,
-                  );
-
-                  setSelectedCourseDeviceId(
-                    "",
                   );
                 }}
                 className="
@@ -1161,7 +1330,7 @@ export default function CoursesTab({
                 >
                   <Cpu size={18} />
 
-                  Vincular dispositivo
+                  Gerenciar dispositivos
                 </span>
 
                 <ArrowRight
@@ -1555,8 +1724,249 @@ export default function CoursesTab({
                     mb-2
                   "
                 >
-                  Dispositivo relacionado ao curso
+                  Adicionar dispositivo
                 </label>
+
+
+                <div>
+  <div
+    className="
+      flex
+      items-center
+      justify-between
+      gap-3
+
+      mb-3
+    "
+  >
+    <h3
+      className="
+        text-sm
+        font-semibold
+
+        text-[#080E2F]
+        dark:text-white
+      "
+    >
+      Dispositivos vinculados
+    </h3>
+
+    {!loadingCourseDevices && (
+      <span
+        className="
+          rounded-xl
+
+          bg-[color-mix(in_srgb,var(--company-primary)_10%,transparent)]
+
+          px-3
+          py-1
+
+          text-xs
+          font-semibold
+
+          text-[var(--company-primary)]
+        "
+      >
+        {linkedCourseDevices.length}
+      </span>
+    )}
+  </div>
+
+  {loadingCourseDevices ? (
+    <div
+      className="
+        flex
+        items-center
+        justify-center
+        gap-2
+
+        rounded-2xl
+
+        border
+        border-gray-200
+        dark:border-white/10
+
+        bg-gray-50
+        dark:bg-[#0d2238]
+
+        p-5
+
+        text-sm
+        text-gray-500
+        dark:text-gray-400
+      "
+    >
+      <Loader2
+        size={18}
+        className="animate-spin"
+      />
+
+      Carregando dispositivos...
+    </div>
+  ) : linkedCourseDevices.length >
+    0 ? (
+    <div className="space-y-2">
+      {linkedCourseDevices.map(
+        (device) => (
+          <div
+            key={
+              device.dispositivo_id
+            }
+            className="
+              flex
+              items-center
+              justify-between
+
+              gap-3
+
+              rounded-2xl
+
+              border
+              border-gray-200
+              dark:border-white/10
+
+              bg-gray-50
+              dark:bg-[#0d2238]
+
+              p-3
+            "
+          >
+            <div
+              className="
+                flex
+                items-center
+                gap-3
+
+                min-w-0
+              "
+            >
+              <div
+                className="
+                  w-10
+                  h-10
+
+                  rounded-xl
+
+                  bg-[color-mix(in_srgb,var(--company-primary)_10%,transparent)]
+
+                  text-[var(--company-primary)]
+
+                  flex
+                  items-center
+                  justify-center
+
+                  shrink-0
+                "
+              >
+                <Cpu size={18} />
+              </div>
+
+              <div className="min-w-0">
+                <p
+                  className="
+                    font-semibold
+
+                    text-[#080E2F]
+                    dark:text-white
+
+                    truncate
+                  "
+                >
+                  {
+                    device.dispositivo_nome
+                  }
+                </p>
+
+                <p
+                  className="
+                    text-xs
+
+                    text-gray-500
+                    dark:text-gray-400
+
+                    truncate
+                  "
+                >
+                  {device.modelo ||
+                    device.tipo ||
+                    "Dispositivo"}
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() =>
+                handleUnlinkDeviceFromCourse(
+                  device.dispositivo_id,
+                )
+              }
+              disabled={
+                unlinkingCourseDeviceId ===
+                device.dispositivo_id
+              }
+              className="
+                rounded-xl
+
+                bg-red-500/10
+
+                px-3
+                py-2
+
+                text-xs
+                font-semibold
+                text-red-500
+
+                hover:bg-red-500/20
+
+                transition-all
+
+                disabled:opacity-60
+                disabled:cursor-not-allowed
+
+                shrink-0
+              "
+            >
+              {unlinkingCourseDeviceId ===
+              device.dispositivo_id ? (
+                <Loader2
+                  size={16}
+                  className="animate-spin"
+                />
+              ) : (
+                "Remover"
+              )}
+            </button>
+                </div>
+              ),
+            )}
+          </div>
+        ) : (
+          <div
+            className="
+              rounded-2xl
+
+              border
+              border-gray-200
+              dark:border-white/10
+
+              bg-gray-50
+              dark:bg-[#0d2238]
+
+              p-4
+
+              text-sm
+              text-gray-500
+              dark:text-gray-400
+            "
+          >
+            Nenhum dispositivo vinculado a
+            este curso.
+          </div>
+        )}
+      </div>
+
+
 
                 <select
                   id="course-device"
@@ -1604,7 +2014,7 @@ export default function CoursesTab({
                     Selecione um dispositivo
                   </option>
 
-                  {devices.map(
+                 {availableCourseDevices.map(
                     (device) => (
                       <option
                         key={device.id}
@@ -1754,7 +2164,7 @@ export default function CoursesTab({
                     <>
                       <Cpu size={18} />
 
-                      Vincular dispositivo
+                      Adicionar dispositivo
                     </>
                   )}
                 </button>
