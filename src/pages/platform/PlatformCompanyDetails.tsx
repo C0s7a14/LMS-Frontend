@@ -30,6 +30,7 @@ import {
 import PlatformIconBox from "../../components/platform/PlatformIconBox";
 import PlatformEditCompanyModal from "./components/PlatformEditCompanyModal";
 import PlatformCompanyBranding from "./components/PlatformCompanyBranding";
+import PlatformCompanyAdmins from "./components/PlatformCompanyAdmins";
 
 import StatCard from "../admin/dashboard/components/StatCard";
 import StatsGrid from "../admin/dashboard/components/StatsGrid";
@@ -864,7 +865,17 @@ export default function PlatformCompanyDetails() {
           void loadCompany()
         }
       /> 
-      
+
+
+      <PlatformCompanyAdmins
+      companyId={
+        company.id
+      }
+      onUpdated={() =>
+        void loadCompany()
+      }
+    />
+   
        
       <PlatformEditCompanyModal
         open={

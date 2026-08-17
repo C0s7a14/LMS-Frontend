@@ -32,6 +32,10 @@ interface DeviceType {
   tipo?: string;
 }
 
+interface LinkedCourseDeviceType {
+  dispositivo_id: number;
+}
+
 interface GeneratedAulaType {
   titulo: string;
   descricao?: string;
@@ -211,38 +215,41 @@ function removeComplementarySourceUrl(index: number) {
   }
 
   async function createBaseCourseIfNeeded() {
-    if (createdCourseId) {
-      return createdCourseId;
-    }
+  if (createdCourseId) {
+    return createdCourseId;
+  }
 
-    const user = JSON.parse(
-      localStorage.getItem("user") || "{}"
+  const response =
+    await api.post(
+      "/courses",
+      {
+        titulo:
+          getInitialCourseTitle(),
+
+        descricao:
+          "Curso criado com IA a partir de manual técnico.",
+
+        thumbnail,
+      }
     );
 
-    if (!user?.id) {
-      throw new Error("Usuário logado não encontrado");
-    }
+  const courseId =
+    response.data.courseId ||
+    response.data.cursoId ||
+    response.data.id;
 
-    const response = await api.post("/courses", {
-      titulo: getInitialCourseTitle(),
-      descricao: "Curso criado com IA a partir de manual técnico.",
-      thumbnail,
-      criado_por: user.id,
-    });
-
-    const courseId =
-      response.data.courseId ||
-      response.data.cursoId ||
-      response.data.id;
-
-    if (!courseId) {
-      throw new Error("Curso criado, mas o ID não foi retornado");
-    }
-
-    setCreatedCourseId(courseId);
-
-    return courseId;
+  if (!courseId) {
+    throw new Error(
+      "Curso criado, mas o ID não foi retornado"
+    );
   }
+
+  setCreatedCourseId(
+    courseId
+  );
+
+  return courseId;
+}
 
   async function handleGenerateCourseWithAi() {
 
@@ -322,6 +329,61 @@ function removeComplementarySourceUrl(index: number) {
   }
 
   
+async function syncCourseDevices(
+  courseId: number
+) {
+  const response =
+    await api.get<LinkedCourseDeviceType[]>(
+      `/devices/courses/${courseId}/devices`
+    );
+
+  const linkedDeviceIds =
+    response.data.map(
+      (device) =>
+        device.dispositivo_id
+    );
+
+  const devicesToAttach =
+    selectedDevices.filter(
+      (deviceId) =>
+        !linkedDeviceIds.includes(
+          deviceId
+        )
+    );
+
+  const devicesToDetach =
+    linkedDeviceIds.filter(
+      (deviceId) =>
+        !selectedDevices.includes(
+          deviceId
+        )
+    );
+
+  if (devicesToAttach.length > 0) {
+    await Promise.all(
+      devicesToAttach.map(
+        (deviceId) =>
+          api.post(
+            `/devices/courses/${courseId}/devices/${deviceId}`
+          )
+      )
+    );
+  }
+
+  if (devicesToDetach.length > 0) {
+    await Promise.all(
+      devicesToDetach.map(
+        (deviceId) =>
+          api.delete(
+            `/devices/courses/${courseId}/devices/${deviceId}`
+          )
+      )
+    );
+  }
+}
+
+
+
 async function handlePublishCourse() {
   if (!createdCourseId) {
     toast.error("Gere o curso com IA antes de publicar");
@@ -349,16 +411,11 @@ async function handlePublishCourse() {
       setCourseSavedAsDraft(true);
     }
 
-    // Dispositivos são opcionais
-    if (selectedDevices.length > 0) {
-      await Promise.all(
-        selectedDevices.map((deviceId) =>
-          api.post(
-            `/devices/courses/${createdCourseId}/devices/${deviceId}`
-          )
-        )
-      );
-    }
+    // Sincroniza os dispositivos relacionados ao curso.
+    // Nenhum dispositivo selecionado = treinamento geral.
+    await syncCourseDevices(
+      createdCourseId
+    );
 
     // Gera avaliações antes de publicar o curso
     if (generateAssessments) {
@@ -421,97 +478,119 @@ async function handlePublishCourse() {
   }
 
   function updateGeneratedCourseField(
-    field: keyof GeneratedCourseType,
-    value: string
-  ) {
-    if (!generatedCourse) {
-      return;
-    }
-
-    setGeneratedCourse({
-      ...generatedCourse,
-      [field]: value,
-    });
+  field: keyof GeneratedCourseType,
+  value: string
+) {
+  if (!generatedCourse) {
+    return;
   }
 
-  function updateGeneratedModulo(
-    moduloIndex: number,
-    field: keyof GeneratedModuloType,
-    value: string
-  ) {
-    if (!generatedCourse) {
-      return;
-    }
+  setGeneratedCourse({
+    ...generatedCourse,
+    [field]: value,
+  });
 
-    const updatedModules = [...generatedCourse.modulos];
+  setCourseSavedAsDraft(false);
+}
 
-    updatedModules[moduloIndex] = {
-      ...updatedModules[moduloIndex],
-      [field]: value,
-    };
-
-    setGeneratedCourse({
-      ...generatedCourse,
-      modulos: updatedModules,
-    });
+function updateGeneratedModulo(
+  moduloIndex: number,
+  field: keyof GeneratedModuloType,
+  value: string
+) {
+  if (!generatedCourse) {
+    return;
   }
+
+  const updatedModules = [
+    ...generatedCourse.modulos,
+  ];
+
+  updatedModules[moduloIndex] = {
+    ...updatedModules[moduloIndex],
+    [field]: value,
+  };
+
+  setGeneratedCourse({
+    ...generatedCourse,
+    modulos: updatedModules,
+  });
+
+  setCourseSavedAsDraft(false);
+}
 
   function updateGeneratedAula(
-    moduloIndex: number,
-    aulaIndex: number,
-    field: keyof GeneratedAulaType,
-    value: string
-  ) {
-    if (!generatedCourse) {
-      return;
-    }
-
-    const updatedModules = [...generatedCourse.modulos];
-
-    const updatedAulas = [...updatedModules[moduloIndex].aulas];
-
-    updatedAulas[aulaIndex] = {
-      ...updatedAulas[aulaIndex],
-      [field]:
-        field === "duracao" || field === "ordem"
-          ? Number(value)
-          : value,
-    };
-
-    updatedModules[moduloIndex] = {
-      ...updatedModules[moduloIndex],
-      aulas: updatedAulas,
-    };
-
-    setGeneratedCourse({
-      ...generatedCourse,
-      modulos: updatedModules,
-    });
+  moduloIndex: number,
+  aulaIndex: number,
+  field: keyof GeneratedAulaType,
+  value: string
+) {
+  if (!generatedCourse) {
+    return;
   }
+
+  const updatedModules = [
+    ...generatedCourse.modulos,
+  ];
+
+  const updatedAulas = [
+    ...updatedModules[
+      moduloIndex
+    ].aulas,
+  ];
+
+  updatedAulas[aulaIndex] = {
+    ...updatedAulas[aulaIndex],
+    [field]:
+      field === "duracao" ||
+      field === "ordem"
+        ? Number(value)
+        : value,
+  };
+
+  updatedModules[moduloIndex] = {
+    ...updatedModules[moduloIndex],
+    aulas: updatedAulas,
+  };
+
+  setGeneratedCourse({
+    ...generatedCourse,
+    modulos: updatedModules,
+  });
+
+  setCourseSavedAsDraft(false);
+}
 
   function removeGeneratedAula(
-    moduloIndex: number,
-    aulaIndex: number
-  ) {
-    if (!generatedCourse) {
-      return;
-    }
-
-    const updatedModules = [...generatedCourse.modulos];
-
-    updatedModules[moduloIndex] = {
-      ...updatedModules[moduloIndex],
-      aulas: updatedModules[moduloIndex].aulas.filter(
-        (_, index) => index !== aulaIndex
-      ),
-    };
-
-    setGeneratedCourse({
-      ...generatedCourse,
-      modulos: updatedModules,
-    });
+  moduloIndex: number,
+  aulaIndex: number
+) {
+  if (!generatedCourse) {
+    return;
   }
 
+  const updatedModules = [
+    ...generatedCourse.modulos,
+  ];
+
+  updatedModules[moduloIndex] = {
+    ...updatedModules[moduloIndex],
+    aulas:
+      updatedModules[
+        moduloIndex
+      ].aulas.filter(
+        (_, index) =>
+          index !== aulaIndex
+      ),
+  };
+
+  setGeneratedCourse({
+    ...generatedCourse,
+    modulos: updatedModules,
+  });
+
+  setCourseSavedAsDraft(false);
+}
   const totalGeneratedLessons =
     generatedCourse?.modulos.reduce(
       (total, modulo) => total + modulo.aulas.length,
@@ -962,7 +1041,7 @@ async function handlePublishCourse() {
                 value={baseTitle}
                 onChange={(e) => setBaseTitle(e.target.value)}
                 disabled={generating || publishing || !!generatedCourse}
-                placeholder="Ex: Treinamento Sirros S1"
+                placeholder="Ex: Treinamento de Instalação e Configuração"
                 className="bg-gray-50 dark:bg-[#0d2238] border border-gray-200 dark:border-white/10 text-[#080E2F] dark:text-white placeholder:text-gray-400 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 transition-all disabled:opacity-60"
               />
             </div>

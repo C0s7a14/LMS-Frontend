@@ -75,7 +75,7 @@ import ClientDeviceDetails from "../pages/client/ClientDeviceDetails";
 import CreateCourses from "../pages/admin/CreateCourse";
 import AdminDashboard from "../pages/admin/dashboard/AdminDashboard";
 import ManageCourseLessons from "../pages/admin/ManageCourseLessons";
-import Users from "../pages/admin/user";
+
 
 export default function AppRoutes() {
   return (
@@ -274,11 +274,15 @@ export default function AppRoutes() {
                 <Certificates />
               }
             />
-
-            <Route
-              path="/users"
-              element={<Users />}
-            />
+              <Route
+                path="/users"
+                element={
+                  <Navigate
+                    to="/Dashboard?tab=users"
+                    replace
+                  />
+                }
+              />
 
             <Route
               path="/courses/:courseId"

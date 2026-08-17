@@ -11,6 +11,7 @@ import {
 } from "react";
 
 import axios from "axios";
+import toast from "react-hot-toast";
 
 interface DeviceFormData {
   nome: string;
@@ -48,46 +49,94 @@ export default function DeviceModal({
   }
 
   async function handleSubmit(
-    event: FormEvent,
-  ) {
-    event.preventDefault();
+  event: FormEvent,
+) {
+  event.preventDefault();
 
-    if (!formData.nome.trim()) {
-      alert(
-        "O nome do dispositivo é obrigatório",
+  if (!formData.nome.trim()) {
+    toast.error(
+      "O nome do dispositivo é obrigatório.",
+    );
+
+    return;
+  }
+
+  const token =
+    localStorage.getItem("token");
+
+  if (!token) {
+    toast.error(
+      "Sessão expirada. Faça login novamente.",
+    );
+
+    return;
+  }
+
+  try {
+    setCreating(true);
+
+    await axios.post(
+      "http://localhost:3333/devices",
+      {
+        nome:
+          formData.nome.trim(),
+
+        modelo:
+          formData.modelo.trim(),
+
+        tipo:
+          formData.tipo.trim(),
+
+        descricao:
+          formData.descricao.trim(),
+
+        imagem_url:
+          formData.imagem_url.trim(),
+      },
+      {
+        headers: {
+          Authorization:
+            `Bearer ${token}`,
+        },
+      },
+    );
+
+    setFormData({
+      nome: "",
+      modelo: "",
+      tipo: "",
+      descricao: "",
+      imagem_url: "",
+    });
+
+    toast.success(
+      "Dispositivo cadastrado com sucesso.",
+    );
+
+    onSuccess();
+    onClose();
+  } catch (error) {
+    console.log(error);
+
+    if (
+      axios.isAxiosError(error)
+    ) {
+      toast.error(
+        error.response?.data?.error ||
+          error.response?.data?.message ||
+          "Erro ao cadastrar dispositivo.",
       );
 
       return;
     }
 
-    try {
-      setCreating(true);
-
-      await axios.post(
-        "http://localhost:3333/devices",
-        formData,
-      );
-
-      setFormData({
-        nome: "",
-        modelo: "",
-        tipo: "",
-        descricao: "",
-        imagem_url: "",
-      });
-
-      onSuccess();
-      onClose();
-    } catch (error) {
-      console.log(error);
-
-      alert(
-        "Erro ao cadastrar dispositivo",
-      );
-    } finally {
-      setCreating(false);
-    }
+    toast.error(
+      "Erro inesperado ao cadastrar dispositivo.",
+    );
+  } finally {
+    setCreating(false);
   }
+}
 
   return (
     <div

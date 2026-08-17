@@ -57,23 +57,35 @@ export default function AdminDashboard() {
     loadDashboardData,
   } = useAdminDashboard();
 
-      const {
-      updatingUserRoleId,
-      selectedClientUser,
-      clientDevices,
-      selectedClientDeviceId,
-      loadingClientDevices,
-      linkingClientDevice,
-      unlinkingClientDeviceId,
-      setSelectedClientDeviceId,
-      handleUpdateUserRole,
-      openClientDevicesModal,
-      handleLinkDeviceToClient,
-      handleUnlinkDeviceFromClient,
-      closeClientDevicesModal,
-    } = useAdminUsers({
-      refreshDashboard: loadDashboardData,
-    });
+  const {
+  updatingUserRoleId,
+
+  selectedClientUser,
+  clientDevices,
+  selectedClientDeviceId,
+
+  loadingClientDevices,
+  linkingClientDevice,
+  unlinkingClientDeviceId,
+
+  disconnectingUserId,
+
+  setSelectedClientDeviceId,
+
+  handleUpdateUserRole,
+
+  openClientDevicesModal,
+
+  handleLinkDeviceToClient,
+  handleUnlinkDeviceFromClient,
+
+  handleDisconnectUser,
+
+  closeClientDevicesModal,
+} = useAdminUsers({
+  refreshDashboard:
+    loadDashboardData,
+});
 
     const {
       editingDevice,
@@ -181,7 +193,7 @@ export default function AdminDashboard() {
     return {
       title: "Gerenciar Usuários",
       subtitle:
-        "Cadastre, acompanhe e administre os usuários da plataforma.",
+        "Cadastre, acompanhe e administre os usuários da empresa.",
       placeholder: "Buscar usuários...",
       button: "Novo Usuário",
     };
@@ -201,7 +213,7 @@ export default function AdminDashboard() {
     return {
       title: "Gerenciar Cursos",
       subtitle:
-        "Organize, publique e acompanhe os cursos disponíveis na plataforma.",
+        "Organize, publique e acompanhe os cursos disponíveis na empresa.",
       placeholder: "Buscar cursos...",
       button: "Novo Curso",
     };
@@ -211,7 +223,7 @@ export default function AdminDashboard() {
     return {
       title: "Gerenciar Certificados",
       subtitle:
-        "Acompanhe, baixe e gerencie os certificados emitidos pela plataforma.",
+        "Acompanhe, baixe e gerencie os certificados emitidos pela empresa.",
       placeholder: "",
       button: "",
     };
@@ -242,7 +254,7 @@ export default function AdminDashboard() {
     return {
       title: "Tokens & Recursos",
       subtitle:
-        "Monitore serviços, modelos, consumo e recursos de IA utilizados pela plataforma.",
+        "Monitore serviços, modelos, consumo e recursos de IA utilizados pela empresa.",
       placeholder: "",
       button: "",
     };
@@ -261,7 +273,7 @@ export default function AdminDashboard() {
   return {
     title: "Visão Geral Administrativa",
     subtitle:
-      "Acompanhe rapidamente os principais indicadores da plataforma.",
+      "Acompanhe rapidamente os principais indicadores da empresa.",
     placeholder: "",
     button: "Novo Usuário",
   };
@@ -297,16 +309,33 @@ export default function AdminDashboard() {
 }
   const header = getHeaderInfo();
 
-  const totalStudents = users.filter(
-    (user) => user.role === "student"
+  const activeUsers =
+  users.filter(
+    (user) =>
+      user.vinculo_status ===
+      "ativo"
+  );
+
+const totalStudents =
+  activeUsers.filter(
+    (user) =>
+      user.role ===
+      "student"
   ).length;
 
-  const totalClients = users.filter(
-    (user) => user.role === "client"
+const totalClients =
+  activeUsers.filter(
+    (user) =>
+      user.role ===
+      "client"
   ).length;
 
-  const totalAdmins = users.filter(
-    (user) => user.role === "admin"
+const totalAdmins =
+  activeUsers.filter(
+    (user) =>
+      user.role ===
+        "admin" &&
+      user.is_admin_empresa
   ).length;
 
 
@@ -376,28 +405,47 @@ export default function AdminDashboard() {
           )}
 
           {currentTab === "users" && (
-            <UsersTab
+          <UsersTab
             users={users}
             students={students}
             search={search}
+
             totalStudents={totalStudents}
             totalClients={totalClients}
             totalAdmins={totalAdmins}
-            updateUserRole={handleUpdateUserRole}
-            updatingUserRoleId={updatingUserRoleId}
-            openClientDevicesModal={openClientDevicesModal}
+
+            updateUserRole={
+              handleUpdateUserRole
+            }
+
+            updatingUserRoleId={
+              updatingUserRoleId
+            }
+
+            openClientDevicesModal={
+              openClientDevicesModal
+            }
+
+            disconnectUser={
+              handleDisconnectUser
+            }
+
+            disconnectingUserId={
+              disconnectingUserId
+            }
           />
           )}
 
-          {currentTab === "devices" && (
-            <DevicesTab
-            devices={devices}
-            search={search}
-            editDevice={openEditDeviceModal}
-            deleteDevice={openDeleteDeviceModal}
-            openDocumentsModal={openAiDocumentsModal}
-          />
-          )}
+         {currentTab === "devices" && (
+        <DevicesTab
+          devices={devices}
+          aiDevices={aiDevices}
+          search={search}
+          editDevice={openEditDeviceModal}
+          deleteDevice={openDeleteDeviceModal}
+          openDocumentsModal={openAiDocumentsModal}
+        />
+      )}
 
           {currentTab === "courses" && (
           <CoursesTab

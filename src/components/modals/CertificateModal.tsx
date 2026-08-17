@@ -5,12 +5,12 @@ import {
   Download,
   ExternalLink,
   Loader2,
+  ShieldAlert,
   ShieldCheck,
   X,
 } from "lucide-react";
 
 import {
-  useEffect,
   useState,
 } from "react";
 
@@ -29,6 +29,15 @@ interface Props {
   certificateTitle: string;
   studentName: string;
   emitidoEm: string;
+  validUntil: string;
+
+  status:
+    | "valido"
+    | "expirado"
+    | "revogado";
+
+  revokedAt: string | null;
+  revocationReason: string | null;
 
   validationCode?: string;
 
@@ -42,6 +51,10 @@ export default function CertificateModal({
   certificateTitle,
   studentName,
   emitidoEm,
+  validUntil,
+  status,
+  revokedAt,
+  revocationReason,
   validationCode,
   workload,
 }: Props) {
@@ -50,72 +63,26 @@ export default function CertificateModal({
     setIsDownloading,
   ] = useState(false);
 
-  const [
-    validUntil,
-    setValidUntil,
-  ] = useState("");
-
-  useEffect(() => {
-    if (!emitidoEm) {
-      setValidUntil("");
-      return;
-    }
-
-    const [
-      day,
-      month,
-      year,
-    ] = emitidoEm.split(
-      "/",
-    );
-
-    const parsedDay =
-      Number(day);
-
-    const parsedMonth =
-      Number(month);
-
-    const parsedYear =
-      Number(year);
-
-    if (
-      !parsedDay ||
-      !parsedMonth ||
-      !parsedYear
-    ) {
-      setValidUntil("");
-      return;
-    }
-
-    const issueDate =
-      new Date(
-        parsedYear,
-        parsedMonth - 1,
-        parsedDay,
-      );
-
-    const validDate =
-      new Date(
-        issueDate,
-      );
-
-    validDate.setFullYear(
-      validDate.getFullYear() +
-        1,
-    );
-
-    setValidUntil(
-      validDate.toLocaleDateString(
-        "pt-BR",
-      ),
-    );
-  }, [
-    emitidoEm,
-  ]);
-
   if (!isOpen) {
     return null;
   }
+
+  const isRevoked =
+    status === "revogado";
+
+  const statusLabel =
+    status === "valido"
+      ? "Válido"
+      : status === "expirado"
+        ? "Expirado"
+        : "Revogado";
+
+  const statusTone =
+    status === "valido"
+      ? "success"
+      : status === "expirado"
+        ? "warning"
+        : "danger";
 
   const qrCodeData =
     validationCode
@@ -130,7 +97,10 @@ export default function CertificateModal({
     )}`;
 
   async function handleDownload() {
-    if (!certificateId) {
+    if (
+      !certificateId ||
+      isRevoked
+    ) {
       return;
     }
 
@@ -530,7 +500,7 @@ export default function CertificateModal({
                 grid-cols-1
 
                 sm:grid-cols-2
-                lg:grid-cols-3
+                lg:grid-cols-4
 
                 gap-4
 
@@ -569,7 +539,9 @@ export default function CertificateModal({
                     ? `Até ${validUntil}`
                     : "Não informada"
                 }
-                success
+                tone={
+                  statusTone
+                }
               />
 
               <CertificateInfo
@@ -580,7 +552,184 @@ export default function CertificateModal({
                   "Não informada"
                 }
               />
+
+              <CertificateInfo
+                icon={
+                  status ===
+                  "revogado"
+                    ? ShieldAlert
+                    : status ===
+                        "expirado"
+                      ? Clock3
+                      : ShieldCheck
+                }
+                title="Status"
+                value={
+                  statusLabel
+                }
+                tone={
+                  statusTone
+                }
+              />
             </div>
+
+            {/* INFORMAÇÕES DA REVOGAÇÃO */}
+            {isRevoked && (
+              <div
+                className="
+                  rounded-2xl
+
+                  border
+                  border-red-200
+                  dark:border-red-500/20
+
+                  bg-red-50
+                  dark:bg-red-500/10
+
+                  p-4
+                  sm:p-5
+
+                  shadow-xl
+                  dark:shadow-sm
+                "
+              >
+                <div
+                  className="
+                    flex
+                    items-start
+
+                    gap-3
+                  "
+                >
+                  <div
+                    className="
+                      rounded-xl
+
+                      bg-red-100
+                      dark:bg-red-500/15
+
+                      p-2
+
+                      text-red-600
+                      dark:text-red-400
+
+                      shrink-0
+                    "
+                  >
+                    <ShieldAlert
+                      className="
+                        w-5
+                        h-5
+                      "
+                    />
+                  </div>
+
+                  <div className="min-w-0">
+                    <p
+                      className="
+                        font-semibold
+
+                        text-red-700
+                        dark:text-red-300
+                      "
+                    >
+                      Certificado revogado
+                    </p>
+
+                    <p
+                      className="
+                        mt-1
+
+                        text-sm
+
+                        text-red-600
+                        dark:text-red-400
+                      "
+                    >
+                      Este certificado não pode mais ser usado como comprovante e o download foi bloqueado.
+                    </p>
+
+                    <div
+                      className="
+                        mt-4
+
+                        grid
+                        grid-cols-1
+                        sm:grid-cols-2
+
+                        gap-3
+                      "
+                    >
+                      <div>
+                        <p
+                          className="
+                            text-xs
+                            font-medium
+
+                            uppercase
+                            tracking-wider
+
+                            text-red-500
+                            dark:text-red-400
+                          "
+                        >
+                          Data da revogação
+                        </p>
+
+                        <p
+                          className="
+                            mt-1
+
+                            text-sm
+                            font-semibold
+
+                            text-red-800
+                            dark:text-red-200
+                          "
+                        >
+                          {revokedAt ||
+                            "Não informada"}
+                        </p>
+                      </div>
+
+                      <div>
+                        <p
+                          className="
+                            text-xs
+                            font-medium
+
+                            uppercase
+                            tracking-wider
+
+                            text-red-500
+                            dark:text-red-400
+                          "
+                        >
+                          Motivo
+                        </p>
+
+                        <p
+                          className="
+                            mt-1
+
+                            text-sm
+                            font-semibold
+
+                            text-red-800
+                            dark:text-red-200
+
+                            break-words
+                          "
+                        >
+                          {revocationReason ||
+                            "Não informado"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* VALIDAÇÃO */}
             {validationCode && (
@@ -860,19 +1009,21 @@ export default function CertificateModal({
               void handleDownload()
             }
             disabled={
-              isDownloading
+              isDownloading ||
+              isRevoked
             }
-            className="
+            title={
+              isRevoked
+                ? "Certificados revogados não podem ser baixados."
+                : undefined
+            }
+            className={`
               min-h-[48px]
 
               w-full
               sm:w-auto
 
               rounded-2xl
-
-              bg-gradient-to-r
-              from-[var(--company-primary)]
-              to-[var(--company-secondary)]
 
               px-6
               py-3
@@ -891,11 +1042,24 @@ export default function CertificateModal({
 
               transition-all
 
-              hover:opacity-95
-
               disabled:opacity-60
               disabled:cursor-not-allowed
-            "
+
+              ${
+                isRevoked
+                  ? `
+                      bg-gray-400
+                      dark:bg-gray-600
+                    `
+                  : `
+                      bg-gradient-to-r
+                      from-[var(--company-primary)]
+                      to-[var(--company-secondary)]
+
+                      hover:opacity-95
+                    `
+              }
+            `}
           >
             {isDownloading ? (
               <Loader2
@@ -903,6 +1067,10 @@ export default function CertificateModal({
                 className="
                   animate-spin
                 "
+              />
+            ) : isRevoked ? (
+              <ShieldAlert
+                size={20}
               />
             ) : (
               <Download
@@ -912,6 +1080,8 @@ export default function CertificateModal({
 
             {isDownloading
               ? "Baixando..."
+              : isRevoked
+                ? "Download bloqueado"
               : "Baixar PDF"}
           </button>
         </div>
@@ -927,15 +1097,28 @@ interface CertificateInfoProps {
   title: string;
   value: string;
 
-  success?: boolean;
+  tone?:
+    | "default"
+    | "success"
+    | "warning"
+    | "danger";
 }
 
 function CertificateInfo({
   icon: Icon,
   title,
   value,
-  success = false,
+  tone = "default",
 }: CertificateInfoProps) {
+  const toneClass =
+    tone === "success"
+      ? "text-green-600 dark:text-green-400"
+      : tone === "warning"
+        ? "text-amber-600 dark:text-amber-400"
+        : tone === "danger"
+          ? "text-red-600 dark:text-red-400"
+          : "text-[var(--company-primary)]";
+
   return (
     <div
       className="
@@ -954,16 +1137,7 @@ function CertificateInfo({
 
           shrink-0
 
-          ${
-            success
-              ? `
-                  text-green-600
-                  dark:text-green-400
-                `
-              : `
-                  text-[var(--company-primary)]
-                `
-          }
+          ${toneClass}
         `}
       />
 
@@ -988,15 +1162,12 @@ function CertificateInfo({
             break-words
 
             ${
-              success
+              tone === "default"
                 ? `
-                    text-green-600
-                    dark:text-green-400
-                  `
-                : `
                     text-[#080E2F]
                     dark:text-white
                   `
+                : toneClass
             }
           `}
         >

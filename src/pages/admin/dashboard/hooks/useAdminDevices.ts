@@ -130,7 +130,7 @@ export default function useAdminDevices({
       }
 
       await axios.patch(
-        `http://localhost:3333/admin/devices/${editingDevice.id}`,
+  `http://localhost:3333/devices/${editingDevice.id}`,
         {
           nome: editDeviceForm.nome,
           modelo: editDeviceForm.modelo,
@@ -185,9 +185,9 @@ export default function useAdminDevices({
         return;
       }
 
-      await axios.delete(
-        `http://localhost:3333/admin/devices/${deleteDeviceTarget.id}`,
-        config,
+     await axios.delete(
+  `http://localhost:3333/devices/${deleteDeviceTarget.id}`,
+  config,
       );
 
       toast.success(

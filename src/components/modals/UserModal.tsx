@@ -62,15 +62,43 @@ export default function UserModal({
     try {
       setCreating(true);
 
-      await axios.post(
-        "http://localhost:3333/auth/register",
-        {
-          name: formData.name,
-          email: formData.email,
-          senha: formData.senha,
-          role: formData.role,
-        }
-      );
+      const token =
+  localStorage.getItem(
+    "token"
+  );
+
+if (!token) {
+  alert(
+    "Sessão expirada. Faça login novamente."
+  );
+
+  return;
+}
+
+await axios.post(
+  "http://localhost:3333/admin/users",
+  {
+    name:
+      formData.name.trim(),
+
+    email:
+      formData.email
+        .trim()
+        .toLowerCase(),
+
+    senha:
+      formData.senha,
+
+    role:
+      formData.role,
+  },
+  {
+    headers: {
+      Authorization:
+        `Bearer ${token}`,
+    },
+  }
+);
 
       setFormData({
         name: "",
@@ -110,7 +138,7 @@ export default function UserModal({
               </h2>
 
               <p className="text-gray-500 dark:text-gray-400 mt-1">
-                Cadastre um novo usuário na plataforma
+                Cadastre um novo usuário na empresa
               </p>
             </div>
           </div>

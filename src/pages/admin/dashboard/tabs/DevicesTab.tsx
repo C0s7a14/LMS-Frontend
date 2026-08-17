@@ -1,10 +1,10 @@
 import {
   BookOpen,
   Calendar,
+  CheckCircle2,
   Cpu,
   FileText,
   Filter,
-  Star,
 } from "lucide-react";
 
 import StatCard from "../components/StatCard";
@@ -12,11 +12,13 @@ import StatsGrid from "../components/StatsGrid";
 import TableCard from "../components/TableCard";
 
 import type {
+  AiDeviceType,
   DeviceType,
 } from "../types/adminDashboard.types";
 
 interface DevicesTabProps {
   devices: DeviceType[];
+  aiDevices: AiDeviceType[];
   search: string;
   editDevice: (
     device: DeviceType,
@@ -31,11 +33,72 @@ interface DevicesTabProps {
 
 export default function DevicesTab({
   devices,
+  aiDevices,
   search,
   editDevice,
   deleteDevice,
   openDocumentsModal,
 }: DevicesTabProps) {
+
+  const devicesWithDocuments =
+  aiDevices.filter(
+    (device) =>
+      Number(
+        device.total_documentos,
+      ) > 0,
+  ).length;
+
+const totalTechnicalDocuments =
+  aiDevices.reduce(
+    (total, device) =>
+      total +
+      Number(
+        device.total_documentos ||
+          0,
+      ),
+    0,
+  );
+
+const totalCategories =
+  new Set(
+    devices
+      .map((device) =>
+        device.tipo
+          ?.trim()
+          .toLowerCase(),
+      )
+      .filter(Boolean),
+  ).size;
+
+const devicesWithProcessedBase =
+  aiDevices.filter(
+    (device) =>
+      Number(
+        device.documentos_processados,
+      ) > 0,
+  ).length;
+
+const currentDate = new Date();
+
+const devicesCreatedThisMonth =
+  devices.filter((device) => {
+    if (!device.criado_em) {
+      return false;
+    }
+
+    const createdAt =
+      new Date(
+        device.criado_em,
+      );
+
+    return (
+      createdAt.getFullYear() ===
+        currentDate.getFullYear() &&
+      createdAt.getMonth() ===
+        currentDate.getMonth()
+    );
+  }).length;
+
   const term =
     search
       .toLowerCase()
@@ -69,56 +132,56 @@ export default function DevicesTab({
         sm:space-y-8
       "
     >
-      {/* Métricas */}
-      <StatsGrid>
-        <StatCard
-          title="Total de Dispositivos"
-          value={devices.length}
-          subtitle="Cadastrados"
-          icon={Cpu}
-          color="bg-blue-500/15 text-blue-600 dark:text-blue-400"
-        />
+     {/* Métricas */}
+<StatsGrid>
+  <StatCard
+    title="Total de Dispositivos"
+    value={devices.length}
+    subtitle="Cadastrados"
+    icon={Cpu}
+    color="bg-blue-500/15 text-blue-600 dark:text-blue-400"
+  />
 
-        <StatCard
-          title="Com Ficha Técnica"
-          value={devices.length}
-          subtitle="Documentados"
-          icon={FileText}
-          color="bg-green-500/15 text-green-600 dark:text-green-400"
-        />
+  <StatCard
+    title="Com Ficha Técnica"
+    value={devicesWithDocuments}
+    subtitle="Com documentos"
+    icon={FileText}
+    color="bg-green-500/15 text-green-600 dark:text-green-400"
+  />
 
-        <StatCard
-          title="Cursos Vinculados"
-          value="32"
-          subtitle="Relacionados"
-          icon={BookOpen}
-          color="bg-blue-500/15 text-blue-600 dark:text-blue-400"
-        />
+  <StatCard
+    title="Documentos Técnicos"
+    value={totalTechnicalDocuments}
+    subtitle="Na base técnica"
+    icon={BookOpen}
+    color="bg-purple-500/15 text-purple-600 dark:text-purple-400"
+  />
 
-        <StatCard
-          title="Categorias"
-          value="5"
-          subtitle="Tipos"
-          icon={Filter}
-          color="bg-orange-500/15 text-orange-600 dark:text-orange-400"
-        />
+  <StatCard
+    title="Categorias"
+    value={totalCategories}
+    subtitle="Tipos cadastrados"
+    icon={Filter}
+    color="bg-orange-500/15 text-orange-600 dark:text-orange-400"
+  />
 
-        <StatCard
-          title="Mais acessado"
-          value="S1"
-          subtitle="Dispositivo"
-          icon={Star}
-          color="bg-purple-500/15 text-purple-600 dark:text-purple-400"
-        />
+  <StatCard
+    title="Base Processada"
+    value={devicesWithProcessedBase}
+    subtitle="Prontos para IA"
+    icon={CheckCircle2}
+    color="bg-green-500/15 text-green-600 dark:text-green-400"
+  />
 
-        <StatCard
-          title="Atualizados"
-          value={devices.length}
-          subtitle="Este mês"
-          icon={Calendar}
-          color="bg-green-500/15 text-green-600 dark:text-green-400"
-        />
-      </StatsGrid>
+  <StatCard
+    title="Cadastrados no mês"
+    value={devicesCreatedThisMonth}
+    subtitle="Este mês"
+    icon={Calendar}
+    color="bg-blue-500/15 text-blue-600 dark:text-blue-400"
+  />
+</StatsGrid>
 
       <TableCard title="Lista de Dispositivos">
         {/* DESKTOP */}

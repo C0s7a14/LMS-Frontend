@@ -5,6 +5,7 @@ import {
   BookOpen,
   Cpu,
   ShieldCheck,
+  UserMinus,
   UserPlus,
   Users,
 } from "lucide-react";
@@ -36,6 +37,15 @@ interface UsersTabProps {
   ) => void;
   updatingUserRoleId: number | null;
   openClientDevicesModal: (user: UserType) => void;
+
+  disconnectUser: (
+  user: UserType
+) => void;
+
+disconnectingUserId:
+  | number
+  | null;
+
 }
 
 export default function UsersTab({
@@ -48,6 +58,8 @@ export default function UsersTab({
   updateUserRole,
   updatingUserRoleId,
   openClientDevicesModal,
+  disconnectUser,
+  disconnectingUserId,
 }: UsersTabProps) {
 
 const [activeView, setActiveView] =
@@ -61,6 +73,16 @@ const [activeView, setActiveView] =
   loadingActiveUsers,
 } = useActiveUsersToday();
 
+const activeCompanyUsers =
+  useMemo(
+    () =>
+      users.filter(
+        (user) =>
+          user.vinculo_status ===
+          "ativo"
+      ),
+    [users]
+  );
 
 const filteredUsers = useMemo(() => {
   const term = search.toLowerCase().trim();
@@ -77,15 +99,20 @@ const filteredUsers = useMemo(() => {
         ?.toLowerCase()
         .includes(term);
 
-   const matchesView =
+  const matchesView =
   activeView === "all" ||
   (
     activeView === "clients" &&
-    user.role === "client"
+    user.role === "client" &&
+    user.vinculo_status ===
+      "ativo"
   ) ||
   (
     activeView === "admins" &&
-    user.role === "admin"
+    user.role === "admin" &&
+    user.vinculo_status ===
+      "ativo" &&
+    user.is_admin_empresa
   );
 
     return matchesSearch && matchesView;
@@ -108,11 +135,11 @@ const filteredStudents = useMemo(() => {
 }, [students, search]);
   return (
     <div className="w-full min-w-0 space-y-6 sm:space-y-8">
-      <StatsGrid>
+      <StatsGrid columns={5}>
       
       <StatCard
       title="Total de Usuários"
-      value={users.length}
+      value={activeCompanyUsers.length}
       subtitle="Todos os perfis"
       icon={Users}
       color="bg-purple-500/15 text-purple-600 dark:text-purple-400"
@@ -537,8 +564,11 @@ const filteredStudents = useMemo(() => {
 
               <select
                 value={user.role}
-                disabled={
-                  updatingUserRoleId === user.id
+               disabled={
+                  updatingUserRoleId ===
+                    user.id ||
+                  user.vinculo_status ===
+                    "desligado"
                 }
                 onChange={(event) =>
                   updateUserRole(
@@ -663,7 +693,10 @@ const filteredStudents = useMemo(() => {
               <select
                 value={user.role}
                 disabled={
-                  updatingUserRoleId === user.id
+                  updatingUserRoleId ===
+                    user.id ||
+                  user.vinculo_status ===
+                    "desligado"
                 }
                 onChange={(event) =>
                   updateUserRole(
@@ -1144,7 +1177,7 @@ const filteredStudents = useMemo(() => {
         <div
           className="
             grid
-            grid-cols-[1.4fr_1.5fr_1fr_1fr_180px]
+            grid-cols-[1.35fr_1.4fr_0.9fr_0.8fr_0.9fr_220px]
             gap-4
             text-sm
             text-gray-500
@@ -1155,14 +1188,15 @@ const filteredStudents = useMemo(() => {
             pb-3
           "
         >
-          <span>Usuário</span>
-          <span>Email</span>
-          <span>Perfil</span>
-          <span>Cadastro</span>
+        <span>Usuário</span>
+        <span>Email</span>
+        <span>Perfil</span>
+        <span>Status</span>
+        <span>Cadastro</span>
 
-          <span className="text-right">
-            Ações
-          </span>
+        <span className="text-right">
+          Ações
+        </span>
         </div>
 
         {filteredUsers.length > 0 ? (
@@ -1178,7 +1212,7 @@ const filteredStudents = useMemo(() => {
                 key={user.id}
                 className="
                   grid
-                  grid-cols-[1.4fr_1.5fr_1fr_1fr_180px]
+                  grid-cols-[1.35fr_1.4fr_0.9fr_0.8fr_0.9fr_220px]
                   gap-4
                   items-center
                   py-4
@@ -1211,8 +1245,11 @@ const filteredStudents = useMemo(() => {
                 {/* Perfil */}
                 <select
                   value={user.role}
-                  disabled={
-                    updatingUserRoleId === user.id
+                 disabled={
+                    updatingUserRoleId ===
+                      user.id ||
+                    user.vinculo_status ===
+                      "desligado"
                   }
                   onChange={(event) =>
                     updateUserRole(
@@ -1254,18 +1291,103 @@ const filteredStudents = useMemo(() => {
                   </option>
                 </select>
 
+                  {/* Status */}
+                  <span
+                    className={`
+                      inline-flex
+                      w-fit
+
+                      rounded-full
+
+                      px-3
+                      py-1.5
+
+                      text-xs
+                      font-bold
+
+                      ${
+                        user.vinculo_status ===
+                        "ativo"
+                          ? `
+                              bg-green-500/15
+                              text-green-600
+                              dark:text-green-400
+                            `
+                          : `
+                              bg-gray-200
+                              dark:bg-white/10
+
+                              text-gray-600
+                              dark:text-gray-400
+                            `
+                      }
+                    `}
+                  >
+                    {user.vinculo_status ===
+                    "ativo"
+                      ? "Ativo"
+                      : "Desligado"}
+                  </span>
+
                 {/* Cadastro */}
                 <span className="text-sm text-gray-500 dark:text-gray-400">
                   {createdAt}
                 </span>
 
-                {/* Ações */}
-                <div className="flex justify-end">
-                  {user.role === "client" ? (
-                   <button
+           {/* Ações */}
+              <div
+                className="
+                  flex
+                  items-center
+                  justify-end
+                  gap-2
+                "
+              >
+                {user.role === "client" &&
+                  user.vinculo_status === "ativo" && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        openClientDevicesModal(user)
+                      }
+                      className="
+                        inline-flex
+                        items-center
+                        justify-center
+                        gap-2
+
+                        rounded-xl
+
+                        bg-[color-mix(in_srgb,var(--company-primary)_10%,transparent)]
+
+                        px-3
+                        py-2
+
+                        text-sm
+                        font-semibold
+
+                        text-[var(--company-primary)]
+
+                        hover:bg-[color-mix(in_srgb,var(--company-primary)_18%,transparent)]
+
+                        transition-all
+                      "
+                    >
+                      <Cpu size={17} />
+
+                      Dispositivos
+                    </button>
+                  )}
+
+                {user.vinculo_status === "ativo" ? (
+                  <button
                     type="button"
+                    disabled={
+                      disconnectingUserId ===
+                      user.id
+                    }
                     onClick={() =>
-                      openClientDevicesModal(user)
+                      disconnectUser(user)
                     }
                     className="
                       inline-flex
@@ -1275,7 +1397,12 @@ const filteredStudents = useMemo(() => {
 
                       rounded-xl
 
-                      bg-[color-mix(in_srgb,var(--company-primary)_10%,transparent)]
+                      border
+                      border-red-200
+                      dark:border-red-500/20
+
+                      bg-red-50
+                      dark:bg-red-500/10
 
                       px-3
                       py-2
@@ -1283,33 +1410,48 @@ const filteredStudents = useMemo(() => {
                       text-sm
                       font-semibold
 
-                      text-[var(--company-primary)]
+                      text-red-600
+                      dark:text-red-400
 
-                      hover:bg-[color-mix(in_srgb,var(--company-primary)_18%,transparent)]
+                      hover:bg-red-100
+                      dark:hover:bg-red-500/20
 
                       transition-all
+
+                      disabled:opacity-50
+                      disabled:cursor-not-allowed
                     "
                   >
-                    <Cpu size={17} />
-                    Dispositivos
+                    <UserMinus size={17} />
+
+                    {disconnectingUserId ===
+                    user.id
+                      ? "Desligando..."
+                      : "Desligar"}
                   </button>
-                  ) : (
-                    <span className="text-gray-400">
-                      —
-                    </span>
-                  )}
-                </div>
+                ) : (
+                  <span
+                    className="
+                      text-sm
+                      font-medium
+                      text-gray-400
+                      dark:text-gray-500
+                    "
+                  >
+                    —
+                  </span>
+                )}
               </div>
-            );
-          })
-        ) : (
-          <div className="py-10 text-center text-gray-500 dark:text-gray-400">
-            Nenhum usuário encontrado.
-          </div>
-        )}
-      </div>
 
-
+              </div>
+              );
+              })
+              ) : (
+                <div className="py-10 text-center text-gray-500 dark:text-gray-400">
+                  Nenhum usuário encontrado.
+                </div>
+              )}
+              </div>
       {/* MOBILE / TABLET */}
       <div className="xl:hidden space-y-3">
         {filteredUsers.length > 0 ? (
@@ -1345,7 +1487,7 @@ const filteredStudents = useMemo(() => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 mt-4">
+                <div className="grid grid-cols-3 gap-3 mt-4">
                   <div>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
                       Perfil
@@ -1353,9 +1495,11 @@ const filteredStudents = useMemo(() => {
 
                     <select
                       value={user.role}
-                      disabled={
+                     disabled={
                         updatingUserRoleId ===
-                        user.id
+                          user.id ||
+                        user.vinculo_status ===
+                          "desligado"
                       }
                       onChange={(event) =>
                         updateUserRole(
@@ -1394,6 +1538,58 @@ const filteredStudents = useMemo(() => {
                     </select>
                   </div>
 
+
+                 <div>
+                  <p
+                    className="
+                      text-xs
+                      text-gray-500
+                      dark:text-gray-400
+                    "
+                  >
+                    Status
+                  </p>
+
+                  <span
+                    className={`
+                      inline-flex
+
+                      mt-2
+
+                      rounded-full
+
+                      px-3
+                      py-1
+
+                      text-xs
+                      font-bold
+
+                      ${
+                        user.vinculo_status ===
+                        "ativo"
+                          ? `
+                              bg-green-500/15
+                              text-green-600
+                              dark:text-green-400
+                            `
+                          : `
+                              bg-gray-200
+                              dark:bg-white/10
+
+                              text-gray-600
+                              dark:text-gray-400
+                            `
+                      }
+                    `}
+                  >
+                    {user.vinculo_status ===
+                    "ativo"
+                      ? "Ativo"
+                      : "Desligado"}
+                  </span>
+                </div>
+
+
                   <div>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       Cadastro
@@ -1405,44 +1601,106 @@ const filteredStudents = useMemo(() => {
                   </div>
                 </div>
 
-                {user.role === "client" && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      openClientDevicesModal(user)
-                    }
-                   className="
-                    w-full
-                    mt-4
+              {user.role ===
+              "client" &&
+              user.vinculo_status ===
+                "ativo" && (
+              <button
+                type="button"
+                onClick={() =>
+                  openClientDevicesModal(
+                    user
+                  )
+                }
+                className="
+                  w-full
+                  mt-4
 
-                    rounded-xl
+                  rounded-xl
 
-                    bg-gradient-to-r
-                    from-[var(--company-primary)]
-                    to-[var(--company-secondary)]
+                  bg-gradient-to-r
+                  from-[var(--company-primary)]
+                  to-[var(--company-secondary)]
 
-                    px-4
-                    py-3
+                  px-4
+                  py-3
 
-                    flex
-                    items-center
-                    justify-center
-                    gap-2
+                  flex
+                  items-center
+                  justify-center
+                  gap-2
 
-                    text-sm
-                    font-semibold
-                    text-white
+                  text-sm
+                  font-semibold
+                  text-white
 
-                    shadow-lg
+                  shadow-lg
 
-                    transition-all
-                    active:scale-[0.98]
-                  "
-                  >
-                    <Cpu size={18} />
-                    Gerenciar dispositivos
-                  </button>
-                )}
+                  transition-all
+                  active:scale-[0.98]
+                "
+              >
+                <Cpu size={18} />
+
+                Gerenciar dispositivos
+              </button>
+            )}
+
+            {user.vinculo_status ===
+              "ativo" && (
+              <button
+                type="button"
+                disabled={
+                  disconnectingUserId ===
+                  user.id
+                }
+                onClick={() =>
+                  disconnectUser(user)
+                }
+                className="
+                  w-full
+
+                  mt-3
+
+                  rounded-xl
+
+                  border
+                  border-red-200
+                  dark:border-red-500/20
+
+                  bg-red-50
+                  dark:bg-red-500/10
+
+                  px-4
+                  py-3
+
+                  flex
+                  items-center
+                  justify-center
+                  gap-2
+
+                  text-sm
+                  font-semibold
+
+                  text-red-600
+                  dark:text-red-400
+
+                  transition-all
+
+                  disabled:opacity-50
+                  disabled:cursor-not-allowed
+                "
+              >
+                <UserMinus
+                  size={18}
+                />
+
+                {disconnectingUserId ===
+                user.id
+                  ? "Desligando..."
+                  : "Desligar usuário"}
+              </button>
+            )}
               </div>
             );
           })
@@ -1463,10 +1721,12 @@ const filteredStudents = useMemo(() => {
           {
             label: "Alunos",
             value: totalStudents,
-            percentage: users.length
+            percentage: activeCompanyUsers.length
               ? Math.round(
-                  (totalStudents /
-                    users.length) *
+                  (
+                    totalStudents /
+                    activeCompanyUsers.length
+                  ) *
                     100,
                 )
               : 0,
@@ -1474,10 +1734,10 @@ const filteredStudents = useMemo(() => {
           {
             label: "Clientes",
             value: totalClients,
-            percentage: users.length
+            percentage: activeCompanyUsers.length
               ? Math.round(
                   (totalClients /
-                    users.length) *
+                    activeCompanyUsers.length) *
                     100,
                 )
               : 0,
@@ -1485,10 +1745,10 @@ const filteredStudents = useMemo(() => {
           {
             label: "Administradores",
             value: totalAdmins,
-            percentage: users.length
+            percentage: activeCompanyUsers.length
               ? Math.round(
                   (totalAdmins /
-                    users.length) *
+                    activeCompanyUsers.length) *
                     100,
                 )
               : 0,

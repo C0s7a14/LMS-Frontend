@@ -13,7 +13,9 @@ import {
   type FormEvent,
 } from "react";
 
-import axios from "axios";
+
+import { api } from "../../services/api";
+import toast from "react-hot-toast";
 
 interface DeviceType {
   id: number;
@@ -58,17 +60,21 @@ export default function CourseModal({
     });
 
   async function getDevices() {
-    try {
-      const response =
-        await axios.get<DeviceType[]>(
-          "http://localhost:3333/devices",
-        );
+  try {
+    const response =
+      await api.get<DeviceType[]>(
+        "/devices",
+      );
 
-      setDevices(response.data);
-    } catch (error) {
-      console.log(error);
-    }
+    setDevices(response.data);
+  } catch (error) {
+    console.log(error);
+
+    toast.error(
+      "Erro ao carregar dispositivos.",
+    );
   }
+}
 
   useEffect(() => {
     if (isOpen) {
@@ -119,20 +125,23 @@ export default function CourseModal({
         return;
       }
 
-      const response =
-        await axios.post(
-          "http://localhost:3333/courses",
-          {
-            titulo:
-              formData.titulo,
-            descricao:
-              formData.descricao,
-            thumbnail:
-              formData.thumbnail,
-            criado_por:
-              user.id,
-          },
-        );
+    const response =
+  await api.post(
+    "/courses",
+    {
+      titulo:
+        formData.titulo.trim(),
+
+      descricao:
+        formData.descricao.trim(),
+
+      thumbnail:
+        formData.thumbnail.trim(),
+
+      criado_por:
+        user.id,
+    },
+  );
 
       const courseId =
         response.data.courseId ||
@@ -143,15 +152,15 @@ export default function CourseModal({
         courseId &&
         selectedDevices.length > 0
       ) {
-        await Promise.all(
-          selectedDevices.map(
-            (deviceId) =>
-              axios.post(
-                `http://localhost:3333/devices/courses/${courseId}/devices/${deviceId}`,
-              ),
-          ),
-        );
-      }
+       await Promise.all(
+        selectedDevices.map(
+          (deviceId) =>
+            api.post(
+              `/devices/courses/${courseId}/devices/${deviceId}`,
+            ),
+        ),
+      );
+            }
 
       setFormData({
         titulo: "",
@@ -163,17 +172,15 @@ export default function CourseModal({
 
       onSuccess();
       onClose();
-    } catch (error: any) {
-      console.log(error);
+   } catch (error: any) {
+  console.log(error);
 
-      alert(
-        error.response?.data
-          ?.error ||
-          error.response?.data
-            ?.message ||
-          "Erro ao cadastrar curso",
-      );
-    } finally {
+  toast.error(
+    error.response?.data?.error ||
+      error.response?.data?.message ||
+      "Erro ao cadastrar curso.",
+  );
+} finally {
       setCreating(false);
     }
   }
